@@ -1,0 +1,11 @@
+**/target/
+.DS_Store
+.idea/
+*.iml
+.vscode/
+**/node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/.env.local
+frontend/.env.*.local
+*.tsbuildinfo

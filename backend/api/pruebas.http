@@ -1,0 +1,133 @@
+@baseUrl = http://localhost:8080
+
+### Estado
+GET {{baseUrl}}/api/estado
+
+### Inventario
+GET {{baseUrl}}/api/productos
+
+### Composite: combo y disponibilidad derivada
+GET {{baseUrl}}/api/combos/6
+
+### Decorator: 3 arroces con 2x1, 10% y débito = 2891.70
+GET {{baseUrl}}/api/productos/1/precio?cantidad=3&medioPago=DEBITO
+
+### Canal digital: catálogo valorizado para una unidad
+GET {{baseUrl}}/api/digital/catalogo?medioPago=DEBITO
+
+### Reservar 2 combos: hojas y combo se modifican de forma atómica
+POST {{baseUrl}}/api/digital/reservas
+Content-Type: application/json
+
+{"stockId":6,"cantidad":2,"motivo":"Compra web de prueba","usuario":"digital.demo"}
+
+### Liberar 1 combo reservado
+POST {{baseUrl}}/api/digital/cancelaciones
+Content-Type: application/json
+
+{"stockId":6,"cantidad":1,"motivo":"Cancelación web de prueba","usuario":"digital.demo"}
+
+### Despachar 1 combo reservado
+POST {{baseUrl}}/api/digital/despachos
+Content-Type: application/json
+
+{"stockId":6,"cantidad":1,"motivo":"Despacho web de prueba","usuario":"digital.demo"}
+
+### Puesto de recepción
+POST {{baseUrl}}/api/recepcion/ingresos
+Content-Type: application/json
+
+{"stockId":1,"cantidad":10,"motivo":"Ingreso por remito de prueba","usuario":"recepcion.demo"}
+
+### PDA: mover 5 arroces a góndola
+POST {{baseUrl}}/api/sucursal/movimientos
+Content-Type: application/json
+
+{"stockId":1,"tipo":"TRASLADO_A_GONDOLA","cantidad":5,"motivo":"Carga de góndola","usuario":"pda.demo"}
+
+### Strategy: cambiar canal de notificación
+PUT {{baseUrl}}/api/notificaciones/canal
+Content-Type: application/json
+
+{"canal":"SMS"}
+
+### Strategy: consultar política
+GET {{baseUrl}}/api/productos/1/politica-reposicion
+
+### Strategy: cambiar política a reposición por demanda
+PUT {{baseUrl}}/api/productos/1/politica-reposicion
+Content-Type: application/json
+
+{"tipo":"DEMANDA","puntoPedido":0,"stockObjetivo":200,"demandaDiaria":100,"diasCobertura":2,"factorEstacional":1,"umbralAlerta":20,"destinoAlerta":"5491100000000"}
+
+### Evaluar políticas y encolar avisos/pedidos necesarios
+POST {{baseUrl}}/api/reposicion/evaluaciones
+
+### Pedidos confirmados: consultar estado vigente después de integrar con ERP
+GET {{baseUrl}}/api/pedidos
+
+### Recibir pedido inicial (primero debe estar ENVIADO)
+POST {{baseUrl}}/api/pedidos/1/recepcion
+Content-Type: application/json
+
+{"usuario":"recepcion.demo"}
+
+### Observer: auditoría de hojas y combos
+GET {{baseUrl}}/api/auditoria
+
+### Adapter: inspeccionar mensajes, pedidos ERP, catálogo y cola SQL
+GET {{baseUrl}}/api/integraciones
+
+### Demo: simular caída de Coto Digital
+PATCH {{baseUrl}}/api/demo/proveedores/COTO_DIGITAL
+Content-Type: application/json
+
+{"disponible":false}
+
+### Confirmar stock mientras la sincronización externa falla
+POST {{baseUrl}}/api/digital/reservas
+Content-Type: application/json
+
+{"stockId":1,"cantidad":1,"motivo":"Prueba de recuperación","usuario":"digital.demo"}
+
+### Consultar entregas pendientes y último error
+GET {{baseUrl}}/api/integraciones
+
+### Recuperar proveedor
+PATCH {{baseUrl}}/api/demo/proveedores/COTO_DIGITAL
+Content-Type: application/json
+
+{"disponible":true}
+
+### Reintentar hasta 100 mensajes pendientes
+POST {{baseUrl}}/api/integraciones/reintentos
+
+### Backoffice: alta de producto simple sin existencias
+POST {{baseUrl}}/api/productos
+Content-Type: application/json
+
+{"nombre":"Yerba COTO","descripcion":"Paquete de 1 kg","precio":3500}
+
+### Backoffice: crear combo anidado
+POST {{baseUrl}}/api/combos
+Content-Type: application/json
+
+{"nombre":"Canasta COTO","descripcion":"Combo ahorro y un arroz adicional","precio":8000,"componentes":[{"stockId":6,"cantidad":1},{"stockId":1,"cantidad":1}]}
+
+### Backoffice: promoción nueva para aceite
+POST {{baseUrl}}/api/productos/2/promociones
+Content-Type: application/json
+
+{"tipo":"DESCUENTO","porcentaje":12.5,"orden":10,"activa":true}
+
+### Error esperado: 409, sin reserva parcial
+POST {{baseUrl}}/api/digital/reservas
+Content-Type: application/json
+
+{"stockId":6,"cantidad":100000,"motivo":"Prueba sin stock suficiente","usuario":"digital.demo"}
+
+### Error esperado: 400
+POST {{baseUrl}}/api/recepcion/ingresos
+Content-Type: application/json
+
+{"stockId":1,"cantidad":0,"motivo":"Cantidad inválida","usuario":"demo"}
