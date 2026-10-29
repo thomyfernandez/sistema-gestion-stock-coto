@@ -12,6 +12,7 @@ Backoffice de inventario de sucursal de COTO: stock, recepción de pedidos, comp
 | Frontend dev (5173, proxy `/api`) | `cd frontend && npm run dev` |
 | Tipos + build de producción | `cd frontend && npm run build` |
 | Catálogo del Design System | `cd frontend && npm run dev` → http://127.0.0.1:5173/design-system.html |
+| Documentación de la API | Backend iniciado → http://localhost:8080/swagger-ui.html (spec en `/v3/api-docs`) |
 
 Para pruebas manuales que modifican datos, levantar instancias aisladas (backend en `18080`, `API_PROXY_TARGET=http://127.0.0.1:18080`, Vite en `5174`) y no tocar el servidor habitual en `8080`.
 
@@ -22,7 +23,7 @@ Para pruebas manuales que modifican datos, levantar instancias aisladas (backend
 - Patrones GoF de la arquitectura: Singleton (`GestorInventario`), Strategy, Decorator, Observer, Composite, Adapter. No romper sus contratos ni sus pruebas.
 - `disponible = físico − exhibición − reservado`; no existe columna de disponible. Simples y combos comparten tabla con discriminador; los combos no tienen contadores propios.
 - Cambios de esquema: actualizar `schema.sql`, `data.sql` **y** agregar un script `db/upgrade-*.sql` idempotente para bases existentes, con su prueba.
-- Errores HTTP en `application/problem+json` (RFC 9457). DTOs validados en `dto/`.
+- Errores HTTP en `application/problem+json` (RFC 9457). DTOs validados en `dto/`. Cada controller lleva `@Tag` para agruparse en Swagger; un controller nuevo también.
 - Frontend: HTTP solo en `api.ts`; estado en `store.tsx`; nunca inventar existencias ni precios en el navegador.
 
 ## Design System COTO

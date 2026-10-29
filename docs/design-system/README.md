@@ -64,6 +64,12 @@ Los ratios de 300 a 00 de la lámina se miden con texto oscuro sobre el color.
 
 Los tonos 100 son fondos de mensajes y badges; los 500 rellenan botones y puntos de estado; los 800/900 se usan para texto sobre los fondos 100.
 
+### Tokens auxiliares
+
+- `--space-half` (4 px): solo para ajustes ópticos internos de un componente; nunca como separación entre bloques.
+- `--radius-xs` (4 px), `--radius-small` (6 px), `--radius-medium` (10 px), `--radius-large` (14 px) y `--radius-pill`.
+- `--color-overlay` y `--color-overlay-soft`: fondos de modales y del menú lateral móvil (Neutral 900 al 45 % y al 30 %).
+
 ### Roles semánticos
 
 Para no atar componentes a un tono concreto, `tokens.css` define alias: `--color-text`, `--color-text-muted`, `--color-text-subtle`, `--color-surface`, `--color-background`, `--color-border`, `--color-divider`, `--color-action`, `--color-action-hover`, `--color-link`, `--color-focus` y `--color-disabled`. Preferirlos cuando el significado coincide.
@@ -169,6 +175,16 @@ Se estilizan los `input[type=checkbox]` y `input[type=radio]` nativos, sin compo
 ### Keypad
 
 `.keypad` + `.keypad-key`: teclas de 40 px con borde Neutral 900. La tecla de acción (borrar) usa `.keypad-key.fill`. Pensado para cargar cantidades en dispositivos táctiles de sucursal.
+
+## Migración de los estilos de las vistas
+
+`app.css` y `shell.css` ya no tienen colores, tamaños tipográficos, pesos ni radios sueltos: todo sale de tokens. Los `padding`, `margin` y `gap` se ajustaron a la grilla de 8 (empates hacia arriba: 12 → 16, 20 → 24) y usan `--space-*`; los de 4 px pasaron a `--space-half`. Se mantienen como valores literales, a propósito:
+
+- trazos y ajustes de 1 a 3 px;
+- posiciones (`top`, `left`, `inset`…), anchos y altos, que son geometría y no ritmo;
+- los anchos del menú lateral (194/220/242 px) y `border-radius: 50%` de los círculos.
+
+Se verificó que ninguna de las nueve vistas desborde horizontalmente a 390 ni a 1280 px.
 
 ## Cambios respecto de la versión anterior de los tokens
 

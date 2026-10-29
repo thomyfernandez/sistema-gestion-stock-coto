@@ -48,7 +48,8 @@
   --weight-book: 350;
   --line-height: 1.4;
 
-  /* Grilla de 8 puntos */
+  /* Grilla de 8 puntos; --space-half solo para ajustes ópticos internos */
+  --space-half: 4px;
   --space-1: 8px;
   --space-2: 16px;
   --space-3: 24px;
@@ -83,6 +84,7 @@
   --icon-small: 24px;
   --icon-stroke: 2px;
 
+  --radius-xs: 4px;
   --radius-small: 6px;
   --radius-medium: 10px;
   --radius-large: 14px;
@@ -101,6 +103,8 @@
   --color-link: var(--info-500);
   --color-focus: var(--info-500);
   --color-disabled: var(--neutral-400);
+  --color-overlay: rgb(27 23 28 / 45%);
+  --color-overlay-soft: rgb(27 23 28 / 30%);
 
   color: var(--color-text);
   background: var(--color-background);

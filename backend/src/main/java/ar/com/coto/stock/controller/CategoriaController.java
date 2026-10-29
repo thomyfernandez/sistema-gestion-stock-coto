@@ -5,10 +5,12 @@ import ar.com.coto.stock.service.GestionCategorias;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import org.springframework.http.ResponseEntity;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.List;
 @RestController @RequestMapping("/api/categorias")
+@Tag(name = "Categorías", description = "Clasificación del catálogo y destinatario de avisos por categoría.")
 public class CategoriaController {
     private final GestionCategorias categorias;
     public CategoriaController(GestionCategorias categorias) { this.categorias = categorias; }

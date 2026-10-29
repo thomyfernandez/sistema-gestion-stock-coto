@@ -4,12 +4,14 @@ import ar.com.coto.stock.dto.*;
 import ar.com.coto.stock.service.GestionIntegraciones;
 import jakarta.validation.Valid;
 import org.springframework.context.annotation.Profile;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 /** Sólo existe en demo. Opera sobre el contrato de aplicación y los proveedores simulados. */
 @RestController
 @Profile("demo")
 @RequestMapping("/api/demo/proveedores")
+@Tag(name = "Simulación de proveedores", description = "Solo perfil demo: simula caídas y recuperación de ERP, mensajería y Coto Digital.")
 public class SimulacionController {
     private final GestionIntegraciones integraciones;
     public SimulacionController(GestionIntegraciones integraciones) { this.integraciones = integraciones; }
