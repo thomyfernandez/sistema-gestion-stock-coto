@@ -65,3 +65,12 @@ Los subagentes no pueden lanzar otros subagentes: la **sesión principal orquest
 4. `revision.md` sin hallazgos bloqueantes abiertos.
 5. Documentación (`README.md`, `docs/`) actualizada cuando cambia el comportamiento visible o el esquema.
 6. No se hace commit ni push sin pedido explícito del usuario.
+
+## Autoría de commits y PRs
+
+- Los commits quedan a nombre de quien los hace (`git config user.name` / `user.email`). **Nunca** agregar `Co-Authored-By` de una IA ni líneas como "Generated with Claude Code", ni en commits ni en descripciones de PR.
+- Cada integrante crea su `.claude/settings.local.json` (no se versiona) con:
+
+```json
+{ "attribution": { "commit": "", "pr": "", "sessionUrl": false }, "includeCoAuthoredBy": false }
+```

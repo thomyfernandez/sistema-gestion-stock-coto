@@ -9,3 +9,4 @@ frontend/test-results/
 frontend/.env.local
 frontend/.env.*.local
 *.tsbuildinfo
+.claude/settings.local.json
