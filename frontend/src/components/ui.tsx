@@ -1,14 +1,19 @@
-import { cloneElement, useEffect, useId, useRef, type ButtonHTMLAttributes, type ReactElement, type ReactNode } from 'react';
+import { cloneElement, useState, useEffect, useId, useRef, type ButtonHTMLAttributes, type ReactElement, type ReactNode, type FormEvent } from 'react';
 import { AlertCircle, ArrowRight, Box, CheckCircle2, Layers3, LoaderCircle, Package, X, type LucideIcon } from 'lucide-react';
-import { ApiError } from '../api';
+import { api, imagenSrc, ApiError } from '../api';
 import { money, number, sku, stockStatus } from '../format';
 import { useStore } from '../store';
 import type { Producto } from '../types';
 
-export function Button({ children, icon: Icon, variant = 'secondary', loading, className = '', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { icon?: LucideIcon; variant?: 'primary' | 'secondary' | 'ghost' | 'danger'; loading?: boolean }) {
-  return <button type="button" className={`button ${variant} ${className}`} {...props} disabled={props.disabled || loading}>
-    {loading ? <LoaderCircle size={24} className="spin" aria-hidden="true" /> : Icon && <Icon size={24} aria-hidden="true" />}{children}
+export type ButtonVariant = 'primary' | 'lineal' | 'secondary' | 'dark' | 'ghost' | 'success' | 'warning' | 'danger' | 'info';
+export function Button({ children, icon: Icon, variant = 'secondary', size = 'md', iconPosition = 'left', loading, className = '', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { icon?: LucideIcon; variant?: ButtonVariant; size?: 'sm' | 'md' | 'lg'; iconPosition?: 'left' | 'right'; loading?: boolean }) {
+  const glyph = loading ? <LoaderCircle size={24} className="spin" aria-hidden="true" /> : Icon && <Icon size={24} aria-hidden="true" />;
+  return <button type="button" className={`button ${variant} ${size === 'md' ? '' : size} ${className}`} {...props} disabled={props.disabled || loading}>
+    {iconPosition === 'left' && glyph}{children}{iconPosition === 'right' && glyph}
   </button>;
+}
+export function IconButton({ icon: Icon, label, appearance = 'naked', size = 'md', className = '', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { icon: LucideIcon; label: string; appearance?: 'naked' | 'lineal' | 'fill'; size?: 'sm' | 'md' | 'lg' }) {
+  return <button type="button" className={`icon-btn ${appearance} ${size === 'md' ? '' : size} ${className}`} aria-label={label} title={label} {...props}><Icon aria-hidden="true" /></button>;
 }
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactElement }) {
   const id = useId();
@@ -51,16 +56,27 @@ export function PageHeading({ eyebrow, title, text, actions }: { eyebrow?: strin
 export function Metric({ label, value, hint, icon: Icon, tone = '' }: { label: string; value: string | number; hint: string; icon: LucideIcon; tone?: string }) {
   return <article className="metric"><div className="metric-top"><span>{label}</span><span className={`metric-icon ${tone}`}><Icon size={24} aria-hidden="true" /></span></div><strong className="metric-value">{typeof value === 'number' ? number(value) : value}</strong><span className="caption">{hint}</span></article>;
 }
-export function ProductName({ product }: { product: Pick<Producto, 'id' | 'nombre' | 'tipo'> }) {
+export function ProductName({ product }: { product: Pick<Producto, 'id' | 'nombre' | 'tipo' | 'imagenUrl'> }) {
   const Icon = product.tipo === 'COMBO' ? Layers3 : Package;
-  return <div className="product-name"><span className={`product-mark ${product.tipo === 'COMBO' ? 'combo' : ''}`}><Icon size={24} aria-hidden="true" /></span>
+  return <div className="product-name"><span className={`product-mark ${product.tipo === 'COMBO' ? 'combo' : ''}`}>{product.imagenUrl ? <img className="product-thumbnail" src={imagenSrc(product.imagenUrl)} alt="" loading="lazy" /> : <Icon size={24} aria-hidden="true" />}</span>
     <div><strong>{product.nombre}</strong><span className="caption">{sku(product.id)} · {product.tipo === 'COMBO' ? 'Combo promocional' : 'Artículo simple'}</span></div></div>;
+}
+function ProductCategory({ product }: { product: Producto }) {
+  const { data, busy, run } = useStore();
+  const [categoryId, setCategoryId] = useState(product.categoriaId);
+  const [error, setError] = useState<Error | null>(null);
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault(); setError(null);
+    try { await run(() => api.asignarCategoria(product.id, categoryId), 'Categoría del artículo actualizada.'); }
+    catch (e) { setError(e as Error); }
+  }
+  return <form className="product-category-form" onSubmit={submit}><Field label="Categoría del artículo"><select value={categoryId ?? ''} disabled={busy} onChange={e => setCategoryId(e.target.value ? Number(e.target.value) : null)}><option value="">Sin categoría</option>{data?.categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></Field><Button type="submit" loading={busy} disabled={categoryId === product.categoriaId}>Guardar categoría</Button><ErrorMessage error={error} /></form>;
 }
 export function ProductDetail({ product, onClose, onMove }: { product: Producto; onClose: () => void; onMove?: () => void }) {
   const { data } = useStore();
   const status = stockStatus(product, data?.politicas[product.id]);
   return <Modal title="Detalle del artículo" description="Existencias confirmadas en el inventario." onClose={onClose}>
-    <div className="modal-body"><ProductName product={product} /><p className="muted">{product.descripcion}</p><div className="split-line"><span>Precio de lista</span><strong>{money(product.precio)}</strong></div>
+    <div className="modal-body"><ProductName product={product} />{product.imagenUrl && <img className="product-detail-image" src={imagenSrc(product.imagenUrl)} alt={product.nombre} />}<p className="muted">{product.descripcion}</p><ProductCategory key={`${product.id}:${product.categoriaId}`} product={product} /><div className="split-line"><span>Precio de lista</span><strong>{money(product.precio)}</strong></div>
       <div className="stock-highlight"><span>Disponible para reservar</span><strong>{number(product.disponible)}</strong><Badge tone={status.tone}>{status.label}</Badge></div>
       {product.tipo === 'SIMPLE' ? <><div className="three-stats"><div><span>Físico</span><strong>{number(product.stockFisico!)}</strong></div><div><span>En góndola</span><strong>{number(product.stockExhibicion!)}</strong></div><div><span>Reservado</span><strong>{number(product.stockReservado!)}</strong></div></div>
         <p className="field-hint">El disponible descuenta las unidades en góndola y las reservas digitales del stock físico.</p></> : <><h3>Composición del combo</h3><div className="component-list">{product.componentes.map(c => <div key={c.stockId}><span><Box size={24} aria-hidden="true" />{c.nombre}</span><strong>× {c.cantidadEnCombo}</strong></div>)}</div><p className="field-hint">La disponibilidad depende de sus componentes. El combo no tiene existencias propias.</p></>}

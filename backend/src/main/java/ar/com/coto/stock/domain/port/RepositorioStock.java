@@ -8,5 +8,7 @@ public interface RepositorioStock {
     Map<Integer, Stock> cargarInventario();
     void guardarEstado(StockSimple stock);
     Stock crear(AltaProducto producto, boolean combo);
+    void guardarCategoria(int productoId, Integer categoriaId);
     void guardarComposicion(ComboStock combo);
+    java.util.Optional<ImagenProducto> consultarImagen(int productoId);
 }

@@ -1,6 +1,8 @@
-# Etapa 4 — Frontend React y Design System COTO
+# v0.4 — Frontend React y Design System COTO
 
-Aplicación React + TypeScript + Vite conectada a la API REST de la Etapa 3. La carpeta `frontend` es independiente del backend: no modifica el dominio Java ni vuelve a implementar sus reglas de stock, composición o precios.
+La navegación y las altas se actualizaron: ver [ajustes del backoffice](ajustes-backoffice.md) para Stock unificado, configuración de avisos, imágenes y migración SQL.
+
+Aplicación React + TypeScript + Vite conectada a la API REST de la v0.3. La carpeta `frontend` es independiente del backend: no modifica el dominio Java ni vuelve a implementar sus reglas de stock, composición o precios.
 
 ## Ejecutar
 
@@ -39,21 +41,31 @@ Si se sirve `dist` desde un servidor diferente, se debe reenviar `/api` al backe
 | Sucursal | Indicadores, búsqueda por nombre/código/descripción, filtros, detalle, traslado a góndola, retorno, devolución y mermas |
 | Recepción | Ingreso de artículos simples, historial de ingresos y recepción confirmada de pedidos enviados |
 | Compras y abastecimiento | Alta de productos y combos, composición con combos anidados, políticas de reposición, evaluación y seguimiento de pedidos, cancelación de pendientes, promociones acumulables y simulador de precios |
-| Coto Digital | Catálogo valorizado según medio de pago, filtros, reservas con cantidad y cotización, cancelación y despacho |
+| Canal digital | Panel de operaciones para empleados: reservas por artículo, disponibilidad local frente a publicada, sincronización e historial de reservas, cancelaciones y despachos |
 
 Compras también incluye el historial de movimientos, la auditoría y el panel de integraciones. Este último permite seleccionar el canal de notificación, consultar mensajes/pedidos/sincronizaciones simulados, reintentar entregas y simular caídas de ERP, mensajería o Coto Digital en el perfil `demo`.
 
-Las reservas del backend son cantidades agregadas por artículo: esta entrega no incorpora clientes, carrito, cobros ni identificación de pedidos web individuales. Los campos de operador registran la identificación declarada en la auditoría; no representan autenticación ni permisos por rol.
+Las reservas del backend son cantidades agregadas por artículo: esta versión no incorpora clientes, carrito, cobros ni identificación de pedidos web individuales. Los campos de operador registran la identificación declarada en la auditoría; no representan autenticación ni permisos por rol.
+
+## Panel interno del canal digital
+
+La ruta `#/digital` se conserva, con el nombre de navegación **Canal digital** y el título **Operaciones digitales**. Permite registrar manualmente los eventos que enviaría el e-commerce en una integración real. El proveedor continúa siendo simulado.
+
+- Los indicadores suman reservado y disponible únicamente de artículos simples, evitando contar nuevamente los componentes de combos. Los despachos se cuentan como movimientos, no como pedidos web.
+- La tabla compara el disponible del backend con `integraciones.catalogoDigital`, el último valor conocido por el proveedor. Un artículo sin publicaciones muestra `—` y **Sin envío**, no un cero inventado. Los estados distinguen sincronizado, pendiente y desactualizado.
+- El formulario ofrece reserva, cancelación y despacho, registra operador y motivo, y muestra el efecto de cada operación. Para simples limita las cancelaciones/despachos por el reservado; para combos la API valida las reservas de sus componentes.
+- El historial muestra los últimos diez movimientos digitales, su tipo, cantidad, operador, motivo y fecha. El enlace de actividad permite consultar el resto.
+- La búsqueda y los filtros permiten revisar artículos simples, combos, simples con reservas y estados de sincronización. Los errores de integración se consultan y reintentan desde Integraciones.
 
 ## Design System
 
-`src/styles/tokens.css` contiene todos los colores exactos del pedido: Primary, Neutrals, Info, Success, Warning y Danger. La composición prioriza superficies blancas, fondos neutros y acentos rojos siguiendo la proporción visual 60/30/10.
+`src/styles/tokens.css` contiene los tokens de las Foundations de COTO (Primary, Neutrals, Info, Success, Warning, Danger, tipografía, grilla de 8 puntos y elevaciones) y `src/styles/components.css`, sus átomos. La especificación completa está en [Design System COTO](design-system/README.md). La composición prioriza superficies blancas, fondos neutros y acentos rojos siguiendo la proporción visual 60/30/10.
 
 La familia declarada es Gotham Rounded con Nunito, Montserrat y sans-serif como alternativas. Se distribuye Nunito Variable en el propio build, sin solicitudes a Google Fonts. Gotham Rounded se utiliza si está instalada; no se incluye una fuente comercial sin licencia.
 
 Se definen Display 56/40/32 px, Heading 28/24/22/20 px, Body 18/16 px y Caption 12 px, con pesos bold, semibold, regular y book. Los títulos usan interlínea 140%. Las siete elevaciones van de `--shadow-100` a `--shadow-700`: cards en 100, modales en 300 y hover/active en 400.
 
-La marca de navegación utiliza la imagen `src/assets/coto-superapp.png` proporcionada por el usuario, conservada sin modificaciones y con proporciones originales.
+La marca de navegación utiliza la imagen `src/assets/coto-superapp.png`, el logo oficial de COTO, conservada sin modificaciones y con proporciones originales.
 
 Los íconos pertenecen a `lucide-react`, con trazos outline y tamaños 24/32/48 px. La interfaz se adapta a escritorio y móvil, con navegación compacta, indicadores reorganizados, formularios de una columna y desplazamiento horizontal contenido en tablas y pestañas.
 
@@ -61,7 +73,7 @@ Los íconos pertenecen a `lucide-react`, con trazos outline y tamaños 24/32/48 
 
 - `api.ts` concentra HTTP y DTOs tipados; interpreta errores RFC 9457 y sus detalles de validación. Las solicitudes vencen a los 20 segundos y las lecturas obsoletas se cancelan.
 - `store.tsx` consulta productos, pedidos, movimientos, auditoría, integraciones y políticas. Actualiza después de las operaciones y cada 20 segundos. No inventa existencias ni persiste stock en el navegador.
-- La disponibilidad y los precios provienen del backend. Los combos muestran su composición y disponibilidad derivada, sin contadores propios.
+- La disponibilidad y los precios provienen del backend. El panel digital muestra existencias y sincronización, sin banners comerciales, tarjetas de compra ni medios de pago. Los precios y promociones se administran en Compras. Los combos no tienen contadores propios; sus reservas se reflejan en los artículos componentes.
 - Durante una operación se bloquea el envío duplicado. Las mutaciones no se reintentan automáticamente: ante una respuesta incierta se indica revisar los movimientos antes de repetir.
 - Si una operación se confirmó pero falla la lectura posterior, el aviso distingue ambos resultados. Si el backend deja de responder, se identifican los datos conservados como desactualizados y se ofrece reintentar.
 - Los modales usan `dialog`, etiquetas accesibles, Escape, bloqueo de cierre durante el envío y restauración del foco. Los resultados y errores se anuncian mediante regiones accesibles.
@@ -86,9 +98,13 @@ La compilación `npm run build` terminó correctamente con TypeScript estricto y
 | Detener el backend y actualizar | Aviso de desconexión, datos anteriores identificados y opción de reintentar |
 | Cerrar un modal con Escape | Modal cerrado y foco devuelto al botón que lo abrió |
 
-Esta etapa agrega verificación manual de navegador y compilación, sin una suite automatizada de frontend. Las 129 pruebas del backend y 37 solicitudes HTTP documentadas en la Etapa 3 corresponden a la validación previa de esa entrega; no se modificó código Java en esta etapa.
+Esta versión agrega verificación manual de navegador y compilación, sin una suite automatizada de frontend. Las 129 pruebas del backend y 37 solicitudes HTTP documentadas en la v0.3 corresponden a la validación de esa versión; no se modificó código Java en esta versión.
 
-Las capturas muestran el logo proporcionado y los datos originales, luego de reiniciar el backend demo al terminar los recorridos. Una ejecución nueva del backend demo vuelve a esos datos originales.
+La revisión del panel interno se comprobó con una reserva de dos combos, cancelación de uno y despacho del restante. El historial mostró los tres movimientos y la disponibilidad publicada acompañó los cambios. También se verificaron filtros por reservas y sincronización, búsqueda sin resultados, bloqueo de despacho de un simple sin reservas y una caída/restablecimiento del proveedor con reintento de pendientes. Estas pruebas usaron instancias aisladas en los puertos 18080 y 5174; el servidor habitual en 8080 no fue modificado. El panel y su formulario se revisaron a 390 px, sin desbordamiento horizontal del documento.
+
+![Panel interno de operaciones digitales](screenshots/operaciones-digitales.jpg)
+
+Las capturas de sucursal muestran el logo oficial y los datos originales, luego de reiniciar el backend demo al terminar los recorridos. Una ejecución nueva del backend demo vuelve a esos datos originales.
 
 ![Inventario en escritorio](screenshots/sucursal-desktop.jpg)
 

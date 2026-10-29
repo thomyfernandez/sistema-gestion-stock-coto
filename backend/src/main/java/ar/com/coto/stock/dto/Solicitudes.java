@@ -23,13 +23,16 @@ public final class Solicitudes {
     public record Producto(
             @NotBlank @Size(max = 160) String nombre,
             @NotBlank @Size(max = 500) String descripcion,
-            @NotNull @DecimalMin("0") @Digits(integer = 13, fraction = 2) BigDecimal precio) { }
+            @NotNull @DecimalMin("0") @Digits(integer = 13, fraction = 2) BigDecimal precio,
+            @Valid Imagen imagen, @Positive Integer categoriaId) { }
+    public record Imagen(@NotBlank @Pattern(regexp = "image/(png|jpeg)") String tipo,
+                         @NotBlank @Size(max = 2796204) String contenido) { }
     public record Componente(@NotNull @Positive Integer stockId, @NotNull @Positive Integer cantidad) { }
     public record Combo(
             @NotBlank @Size(max = 160) String nombre,
             @NotBlank @Size(max = 500) String descripcion,
             @NotNull @DecimalMin("0") @Digits(integer = 13, fraction = 2) BigDecimal precio,
-            @NotEmpty List<@NotNull @Valid Componente> componentes) { }
+            @NotEmpty List<@NotNull @Valid Componente> componentes, @Valid Imagen imagen, @Positive Integer categoriaId) { }
     public record Movimiento(
             @NotNull @Positive Integer stockId,
             @NotNull TipoMovimiento tipo,
@@ -56,7 +59,7 @@ public final class Solicitudes {
             @NotNull @Positive Integer diasCobertura,
             @NotNull @DecimalMin(value = "0", inclusive = false) @Digits(integer = 8, fraction = 4) BigDecimal factorEstacional,
             @NotNull @Positive Integer umbralAlerta,
-            @NotBlank @Size(max = 200) String destinoAlerta) { }
+            @Size(max = 200) String destinoAlerta, @com.fasterxml.jackson.annotation.JsonAlias("proveedorId") @Positive Long contactoId, Canal canalAlerta) { }
     public record Promocion(
             @NotNull TipoPromocion tipo,
             @NotNull @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 4) BigDecimal porcentaje,
@@ -64,5 +67,11 @@ public final class Solicitudes {
             @NotNull Boolean activa,
             @Size(max = 60) String medioPago) { }
     public record ConfiguracionCanal(@NotNull Canal canal) { }
+    public record ConfiguracionAvisos(@NotNull Canal canal, @NotBlank @Email @Size(max = 200) String email,
+                                     @NotNull @Size(max = 30) String telefono) { }
+    public record Contacto(@NotBlank @Size(max = 160) String nombre,
+                            @Size(max = 200) String email, @Size(max = 30) String telefono) { }
+    public record Categoria(@NotBlank @Size(max = 80) String nombre, @Positive Long contactoId, Canal canalAlerta) { }
+    public record CategoriaProducto(@Positive Integer categoriaId) { }
     public record Disponibilidad(@NotNull Boolean disponible) { }
 }

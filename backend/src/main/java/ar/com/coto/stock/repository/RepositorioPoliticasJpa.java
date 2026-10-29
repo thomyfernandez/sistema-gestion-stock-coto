@@ -17,7 +17,7 @@ public class RepositorioPoliticasJpa implements RepositorioPoliticas {
         em.createQuery("select p from PoliticaEntity p order by p.stockId", PoliticaEntity.class).getResultList().forEach(p ->
                 politicas.put(p.stockId, new PoliticaReposicion(p.stockId, PoliticaReposicion.Tipo.valueOf(p.tipo),
                         p.puntoPedido, p.stockObjetivo, p.demandaDiaria.doubleValue(), p.diasCobertura,
-                        p.factorEstacional.doubleValue(), p.umbralAlerta, p.destinoAlerta)));
+                        p.factorEstacional.doubleValue(), p.umbralAlerta, p.destinoAlerta, p.contactoId, p.canalAlerta)));
         return politicas;
     }
     @Override public void guardar(PoliticaReposicion p) {
@@ -27,7 +27,7 @@ public class RepositorioPoliticasJpa implements RepositorioPoliticas {
         fila.tipo = p.tipo().name(); fila.puntoPedido = p.puntoPedido(); fila.stockObjetivo = p.stockObjetivo();
         fila.demandaDiaria = BigDecimal.valueOf(p.demandaDiaria()); fila.diasCobertura = p.diasCobertura();
         fila.factorEstacional = BigDecimal.valueOf(p.factorEstacional()); fila.umbralAlerta = p.umbralAlerta();
-        fila.destinoAlerta = p.destinoAlerta();
+        fila.destinoAlerta = p.destinoAlerta(); fila.contactoId = p.contactoId(); fila.canalAlerta = p.canalAlerta();
         if (nueva) em.persist(fila);
     }
     @Override public boolean alertaActiva(int id) {

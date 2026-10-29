@@ -1,9 +1,11 @@
-import type { Auditoria, Canal, Integraciones, ItemCatalogo, Movimiento, Operacion, Pedido, Politica, Precio, Producto, Promocion, ResultadoMovimiento, Sistema, TipoMovimiento } from './types';
+import type { Categoria, Contacto, ConfiguracionAvisos, ImagenCarga, Auditoria, Canal, Integraciones, ItemCatalogo, Movimiento, Operacion, Pedido, Politica, Precio, Producto, Promocion, ResultadoMovimiento, Sistema, TipoMovimiento } from './types';
 
 export class ApiError extends Error {
   constructor(message: string, public status: number, public codigo = '', public errores: Record<string, string[]> = {}) { super(message); }
 }
 const base = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+
+export const imagenSrc = (url: string) => `${base}${url}`;
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const mutation = options.method && options.method !== 'GET';
@@ -27,6 +29,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 const json = (method: string, body?: unknown): RequestInit => ({ method, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
 const query = (values: Record<string, string | number>) => new URLSearchParams(Object.entries(values).map(([k, v]) => [k, String(v)])).toString();
 export const api = {
+  categorias: (signal?: AbortSignal) => request<Categoria[]>('/categorias', { signal }),
+  guardarCategoria: (body: Omit<Categoria, 'id'>, id?: number) => request<Categoria>(`/categorias${id ? `/${id}` : ''}`, json(id ? 'PUT' : 'POST', body)),
+  asignarCategoria: (id: number, categoriaId: number | null) => request<Producto>(`/productos/${id}/categoria`, json('PUT', { categoriaId })),
+  contactos: (signal?: AbortSignal) => request<Contacto[]>('/configuracion/contactos', { signal }),
+  guardarContacto: (body: Omit<Contacto, 'id'>, id?: number) => request<Contacto>(`/configuracion/contactos${id ? `/${id}` : ''}`, json(id ? 'PUT' : 'POST', body)),
+  avisos: (signal?: AbortSignal) => request<ConfiguracionAvisos>('/configuracion/avisos', { signal }),
+  guardarAvisos: (body: ConfiguracionAvisos) => request<ConfiguracionAvisos>('/configuracion/avisos', json('PUT', body)),
   productos: (signal?: AbortSignal) => request<Producto[]>('/productos', { signal }),
   pedidos: (signal?: AbortSignal) => request<Pedido[]>('/pedidos', { signal }),
   movimientos: (signal?: AbortSignal) => request<Movimiento[]>('/movimientos', { signal }),
@@ -38,8 +47,8 @@ export const api = {
   guardarPromocion: (id: number, body: Omit<Promocion, 'id' | 'productoId'>, promocionId?: number) => request<Promocion>(`/productos/${id}/promociones${promocionId ? `/${promocionId}` : ''}`, json(promocionId ? 'PUT' : 'POST', body)),
   precio: (id: number, cantidad: number, medioPago: string, signal?: AbortSignal) => request<Precio>(`/productos/${id}/precio?${query({ cantidad, medioPago })}`, { signal }),
   catalogo: (medioPago: string, signal?: AbortSignal) => request<ItemCatalogo[]>(`/digital/catalogo?${query({ medioPago })}`, { signal }),
-  crearProducto: (body: { nombre: string; descripcion: string; precio: number }) => request<Producto>('/productos', json('POST', body)),
-  crearCombo: (body: { nombre: string; descripcion: string; precio: number; componentes: { stockId: number; cantidad: number }[] }) => request<Producto>('/combos', json('POST', body)),
+  crearProducto: (body: { nombre: string; descripcion: string; precio: number; categoriaId: number | null; imagen?: ImagenCarga }) => request<Producto>('/productos', json('POST', body)),
+  crearCombo: (body: { nombre: string; descripcion: string; precio: number; componentes: { stockId: number; cantidad: number }[]; categoriaId: number | null; imagen?: ImagenCarga }) => request<Producto>('/combos', json('POST', body)),
   ingresar: (body: Operacion) => request<ResultadoMovimiento>('/recepcion/ingresos', json('POST', body)),
   mover: (body: Operacion & { tipo: TipoMovimiento }) => request<ResultadoMovimiento>('/sucursal/movimientos', json('POST', body)),
   digital: (accion: 'reservas' | 'cancelaciones' | 'despachos', body: Operacion) => request<ResultadoMovimiento>(`/digital/${accion}`, json('POST', body)),

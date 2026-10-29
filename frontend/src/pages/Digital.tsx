@@ -1,50 +1,73 @@
-import { useState, type FormEvent } from 'react';
-import { ArrowRight, BadgePercent, Layers3, Minus, Package, Plus, Search, ShoppingBag, Sparkles } from 'lucide-react';
-import { api } from '../api';
-import { money, number } from '../format';
+import { useState } from 'react';
+import { ArrowRight, ArrowRightLeft, Boxes, ClipboardList, Plus, RefreshCw, Search, Truck } from 'lucide-react';
+import { date, movementLabels, number, sku } from '../format';
 import { useStore } from '../store';
-import type { ItemCatalogo } from '../types';
-import { useResource } from '../useResource';
+import type { Evento, Integraciones, Producto } from '../types';
 import { OperationForm } from '../components/OperationForm';
-import { Badge, Button, Empty, ErrorMessage, Field, Modal, PageHeading } from '../components/ui';
+import { Badge, Button, Empty, Metric, Modal, PageHeading } from '../components/ui';
 
-function ReserveForm({ item, medioPago, onClose }: { item: ItemCatalogo; medioPago: string; onClose: () => void }) {
-  const { data, revision, busy, error: connectionError, run } = useStore();
-  const [cantidad, setCantidad] = useState(1);
-  const [usuario, setUsuario] = useState('digital.demo');
-  const [motivo, setMotivo] = useState('Compra por Coto Digital');
-  const [error, setError] = useState<Error | null>(null);
-  const actual = data?.productos.find(p => p.id === item.id);
-  const max = actual?.disponible ?? item.disponible;
-  const price = useResource(`reserva:${item.id}:${cantidad}:${medioPago}:${revision}`, signal => api.precio(item.id, Math.max(1, cantidad), medioPago, signal));
-  async function submit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault(); setError(null);
-    try { await run(() => api.digital('reservas', { stockId: item.id, cantidad, usuario: usuario.trim(), motivo: motivo.trim() }), r => `Reserva confirmada · movimiento #${r.id}.`); onClose(); }
-    catch (e) { setError(e as Error); }
-  }
-  return <Modal title="Reservar artículo" description="Las unidades se descuentan del disponible al confirmar." onClose={onClose}><form onSubmit={submit}><div className="modal-body form-stack"><div className="reserve-product"><span className="product-mark large">{item.tipo === 'COMBO' ? <Layers3 size={32} /> : <Package size={32} />}</span><div><h3>{item.nombre}</h3><span className="caption">{number(max)} disponibles</span></div></div>
-    <fieldset className="field"><legend>Cantidad</legend><div className="quantity-control"><Button variant="ghost" icon={Minus} className="icon-button" aria-label="Quitar una unidad" disabled={busy || cantidad <= 1} onClick={() => setCantidad(v => v - 1)} /><input aria-label="Cantidad a reservar" type="number" min="1" max={max} step="1" required value={cantidad || ''} onChange={e => setCantidad(Number(e.target.value))} disabled={busy} /><Button variant="ghost" icon={Plus} className="icon-button" aria-label="Agregar una unidad" disabled={busy || cantidad >= max} onClick={() => setCantidad(v => v + 1)} /></div></fieldset>
-    <div className="quote-box" aria-live="polite">{price.loading ? <p className="muted">Calculando precio…</p> : price.error ? <ErrorMessage error={price.error} /> : price.data && <><div className="split-line"><span>Precio de lista</span><span>{money(price.data.precioLista)}</span></div><div className="split-line positive"><span>Ahorro por promociones</span><span>−{money(price.data.ahorro)}</span></div><div className="split-line quote-total"><strong>Total de la línea</strong><strong>{money(price.data.precioFinal)}</strong></div><span className="caption">Medio para promociones: {medioPago}. La reserva no realiza un cobro.</span></>}</div>
-    {actual?.tipo === 'COMBO' && <div className="component-list">{actual.componentes.map(c => <div key={c.stockId}><span>{c.nombre}</span><strong>× {c.cantidadEnCombo * Math.max(0, cantidad)}</strong></div>)}</div>}
-    <Field label="Motivo"><input required maxLength={500} value={motivo} onChange={e => setMotivo(e.target.value)} disabled={busy} /></Field><Field label="Operador"><input required maxLength={100} value={usuario} onChange={e => setUsuario(e.target.value)} disabled={busy} /></Field><ErrorMessage error={error} /></div>
-    <footer className="modal-footer"><Button onClick={onClose} disabled={busy}>Cancelar</Button><Button type="submit" variant="primary" icon={ShoppingBag} loading={busy} disabled={max === 0 || !cantidad || !!connectionError || price.loading || !!price.error}>Confirmar reserva</Button></footer></form></Modal>;
+function syncStatus(product: Producto, published: string | undefined, pending: boolean) {
+  if (pending) return { key: 'PENDIENTE', label: 'Pendiente', tone: 'warning' as const };
+  if (published === undefined) return { key: 'SIN_ENVIO', label: 'Sin envío', tone: 'neutral' as const };
+  if (Number(published) !== product.disponible) return { key: 'DESACTUALIZADO', label: 'Desactualizado', tone: 'danger' as const };
+  return { key: 'SINCRONIZADO', label: 'Sincronizado', tone: 'success' as const };
 }
 
-export function DigitalPage() {
-  const { revision } = useStore();
-  const [medioPago, setMedioPago] = useState('DEBITO');
+function AvailabilityTable({ products, integration, pending, onOperate }: {
+  products: Producto[]; integration: Integraciones; pending: Evento[]; onOperate: (id: number) => void;
+}) {
+  const { data } = useStore();
+  const [category, setCategory] = useState('TODAS');
   const [search, setSearch] = useState('');
-  const [tipo, setTipo] = useState('TODOS');
-  const [selected, setSelected] = useState<ItemCatalogo | null>(null);
-  const [manage, setManage] = useState(false);
-  const catalog = useResource(`catalogo:${medioPago}:${revision}`, signal => api.catalogo(medioPago, signal));
-  const items = catalog.data?.filter(p => p.nombre.toLocaleLowerCase('es').includes(search.toLocaleLowerCase('es')) && (tipo === 'TODOS' || p.tipo === tipo)) || [];
-  return <><PageHeading eyebrow="Canal online" title="Coto Digital" text="El catálogo de la sucursal, listo para tus compras online." actions={<Button icon={ShoppingBag} onClick={() => setManage(true)}>Gestionar reservas</Button>} />
-    <div className="digital-banner"><div><span className="eyebrow">Más juntos, más ahorro</span><h2>Combos que rinden más.</h2><p>Promociones acumulables y disponibilidad actualizada.</p><button className="text-link" onClick={() => setTipo('COMBO')}>Explorar combos <ArrowRight size={24} aria-hidden="true" /></button></div><div className="banner-illustration" aria-hidden="true"><span className="illustration-package"><Package size={48} /></span><span className="illustration-badge"><BadgePercent size={48} /></span><span className="illustration-spark"><Sparkles size={32} /></span></div></div>
-    <div className="catalog-toolbar"><div className="search-field"><Search size={24} aria-hidden="true" /><input aria-label="Buscar en catálogo digital" placeholder="¿Qué artículo estás buscando?" value={search} onChange={e => setSearch(e.target.value)} /></div><label className="inline-label">Promociones con<select value={medioPago} onChange={e => setMedioPago(e.target.value)}><option value="DEBITO">Débito</option><option value="CREDITO">Crédito</option><option value="EFECTIVO">Efectivo</option></select></label></div>
-    <div className="catalog-tabs" role="group" aria-label="Tipo de catálogo">{[['TODOS', 'Todos los artículos'], ['SIMPLE', 'Artículos simples'], ['COMBO', 'Combos']].map(([value, label]) => <button key={value} className={tipo === value ? 'active' : ''} aria-pressed={tipo === value} onClick={() => setTipo(value)}>{label}</button>)}<span>{items.length} resultados</span></div>
-    <ErrorMessage error={catalog.error} />{catalog.loading ? <div className="catalog-grid" aria-label="Cargando catálogo" aria-busy="true">{Array.from({ length: 6 }, (_, i) => <div key={i} className="catalog-card skeleton-card"><div className="skeleton block" /><div className="skeleton line" /><div className="skeleton line short" /></div>)}</div> : <div className="catalog-grid">{items.map(item => <article className="catalog-card" key={item.id}><div className={`catalog-art ${item.tipo === 'COMBO' ? 'combo' : ''}`}><span className="catalog-symbol">{item.tipo === 'COMBO' ? <Layers3 size={48} aria-hidden="true" /> : <Package size={48} aria-hidden="true" />}</span>{item.precio.ahorro > 0 && <Badge tone="primary">Con promoción</Badge>}{item.tipo === 'COMBO' && <span className="catalog-type">Combo ahorro</span>}</div><div className="catalog-content"><span className="caption">{item.tipo === 'COMBO' ? 'Combos y canastas' : 'Selección de la sucursal'}</span><h3>{item.nombre}</h3><p>{item.descripcion}</p><div className="catalog-price">{item.precio.ahorro > 0 && <del>{money(item.precio.precioLista)}</del>}<strong>{money(item.precio.precioFinal)}</strong><span className="caption">Por una unidad · promociones con {medioPago.toLocaleLowerCase('es')}</span></div><div className="catalog-bottom"><Badge tone={item.disponible ? 'success' : 'danger'}>{item.disponible ? `${number(item.disponible)} disponibles` : 'Sin disponible'}</Badge><Button variant="primary" onClick={() => setSelected(item)} disabled={item.disponible === 0} aria-label={`Reservar ${item.nombre}`}>Reservar</Button></div></div></article>)}</div>}
-    {!catalog.loading && !catalog.error && !items.length && <Empty action={<Button onClick={() => { setSearch(''); setTipo('TODOS'); }}>Ver todo el catálogo</Button>} />}
-    {selected && <ReserveForm item={selected} medioPago={medioPago} onClose={() => setSelected(null)} />}{manage && <Modal title="Gestionar reservas" description="Liberá unidades reservadas o registrá su despacho." onClose={() => setManage(false)}><div className="modal-body"><OperationForm mode="gestion-digital" compact onComplete={() => setManage(false)} onCancel={() => setManage(false)} /></div></Modal>}
+  const [type, setType] = useState('TODOS');
+  const [status, setStatus] = useState('TODOS');
+  const pendingIds = new Set(pending.map(e => e.stockId));
+  const rows = products.filter(p => `${p.nombre} ${p.id} ${p.descripcion}`.toLocaleLowerCase('es').includes(search.toLocaleLowerCase('es'))
+    && (category === 'TODAS' || (category === 'SIN_CATEGORIA' ? p.categoriaId === null : p.categoriaId === Number(category)))
+    && (type === 'TODOS' || p.tipo === type || (type === 'RESERVADOS' && p.tipo === 'SIMPLE' && (p.stockReservado || 0) > 0))
+    && (status === 'TODOS' || syncStatus(p, integration.catalogoDigital[p.id], pendingIds.has(p.id)).key === status));
+  return <section className="panel digital-stock"><div className="panel-heading"><div><h2>Stock del canal digital</h2><p>Compará las existencias locales con el último valor publicado.</p></div><span className="count-tag">{products.length} artículos</span></div>
+    <div className="table-toolbar"><div className="search-field"><Search size={24} aria-hidden="true" /><input aria-label="Buscar stock digital" placeholder="Buscar por nombre o código…" value={search} onChange={e => setSearch(e.target.value)} /></div>
+      <div className="filter-group"><select aria-label="Filtrar stock digital por categoría" value={category} onChange={e => setCategory(e.target.value)}><option value="TODAS">Todas las categorías</option><option value="SIN_CATEGORIA">Sin categoría</option>{data?.categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select><select aria-label="Filtrar stock digital" value={type} onChange={e => setType(e.target.value)}><option value="TODOS">Todos los artículos</option><option value="RESERVADOS">Simples con reservas</option><option value="SIMPLE">Artículos simples</option><option value="COMBO">Combos</option></select>
+        <select aria-label="Estado de sincronización" value={status} onChange={e => setStatus(e.target.value)}><option value="TODOS">Todos los estados</option><option value="PENDIENTE">Pendiente</option><option value="SINCRONIZADO">Sincronizado</option><option value="DESACTUALIZADO">Desactualizado</option><option value="SIN_ENVIO">Sin envío</option></select></div></div>
+    <div className="table-scroll" role="region" aria-label="Stock y reservas digitales" tabIndex={0}><table><thead><tr><th scope="col">Artículo</th><th scope="col" className="numeric">Reservado</th><th scope="col" className="numeric">Disponible local</th><th scope="col" className="numeric">Publicado online</th><th scope="col">Sincronización</th><th scope="col"><span className="sr-only">Acciones</span></th></tr></thead>
+      <tbody>{rows.map(p => {
+        const published = integration.catalogoDigital[p.id];
+        const state = syncStatus(p, published, pendingIds.has(p.id));
+        return <tr key={p.id}><td><div className="stacked-cell"><strong>{p.nombre}</strong><span className="caption">{sku(p.id)} · {p.tipo === 'COMBO' ? 'Combo · reservas en sus componentes' : 'Artículo simple'}</span></div></td>
+          <td className="numeric">{p.stockReservado === null ? '—' : number(p.stockReservado)}</td><td className="numeric available">{number(p.disponible)}</td><td className="numeric">{published === undefined ? '—' : number(Number(published))}</td><td><Badge tone={state.tone}>{state.label}</Badge></td>
+          <td><Button variant="ghost" icon={ArrowRightLeft} aria-label={`Registrar operación de ${p.nombre}`} onClick={() => onOperate(p.id)}>Operar</Button></td></tr>;
+      })}</tbody></table></div>
+    {!rows.length && <Empty title="Sin artículos para estos filtros" action={<Button onClick={() => { setSearch(''); setCategory('TODAS'); setType('TODOS'); setStatus('TODOS'); }}>Limpiar filtros</Button>} />}
+    <footer className="table-footer"><span>Mostrando {rows.length} de {products.length} artículos</span><span>Un valor sin envío no equivale a cero disponible</span></footer>
+  </section>;
+}
+
+export function DigitalPage({ embedded = false }: { embedded?: boolean }) {
+  const { data, error } = useStore();
+  const [operation, setOperation] = useState<{ id?: number } | null>(null);
+  if (!data) return null;
+  const { productos, integraciones } = data;
+  const simples = productos.filter(p => p.tipo === 'SIMPLE');
+  const pending = integraciones.entregas.filter(e => e.tipo === 'STOCK_DIGITAL' && e.estado === 'PENDIENTE');
+  const movements = data.movimientos.filter(m => ['RESERVA_DIGITAL', 'CANCELACION_RESERVA', 'DESPACHO_DIGITAL'].includes(m.tipo))
+    .sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id);
+  return <>
+    {!embedded && <PageHeading eyebrow="Control de stock · Coto Digital" title="Operaciones digitales" text="Gestioná las reservas y el despacho de mercadería del canal online."
+      actions={<Button variant="primary" icon={Plus} disabled={!!error || !productos.length} onClick={() => setOperation({})}>Registrar operación</Button>} />}
+    {!embedded && <div className="metrics-grid">
+      <Metric label="Unidades reservadas" value={simples.reduce((total, p) => total + (p.stockReservado || 0), 0)} hint="Comprometidas en artículos simples" icon={ClipboardList} />
+      <Metric label="Disponible para reservar" value={simples.reduce((total, p) => total + p.disponible, 0)} hint="Unidades simples en depósito" icon={Boxes} />
+      <Metric label="Sincronizaciones pendientes" value={pending.length} hint="Actualizaciones de disponibilidad" icon={RefreshCw} tone={pending.length ? 'warning' : ''} />
+      <Metric label="Despachos registrados" value={movements.filter(m => m.tipo === 'DESPACHO_DIGITAL').length} hint="Movimientos confirmados del canal" icon={Truck} />
+    </div>}
+    <AvailabilityTable products={productos} integration={integraciones} pending={pending} onOperate={id => setOperation({ id })} />
+    <p className="digital-note">Las reservas se controlan por artículo. Los combos comprometen unidades de sus componentes; los totales suman únicamente artículos simples.</p>
+    <section className="panel"><div className="panel-heading"><div><h2>Últimos movimientos digitales</h2><p>Reservas, cancelaciones y despachos confirmados · horario de Argentina.</p></div><a className="text-link" href="#/compras/actividad">Ver actividad <ArrowRight size={24} aria-hidden="true" /></a></div>
+      <div className="table-scroll" role="region" aria-label="Movimientos digitales" tabIndex={0}><table><thead><tr><th scope="col">Movimiento</th><th scope="col">Artículo</th><th scope="col">Operación</th><th scope="col" className="numeric">Cantidad</th><th scope="col">Operador y motivo</th><th scope="col">Fecha</th></tr></thead><tbody>{movements.slice(0, 10).map(m => <tr key={m.id}><td>{sku(m.id)}</td><td>{productos.find(p => p.id === m.stockId)?.nombre || `Artículo ${sku(m.stockId)}`}</td><td><Badge tone={m.tipo === 'DESPACHO_DIGITAL' ? 'success' : m.tipo === 'RESERVA_DIGITAL' ? 'info' : 'neutral'}>{movementLabels[m.tipo]}</Badge></td><td className="numeric">{number(m.cantidad)}</td><td><div className="stacked-cell digital-movement-detail"><span>{m.usuario}</span><span className="caption">{m.motivo}</span></div></td><td className="nowrap">{date(m.fecha)}</td></tr>)}</tbody></table></div>
+      {!movements.length && <Empty title="Sin movimientos digitales" text="Las operaciones confirmadas del canal aparecerán acá." />}
+      <footer className="table-footer"><span>Mostrando {Math.min(10, movements.length)} de {movements.length} movimientos</span><span>Del más reciente al más antiguo</span></footer>
+    </section>
+    {operation && <Modal title="Registrar operación digital" description="Registrá una reserva, liberá unidades o confirmá su despacho." onClose={() => setOperation(null)}><div className="modal-body"><OperationForm mode="gestion-digital" initialId={operation.id} compact onComplete={() => setOperation(null)} onCancel={() => setOperation(null)} /></div></Modal>}
   </>;
 }

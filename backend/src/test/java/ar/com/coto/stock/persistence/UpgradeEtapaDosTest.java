@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class UpgradeEtapaDosTest {
     @Test void actualizacionPreservaElInventarioYRecuperaLosPedidosPendientes() throws Exception {
         try (var conexion = DriverManager.getConnection("jdbc:h2:mem:" + UUID.randomUUID() + ";MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE")) {
-            for (String archivo : new String[]{"/etapa1/schema.sql", "/etapa1/data.sql", "/db/upgrade-etapa2.sql"}) {
+            for (String archivo : new String[]{"/etapa1/schema.sql", "/etapa1/data.sql", "/db/upgrade-etapa2.sql", "/db/upgrade-backoffice.sql", "/db/upgrade-proveedores.sql", "/db/upgrade-categorias.sql"}) {
                 try (var lector = new InputStreamReader(Objects.requireNonNull(getClass().getResourceAsStream(archivo)), StandardCharsets.UTF_8)) {
                     RunScript.execute(conexion, lector);
                 }
@@ -24,6 +24,10 @@ class UpgradeEtapaDosTest {
                         {"SELECT COUNT(*) FROM movimiento_stock", "14"},
                         {"SELECT COUNT(*) FROM auditoria_stock", "6"},
                         {"SELECT COUNT(*) FROM politica_reposicion", "5"},
+                        {"SELECT COUNT(*) FROM proveedor", "0"},
+                        {"SELECT COUNT(*) FROM categoria", "5"},
+                        {"SELECT COUNT(*) FROM producto WHERE categoria_id IS NULL", "6"},
+                        {"SELECT COUNT(*) FROM politica_reposicion WHERE proveedor_id IS NULL AND canal_alerta IS NULL", "5"},
                         {"SELECT COUNT(*) FROM promocion", "3"},
                         {"SELECT clave FROM evento_integracion", "pedido:1"}}) {
                     try (var resultado = sentencia.executeQuery(caso[0])) {

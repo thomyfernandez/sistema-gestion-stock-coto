@@ -43,8 +43,8 @@ class AplicacionIntegracionTest {
     @Autowired JdbcTemplate jdbc;
 
     @BeforeEach void reiniciar() {
-        for (String tabla : List.of("evento_integracion", "promocion", "politica_reposicion", "auditoria_stock", "pedido_reposicion",
-                "movimiento_stock", "linea_combo", "stock", "producto", "bloqueo_operacion")) jdbc.update("DELETE FROM " + tabla);
+        for (String tabla : List.of("imagen_producto", "configuracion_avisos", "evento_integracion", "promocion", "politica_reposicion", "auditoria_stock", "pedido_reposicion",
+                "movimiento_stock", "linea_combo", "stock", "producto", "categoria", "proveedor", "bloqueo_operacion")) jdbc.update("DELETE FROM " + tabla);
         new ResourceDatabasePopulator(new ClassPathResource("data.sql")).execute(dataSource);
         mensajes.setDisponible(true); erp.setDisponible(true); digital.setDisponible(true);
         mensajes.limpiar(); erp.limpiar(); digital.limpiar();
@@ -210,6 +210,19 @@ class AplicacionIntegracionTest {
     @Test void noSeRecibeUnPedidoTodaviaNoEnviado() {
         assertThrows(IllegalStateException.class, () -> gestor.recibirPedido(1, "demo"));
         assertEquals(6, gestor.consultarStock(3).getDisponible());
+    }
+
+    @Test void recepcionFuncionaDespuesDeRenovarLasConexionesDelPool() throws Exception {
+        integraciones.procesarPendientes();
+        dataSource.unwrap(com.zaxxer.hikari.HikariDataSource.class).getHikariPoolMXBean().softEvictConnections();
+
+        var resultado = gestor.recibirPedido(1, "recepcion.demo");
+        assertEquals(36, resultado.disponibilidades().get(3));
+        assertEquals(36, gestor.consultarStock(3).getDisponible());
+        assertEquals(EstadoPedido.RECIBIDO, pedidosDe(3).getFirst().pedido().getEstado());
+        assertEquals(15, contar("movimiento_stock"));
+        assertThrows(IllegalStateException.class, () -> gestor.recibirPedido(1, "recepcion.demo"));
+        assertEquals(15, contar("movimiento_stock"));
     }
 
     @Test void pedidoCanceladoNoSeEnviaAlERP() {

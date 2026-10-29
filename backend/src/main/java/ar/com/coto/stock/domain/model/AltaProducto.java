@@ -1,7 +1,10 @@
 package ar.com.coto.stock.domain.model;
 
-public record AltaProducto(String nombre, String descripcion, double precio) {
+public record AltaProducto(String nombre, String descripcion, double precio, ImagenProducto imagen, Integer categoriaId) {
+    public AltaProducto(String nombre, String descripcion, double precio) { this(nombre, descripcion, precio, null, null); }
+    public AltaProducto(String nombre, String descripcion, double precio, ImagenProducto imagen) { this(nombre, descripcion, precio, imagen, null); }
     public AltaProducto {
+        if (categoriaId != null) Reglas.positivo(categoriaId, "categoriaId");
         nombre = Reglas.texto(nombre, "nombre");
         descripcion = Reglas.texto(descripcion, "descripcion");
         Reglas.noNegativo(precio, "precio");

@@ -50,7 +50,8 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <version>2.4.240</version>
+            <!-- Corrige CHECK(IN ...) al renovar conexiones: H2 #4302 / #4311. -->
+            <version>2.5.252</version>
             <scope>runtime</scope>
         </dependency>
     </dependencies>

@@ -1,6 +1,6 @@
 # Sistema de Gestión de Stock — COTO C.I.C.S.A.
 
-Trabajo Práctico Integrador. **Las cuatro etapas implementadas**: dominio Java puro, seis patrones GoF, servicios, persistencia JPA, adaptadores simulados, API REST y frontend React con el Design System COTO. Una única sucursal, sin entidad `Sucursal`.
+Backoffice de inventario de sucursal de COTO: existencias, recepción de pedidos, compras y reposición automática, y reservas de Coto Digital. Dominio Java puro con seis patrones GoF, servicios, persistencia JPA, adaptadores de integración, API REST y frontend React con el [Design System COTO](docs/design-system/README.md). Opera una única sucursal, sin entidad `Sucursal`.
 
 ## Ejecutar
 
@@ -61,7 +61,9 @@ npm ci
 npm run dev
 ```
 
-Abrir [COTO Gestión de stock](http://127.0.0.1:5173). Las cuatro vistas —Sucursal, Recepción, Compras y Coto Digital— consumen la API real. Vite reenvía `/api` al backend; no se necesitan servicios externos ni datos simulados en el navegador.
+Abrir [COTO Gestión de stock](http://127.0.0.1:5173). Configuración incluye categorías y una agenda de contactos internos. En Compras → Reposición se asigna un contacto y un canal de aviso por artículo; sin asignación se usa el de su categoría y, si tampoco tiene, el general. [Uso y migración](docs/contactos-y-avisos.md).
+
+Las cuatro vistas —Stock, Recepción, Compras y Configuración— consumen la API real. Vite reenvía `/api` al backend; no se necesitan servicios externos ni datos simulados en el navegador.
 
 Si el backend usa otro puerto, copiar `frontend/.env.example` a `frontend/.env.local`, cambiar `API_PROXY_TARGET` y reiniciar Vite. Por ejemplo, `API_PROXY_TARGET=http://127.0.0.1:18080`.
 
@@ -72,7 +74,7 @@ npm run build
 npm run preview
 ```
 
-La compilación queda en `frontend/dist`; la vista previa abre en [127.0.0.1:4173](http://127.0.0.1:4173) y utiliza el mismo proxy. El backend debe seguir ejecutándose. Más configuración y recorridos de prueba en [Etapa 4](docs/etapa-4.md).
+La compilación queda en `frontend/dist`; la vista previa abre en [127.0.0.1:4173](http://127.0.0.1:4173) y utiliza el mismo proxy. El backend debe seguir ejecutándose. Más configuración y recorridos de prueba en [Frontend](docs/etapa-4.md).
 
 ## Contenido del backend
 
@@ -82,12 +84,22 @@ La compilación queda en `frontend/dist`; la vista previa abre en [127.0.0.1:417
 | Casos de uso | Contrato `GestionInventario`: movimientos, reservas, recepción/cancelación de pedidos, altas de productos y combos, políticas y promociones |
 | Strategy | Contextos `ServicioReposicion` y `ServicioNotificaciones`, con estrategias explícitas |
 | Decorator | `ServicioValorizacion` construye la cadena desde promociones SQL y redondea el total al final |
-| JPA | Siete repositorios concretos, modelos relacionales separados del dominio y unidad de trabajo explícita |
+| JPA | Diez repositorios concretos, modelos relacionales separados del dominio y unidad de trabajo explícita |
 | Adapter | `AdaptadorProveedor`, `AdaptadorProveedorSMS`, `AdaptadorERP`, `AdaptadorCotoDigital` y APIs simuladas de firmas incompatibles |
 | Consistencia | Bloqueo SQL del inventario, auditoría y outbox en la misma transacción; entrega después del commit y reintentos |
-| REST | 35 operaciones HTTP, DTOs validados, errores RFC 9457, CORS local y simulación de proveedores en demo |
+| REST | 47 operaciones HTTP, DTOs validados, errores RFC 9457, CORS local y simulación de proveedores en demo |
 
 Se conserva `disponible = físico − exhibición − reservado`, sin columna de disponible en `stock`. Simples y combos siguen en una sola tabla con discriminador. Los combos no tienen contadores propios.
+
+## Trabajo en equipo con IA
+
+El repositorio incluye un equipo de agentes para Claude Code (líder, diseñador UX/UI, implementador, tester y reviewer) y una memoria SQLite versionada que comparten las IAs de los tres integrantes. Las reglas del proyecto están en [CLAUDE.md](CLAUDE.md) y el flujo completo se inicia con `/equipo <pedido>`. Antes de empezar a trabajar, consultar el contexto del equipo:
+
+```sh
+node --experimental-sqlite --no-warnings .claude/memoria/memoria.mjs contexto
+```
+
+Detalle en [Equipo de agentes y memoria compartida](docs/harness-engineering.md).
 
 ## Organización
 
@@ -95,8 +107,9 @@ Se conserva `disponible = físico − exhibición − reservado`, sin columna de
 frontend/
   src/
     components/         Controles, modales y formularios reutilizables
-    pages/              Sucursal, recepción, compras y canal digital
-    styles/             Tokens COTO y diseño adaptable
+    pages/              Stock, recepción, compras y configuración
+    styles/             Tokens y átomos del Design System COTO, diseño adaptable
+    design-system/      Catálogo vivo (design-system.html)
     api.ts              Contratos HTTP tipados y errores
     store.tsx           Lecturas, actualización y coordinación de operaciones
 backend/
@@ -121,7 +134,7 @@ backend/
   src/test/java/ar/com/coto/stock/
     domain/             Invariantes y patrones
     application/        Servicios y transacciones completas con Spring/JPA
-    persistence/        Scripts SQL y actualización desde Etapa 1
+    persistence/        Scripts SQL y actualización desde el esquema v0.1
     presentation/       Contratos HTTP completos con MockMvc
 ```
 
@@ -129,7 +142,7 @@ La separación mantiene las cuatro capas solicitadas. `config` es la raíz de co
 
 ## Base de datos
 
-`schema.sql` y `data.sql` inicializan una base vacía. Además de las seis tablas originales, esta etapa agrega `politica_reposicion`, `promocion`, `evento_integracion` y `bloqueo_operacion`.
+`schema.sql` y `data.sql` inicializan una base vacía. Además de las seis tablas del esquema inicial, se agregan `politica_reposicion`, `promocion`, `evento_integracion` y `bloqueo_operacion`. Los ajustes de backoffice agregan `configuracion_avisos`, `imagen_producto`, `proveedor` (agenda de contactos internos) y `categoria`.
 
 El perfil `demo` usa H2 en memoria y sus datos se recrean con cada ejecución. Para conservar información entre reinicios, está disponible el perfil PostgreSQL. Crear primero una base local y ejecutar **una sola vez**:
 
@@ -146,14 +159,17 @@ java -jar backend/target/gestion-stock-0.3.0-SNAPSHOT.jar \
   --spring.profiles.active=postgres
 ```
 
-El perfil PostgreSQL valida las tablas y no ejecuta inicializaciones al arrancar. Si la base ya contiene el esquema y los datos de muestra de la **Etapa 1**, utilizar en su lugar:
+El perfil PostgreSQL valida las tablas y no ejecuta inicializaciones al arrancar. Si la base ya contiene el esquema inicial (**v0.1**) y sus datos de muestra, utilizar en su lugar:
 
 ```sh
 psql -v ON_ERROR_STOP=1 -1 -d coto_stock \
-  -f backend/src/main/resources/db/upgrade-etapa2.sql
+  -f backend/src/main/resources/db/upgrade-etapa2.sql \
+  -f backend/src/main/resources/db/upgrade-backoffice.sql \
+  -f backend/src/main/resources/db/upgrade-proveedores.sql \
+  -f backend/src/main/resources/db/upgrade-categorias.sql
 ```
 
-Esta actualización agrega las tablas/configuraciones de la Etapa 2 y encola pedidos pendientes sin borrar el inventario existente. Se ejecuta una sola vez y está pensada para la base universitaria de la Etapa 1. El modo `-1` aplica todo en una transacción.
+Estas actualizaciones agregan las tablas/configuraciones de reposición, avisos, imágenes, contactos y categorías, y encolan pedidos pendientes sin borrar el inventario existente. Se ejecuta una sola vez y está pensada para bases creadas con el esquema v0.1. El modo `-1` aplica todo en una transacción. Si ya se aplicaron migraciones anteriores, ejecutar solamente las que falten, en el orden indicado.
 
 ## Verificación
 
@@ -161,17 +177,29 @@ Esta actualización agrega las tablas/configuraciones de la Etapa 2 y encola ped
 mvn -f backend/pom.xml test
 ```
 
-La suite incluye las 59 pruebas originales y pruebas de integración reales con Spring, Hibernate y H2. Verifica reservas concurrentes, rollback tardío, auditoría correlacionada, reposición sin duplicados, reintentos FIFO, episodios de alerta persistidos, recepción única, alta de combos y promociones acumulables. Los proveedores son simulados: no se envían correos, SMS, WhatsApp ni pedidos reales.
+La suite incluye las pruebas de dominio y pruebas de integración reales con Spring, Hibernate y H2. Verifica reservas concurrentes, rollback tardío, auditoría correlacionada, reposición sin duplicados, reintentos FIFO, episodios de alerta persistidos, recepción única, alta de combos y promociones acumulables. Los proveedores son simulados: no se envían correos, SMS, WhatsApp ni pedidos reales.
 
-Verificación realizada: **129 pruebas aprobadas, sin fallos ni errores** (43 HTTP), JAR empaquetado y **37 solicitudes de Postman comprobadas contra el servidor HTTP real**. La prueba del servidor usó el puerto 18080; el puerto predeterminado para uso normal es 8080.
+Verificación actual: **153 pruebas aprobadas, sin fallos ni errores** (65 HTTP), JAR empaquetado. Incluye regresiones por renovación de conexiones de H2 y pruebas de avisos compartidos, contactos internos, destinatarios por artículo/categoría, clasificación del catálogo e imágenes de productos. La validación de la API también comprobó **37 solicitudes de Postman contra el servidor HTTP real**. La prueba del servidor usó el puerto 18080; el puerto predeterminado para uso normal es 8080.
 
-Los scripts y el mapeo JPA se verifican con H2 compatible con PostgreSQL. El perfil PostgreSQL está configurado; esta entrega no se ejecutó contra un servidor PostgreSQL real.
+Los scripts y el mapeo JPA se verifican con H2 compatible con PostgreSQL. El perfil PostgreSQL está configurado; todavía no se validó contra un servidor PostgreSQL real.
 
 ## Documentación
 
-- [Etapa 4: frontend React, Design System, ejecución y validación](docs/etapa-4.md).
-- [Etapa 3: endpoints, cuerpos JSON y pruebas de los seis patrones](docs/etapa-3.md).
-- [Etapa 2: contratos, patrones, transacciones y decisiones](docs/etapa-2.md).
-- [Etapa 1: explicación original del dominio y modelo SQL](docs/etapa-1.md).
+- [Design System COTO: color, tipografía, grillas, elevaciones, íconos y átomos](docs/design-system/README.md).
 
-El frontend se verificó con TypeScript, compilación de producción y recorridos reales en navegador de escritorio y móvil. Los detalles y las capturas están en la documentación de la Etapa 4.
+- [Equipo de agentes (harness) y memoria compartida](docs/harness-engineering.md).
+
+- [Categorías: clasificación, filtros y destinatarios compartidos](docs/categorias.md).
+
+- [Contactos internos y avisos por producto](docs/contactos-y-avisos.md).
+
+- [Ajustes de backoffice: Stock unificado, avisos compartidos, imágenes y actualización de la base](docs/ajustes-backoffice.md).
+
+- [Corrección de H2: recepción de pedidos después de renovar conexiones](docs/correccion-h2.md).
+
+- [v0.4 — Frontend React: vistas, estado, ejecución y validación](docs/etapa-4.md).
+- [v0.3 — API REST: endpoints, cuerpos JSON y pruebas de los seis patrones](docs/etapa-3.md).
+- [v0.2 — Aplicación: contratos, patrones, transacciones y decisiones](docs/etapa-2.md).
+- [v0.1 — Dominio y modelo SQL inicial](docs/etapa-1.md).
+
+El frontend se verificó con TypeScript, compilación de producción y recorridos reales en navegador de escritorio y móvil. Los detalles y las capturas están en la documentación del frontend.

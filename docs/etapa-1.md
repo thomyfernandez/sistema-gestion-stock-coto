@@ -1,12 +1,12 @@
-> Documento histórico de la Etapa 1. La versión vigente del proyecto se describe en el README de la raíz y en etapa-2.md.
+> Documento histórico de la versión 0.1. La versión vigente del proyecto se describe en el README de la raíz y en etapa-2.md.
 
 # Sistema de Gestión de Stock — COTO C.I.C.S.A.
 
-Trabajo Práctico Integrador. **Entrega: Etapa 1**, con dominio Java puro, modelo SQL y pruebas ejecutables. Los datos comerciales son ficticios.
+**Versión 0.1**: dominio Java puro, modelo SQL y pruebas ejecutables. Los datos comerciales son ficticios.
 
-El proyecto representa **una única sucursal**. No existe una entidad ni una tabla `Sucursal`. Spring Boot se incorporará al implementar los servicios y la persistencia en la Etapa 2; esta entrega no inicia un servidor HTTP.
+El proyecto representa **una única sucursal**. No existe una entidad ni una tabla `Sucursal`. Spring Boot se incorporará al implementar los servicios y la persistencia en la v0.2; esta versión no inicia un servidor HTTP.
 
-## Ejecutar la entrega
+## Ejecutar esta versión
 
 Requisitos: JDK 21 o superior y Maven 3.9 o superior.
 
@@ -90,22 +90,22 @@ backend/
         └── persistence/SchemaTest.java
 ```
 
-Los `package-info.java` documentan los paquetes de las siguientes etapas. No contienen implementaciones anticipadas de servicios, adaptadores ni endpoints.
+Los `package-info.java` documentan los paquetes de las siguientes versiones. No contienen implementaciones anticipadas de servicios, adaptadores ni endpoints.
 
 ## Separación de las cuatro capas
 
-| Capa | Responsabilidad | Entrega |
+| Capa | Responsabilidad | Versión |
 | --- | --- | --- |
-| Presentación: `controller`, `dto` | HTTP y validación de contratos; acceso a interfaces de casos de uso | Etapa 3 |
-| Aplicación: `service` | Orquestación, `GestorInventario`, selección de estrategias y transacciones | Etapa 2 |
-| Dominio: `domain` | Invariantes, entidades, Composite, Observer, estrategias y decoradores | Etapa 1 |
-| Persistencia e integración: `repository`, `adapter` | SQL/JPA y traducción de contratos externos | Etapa 2 |
+| Presentación: `controller`, `dto` | HTTP y validación de contratos; acceso a interfaces de casos de uso | v0.3 |
+| Aplicación: `service` | Orquestación, `GestorInventario`, selección de estrategias y transacciones | v0.2 |
+| Dominio: `domain` | Invariantes, entidades, Composite, Observer, estrategias y decoradores | v0.1 |
+| Persistencia e integración: `repository`, `adapter` | SQL/JPA y traducción de contratos externos | v0.2 |
 
 Las colaboraciones externas del dominio se expresan mediante interfaces en `domain.port`. De esa manera `AlertaStockBajo` puede enviar a `ServicioNotificaciones` mediante `EmisorAlertas`, sin importar una clase de aplicación. Los futuros repositorios/adaptadores implementarán los contratos correspondientes. El dominio no importa Spring, JPA, JDBC ni clases de las otras capas.
 
 La separación por capas describe el flujo de responsabilidad. La dirección de dependencias de código respeta inversión de dependencias: la infraestructura implementa contratos del núcleo. El dominio no dependerá de implementaciones JPA para acceder a la cuarta capa.
 
-En la Etapa 2, `GestorInventario` será la única entrada pública a casos de uso que cambien existencias. En esta entrega se prueban directamente los métodos de las entidades: no hay una entrada de aplicación alternativa al gestor.
+En la v0.2, `GestorInventario` será la única entrada pública a casos de uso que cambien existencias. En esta versión se prueban directamente los métodos de las entidades: no hay una entrada de aplicación alternativa al gestor.
 
 ## Modelo relacional
 
@@ -147,7 +147,7 @@ Datos incluidos:
 
 También se incluyen 14 movimientos de apertura, un pedido pendiente de 30 leches y seis registros de auditoría. No se deben reaplicar esos movimientos sobre los contadores ya cargados: el historial explica el snapshot inicial. La prueba de reconstrucción los aplica sobre stocks en cero y verifica su correspondencia.
 
-## Patrones GoF de esta etapa
+## Patrones GoF de esta versión
 
 | Patrón | Roles explícitos |
 | --- | --- |
@@ -157,7 +157,7 @@ También se incluyen 14 movimientos de apertura, un pedido pendiente de 30 leche
 | Strategy: notificaciones | Strategy `CanalNotificador`; concretas `EmailNotificador`, `SmsNotificador`, `WhatsAppNotificador` |
 | Decorator | Component `ItemValorizable`; ConcreteComponent `PrecioLista`; Decorator `DecoradorPrecio`; concretos `DescuentoDecorator`, `PromocionDecorator` |
 
-Los dos casos de Strategy constituyen un mismo patrón. Sus contextos `ServicioReposicion` y `ServicioNotificaciones` corresponden a la Etapa 2. `ProveedorMensajeria` es únicamente el contrato Target necesario para conectar las estrategias: la implementación de Adapter y el Singleton explícito también quedan para esa etapa.
+Los dos casos de Strategy constituyen un mismo patrón. Sus contextos `ServicioReposicion` y `ServicioNotificaciones` corresponden a la v0.2. `ProveedorMensajeria` es únicamente el contrato Target necesario para conectar las estrategias: la implementación de Adapter y el Singleton explícito también quedan para esa versión.
 
 ### Composite y reglas de movimientos
 
@@ -178,7 +178,7 @@ Las operaciones validan la zona de origen antes de modificarla. Las mermas de de
 
 En combos con componentes independientes, la disponibilidad es `min(disponibleComponente / cantidadEnCombo)`, con división entera. Si diferentes ramas contienen el mismo artículo, primero se suman las cantidades requeridas por unidad de combo: así no se cuenta dos veces una misma existencia. Todas las ramas deben reutilizar la misma instancia de un stock identificado; el futuro repositorio debe reconstruir el grafo usando un mapa por ID.
 
-Una reserva, cancelación o despacho de un combo valida el plan completo, modifica las hojas y recién entonces notifica. Una operación rechazada no deja cambios parciales. El monitor compartido protege el modelo en una JVM; las transacciones y el control de concurrencia SQL siguen siendo responsabilidad de la Etapa 2.
+Una reserva, cancelación o despacho de un combo valida el plan completo, modifica las hojas y recién entonces notifica. Una operación rechazada no deja cambios parciales. El monitor compartido protege el modelo en una JVM; las transacciones y el control de concurrencia SQL siguen siendo responsabilidad de la v0.2.
 
 Ejemplo ejecutable en JShell, tras compilar, con `jshell --class-path backend/target/classes`:
 
@@ -208,7 +208,7 @@ System.out.println(combo.getDisponible()); // 32
 
 `SincronizadorCotoDigital` delega en `PublicadorDisponibilidad`. `AuditorMovimientos` delega en `RegistroAuditoria`, con un `Clock` inyectable. El disponible anterior es `null` para la primera observación; se puede realizar una llamada inicial a `actualizar` al suscribir para establecer una línea de base. También audita despachos y mermas en góndola, donde el disponible puede conservarse aunque cambie el físico.
 
-Una excepción de un observador se registra y no impide avisar a los restantes ni revierte el stock ya modificado. Todavía no hay garantías de entrega durable o coordinación con un commit SQL: se definirán con los servicios de la Etapa 2. Un grafo con varios caminos puede propagar más de una notificación con el mismo estado final; las integraciones deberán ser idempotentes.
+Una excepción de un observador se registra y no impide avisar a los restantes ni revierte el stock ya modificado. Todavía no hay garantías de entrega durable o coordinación con un commit SQL: se definirán con los servicios de la v0.2. Un grafo con varios caminos puede propagar más de una notificación con el mismo estado final; las integraciones deberán ser idempotentes.
 
 Ejemplo adicional para la misma sesión de JShell:
 
@@ -236,9 +236,9 @@ Las políticas usan disponible, no físico. Sus parámetros son explícitos y va
 
 Una cantidad cero significa que el futuro contexto no debe crear un pedido. `PedidoReposicion` exige cantidad positiva y protege la fecha con copias defensivas. Sus estados admiten `PENDIENTE → ENVIADO → RECIBIDO` o `PENDIENTE → CANCELADO`. Marcar recibido no altera existencias por sí mismo: el gestor coordinará el movimiento de recepción.
 
-Las políticas aceptan `Stock` como indica el contrato; los pedidos a proveedores corresponden a hojas simples. El futuro servicio evaluará los componentes, descontará pedidos pendientes según la política elegida y evitará pedidos duplicados; no se implementa esa orquestación en esta etapa.
+Las políticas aceptan `Stock` como indica el contrato; los pedidos a proveedores corresponden a hojas simples. El futuro servicio evaluará los componentes, descontará pedidos pendientes según la política elegida y evitará pedidos duplicados; no se implementa esa orquestación en esta versión.
 
-Las tres estrategias de canal dependen de `ProveedorMensajeria`, nunca de una API externa. En la Etapa 2 cada una recibirá un adaptador configurado para su canal (`EMAIL`, `SMS` o `WHATSAPP`). Aquí se pueden ejecutar con una lambda que registre los mensajes, como lo hacen las pruebas.
+Las tres estrategias de canal dependen de `ProveedorMensajeria`, nunca de una API externa. En la v0.2 cada una recibirá un adaptador configurado para su canal (`EMAIL`, `SMS` o `WHATSAPP`). Aquí se pueden ejecutar con una lambda que registre los mensajes, como lo hacen las pruebas.
 
 ### Decorator y promociones acumulables
 
@@ -257,7 +257,7 @@ precio = new PromocionDecorator(precio, "Descuento Medio de Pago", 15); // 1530
 System.out.println(precio.getPrecio());
 ```
 
-Los porcentajes se aplican sobre el resultado envuelto: 10% seguido de 20% deja 72% del precio original. Se utiliza `BigDecimal` en las operaciones internas; se conserva `double` en la interfaz requerida. La política de redondeo monetario a dos decimales se centralizará en `ServicioValorizacion` en la Etapa 2. El precio base del producto nunca se modifica.
+Los porcentajes se aplican sobre el resultado envuelto: 10% seguido de 20% deja 72% del precio original. Se utiliza `BigDecimal` en las operaciones internas; se conserva `double` en la interfaz del contrato. La política de redondeo monetario a dos decimales se centralizará en `ServicioValorizacion` en la v0.2. El precio base del producto nunca se modifica.
 
 ## SOLID y GRASP
 
@@ -267,10 +267,10 @@ Los porcentajes se aplican sobre el resultado envuelto: 10% seguido de 20% deja 
 - **Abierto/cerrado e interfaces pequeñas:** se pueden agregar estrategias, observadores y decoradores sin modificar a sus clientes. Los puertos tienen una sola responsabilidad.
 - **Bajo acoplamiento e inversión de dependencias:** los colaboradores se inyectan por constructor y las salidas del dominio se expresan como contratos propios.
 
-## Verificación y siguientes entregas
+## Verificación y siguientes versiones
 
 La suite cubre disponibilidad, contadores por tipo de movimiento, invariantes, combos anidados, componentes compartidos, ciclos, reservas fallidas sin efectos parciales, concurrencia, observadores, políticas, transiciones de pedidos, acumulación de promociones y restricciones SQL.
 
-Verificación de esta entrega: `mvn -o -B -f backend/pom.xml verify` completado con **59 pruebas, 0 fallos, 0 errores** y generación de `backend/target/gestion-stock-0.1.0-SNAPSHOT.jar`. Los avisos de observadores fallidos en la salida de pruebas corresponden a fallas simuladas intencionalmente para comprobar su aislamiento.
+Verificación de esta versión: `mvn -o -B -f backend/pom.xml verify` completado con **59 pruebas, 0 fallos, 0 errores** y generación de `backend/target/gestion-stock-0.1.0-SNAPSHOT.jar`. Los avisos de observadores fallidos en la salida de pruebas corresponden a fallas simuladas intencionalmente para comprobar su aislamiento.
 
-La Etapa 1 termina aquí. La Etapa 2 necesita confirmación e incorporará `GestorInventario` Singleton clásico, los cuatro servicios, repositorios JPA y Adapter para ERP, proveedor de mensajería y Coto Digital. La Etapa 3 agregará REST/DTO y la Etapa 4 el frontend React con el Design System indicado.
+La versión 0.1 termina aquí. La [v0.2](etapa-2.md) incorpora `GestorInventario` Singleton clásico, los cuatro servicios, repositorios JPA y Adapter para ERP, proveedor de mensajería y Coto Digital. La [v0.3](etapa-3.md) agrega REST/DTO y la [v0.4](etapa-4.md) el frontend React con el Design System COTO.

@@ -11,13 +11,14 @@ public final class Respuestas {
     public record Componente(int stockId, String nombre, String tipo, int cantidadEnCombo, int disponible) { }
     public record Producto(int id, String nombre, String descripcion, BigDecimal precio, String tipo,
                            int disponible, Integer stockFisico, Integer stockExhibicion, Integer stockReservado,
-                           List<Componente> componentes) { }
+                           List<Componente> componentes, String imagenUrl, Integer categoriaId) { }
+    public record ConfiguracionAvisos(String canal, String email, String telefono) { }
     public record Pedido(long id, int stockId, Instant fecha, int cantidad, String estado) { }
     public record Movimiento(long id, int stockId, String tipo, int cantidad, Instant fecha, String motivo, String usuario) { }
     public record ResultadoMovimiento(long id, Map<Integer, Integer> disponibilidades, List<Pedido> pedidosGenerados) { }
     public record Auditoria(int stockId, Instant fecha, Integer disponibleAnterior, int disponibleActual, String detalle) { }
     public record Politica(int stockId, String tipo, int puntoPedido, int stockObjetivo, BigDecimal demandaDiaria,
-                           int diasCobertura, BigDecimal factorEstacional, int umbralAlerta, String destinoAlerta) { }
+                           int diasCobertura, BigDecimal factorEstacional, int umbralAlerta, String destinoAlerta, Long contactoId, String canalAlerta) { }
     public record Promocion(long id, int productoId, String tipo, BigDecimal porcentaje, int orden, boolean activa, String medioPago) { }
     public record Precio(int productoId, int cantidad, BigDecimal precioLista, BigDecimal precioFinal,
                          BigDecimal ahorro, List<Long> promocionesAplicadas) { }

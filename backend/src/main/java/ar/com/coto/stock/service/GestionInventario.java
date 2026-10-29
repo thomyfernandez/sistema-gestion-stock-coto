@@ -15,8 +15,10 @@ public interface GestionInventario {
     List<PedidoRegistrado> evaluarReposicion();
     Stock consultarStock(int id);
     List<Stock> listarStock();
+    ImagenProducto consultarImagen(int productoId);
     Stock crearProducto(AltaProducto datos);
     ComboStock crearCombo(AltaProducto datos, List<ComponenteCombo> componentes);
+    void asignarCategoria(int productoId, Integer categoriaId);
     void configurarPolitica(PoliticaReposicion politica);
     Promocion guardarPromocion(Promocion promocion);
     List<Promocion> listarPromociones(int productoId);

@@ -1,6 +1,6 @@
 -- Aplicar una vez sobre una base inicializada con schema.sql + data.sql de la Etapa 1.
 -- No elimina ni modifica productos, existencias, movimientos, pedidos o auditorías previas.
--- La configuración/promociones de ejemplo corresponden a los IDs del fixture universitario.
+-- La configuración/promociones de ejemplo corresponden a los IDs de los datos de demostración.
 -- Ejecutar con psql -v ON_ERROR_STOP=1 -1 para que toda la actualización sea atómica.
 -- Dos filas de coordinación: inventario y despacho de integraciones. Sin entidad Sucursal.
 CREATE TABLE bloqueo_operacion (id INTEGER PRIMARY KEY);

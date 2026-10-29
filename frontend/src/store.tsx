@@ -26,16 +26,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     current.current = controller;
     setLoading(true);
     try {
-      const [productos, pedidos, movimientos, auditoria, integraciones] = await Promise.all([
+      const [productos, pedidos, movimientos, auditoria, integraciones, avisos, contactos, categorias] = await Promise.all([
         api.productos(controller.signal), api.pedidos(controller.signal), api.movimientos(controller.signal),
-        api.auditoria(controller.signal), api.integraciones(controller.signal),
+        api.auditoria(controller.signal), api.integraciones(controller.signal), api.avisos(controller.signal), api.contactos(controller.signal), api.categorias(controller.signal),
       ]);
       const entries = await Promise.all(productos.filter(p => p.tipo === 'SIMPLE').map(async p => {
         try { return [p.id, await api.politica(p.id, controller.signal)] as const; }
         catch (e) { if (e instanceof ApiError && e.status === 404) return null; throw e; }
       }));
       if (controller.signal.aborted) return;
-      setData({ productos, pedidos, movimientos, auditoria, integraciones, politicas: Object.fromEntries(entries.filter(e => e !== null)) });
+      setData({ categorias, contactos, avisos, productos, pedidos, movimientos, auditoria, integraciones, politicas: Object.fromEntries(entries.filter(e => e !== null)) });
       setError(null); setUpdated(new Date()); setRevision(r => r + 1);
     } catch (e) {
       if (!controller.signal.aborted) { setError(e as Error); throw e; }

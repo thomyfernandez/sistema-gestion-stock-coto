@@ -1,0 +1,4 @@
+# Memoria compartida del equipo: el espejo de texto combina las filas de todos (una por línea).
+.claude/memoria/memoria.sql merge=union text eol=lf
+# La base SQLite es binaria; tras un merge se reconstruye con `memoria.mjs sincronizar`.
+.claude/memoria/memoria.db binary

@@ -1,10 +1,10 @@
-> Documentación de la Etapa 2. La API HTTP y los comandos de la versión vigente se encuentran en el README y en etapa-3.md.
+> Documentación de la versión 0.2. La API HTTP y los comandos de la versión vigente se encuentran en el README y en etapa-3.md.
 
-# Etapa 2 — Aplicación, persistencia e integración
+# v0.2 — Aplicación, persistencia e integración
 
 ## Alcance
 
-La entrega implementa los servicios de aplicación, el Singleton clásico, repositorios JPA y Adapter para ERP, mensajería y Coto Digital. El dominio de la Etapa 1 conserva sus patrones e invariantes. No se agregan controladores REST ni frontend.
+Esta versión implementa los servicios de aplicación, el Singleton clásico, repositorios JPA y Adapter para ERP, mensajería y Coto Digital. El dominio de la v0.1 conserva sus patrones e invariantes. No se agregan controladores REST ni frontend.
 
 El arranque está en `StockApplication`. `ConfiguracionAplicacion` conecta los contratos con sus implementaciones. Se utiliza Spring Boot 4.1.1, Java 21, Hibernate y SQL definido explícitamente; Hibernate valida el esquema y no lo genera.
 
@@ -27,7 +27,7 @@ Los futuros controladores dependerán de `GestionInventario`. Los métodos que c
 
 También hay consultas de inventario, promociones, movimientos, auditoría y pedidos. Devuelven modelos del dominio reconstruidos, nunca entidades JPA ni objetos administrados por el EntityManager. Mutar una copia consultada no modifica SQL.
 
-Los tipos `AltaProducto`, `ComponenteCombo`, `PedidoRegistrado` y `MovimientoRegistrado` son valores/contratos internos. Los DTOs HTTP se definirán en la Etapa 3.
+Los tipos `AltaProducto`, `ComponenteCombo`, `PedidoRegistrado` y `MovimientoRegistrado` son valores/contratos internos. Los DTOs HTTP se definirán en la v0.3.
 
 ## Una transacción por movimiento
 
@@ -115,11 +115,11 @@ Las APIs externas simuladas registran llamadas y permiten `setDisponible(false)`
 
 Cada lote procesa como máximo 100 eventos en orden de ID, bajo un bloqueo SQL exclusivo de envíos y el bloqueo del inventario. Este último protege las transiciones de pedidos frente a una cancelación o recepción concurrente. La primera falla detiene el lote, conserva el evento pendiente y registra el error: se evita que una sincronización vieja sobrescriba una nueva. En este prototipo, un proveedor caído puede demorar eventos de los otros canales; separar colas por destino sería una mejora para mayor volumen.
 
-La entrega es **al menos una vez**: si un proveedor acepta el envío y el proceso cae antes de confirmar su estado, habrá un reintento. El ERP simulado es idempotente por referencia y el inventario digital aplica valores absolutos. La API de mensajes solicitada no recibe una clave de idempotencia y por eso un SMS/email/WhatsApp podría repetirse en esa ventana. No se promete entrega exactamente una vez.
+La entrega es **al menos una vez**: si un proveedor acepta el envío y el proceso cae antes de confirmar su estado, habrá un reintento. El ERP simulado es idempotente por referencia y el inventario digital aplica valores absolutos. La API de mensajes del proveedor no recibe una clave de idempotencia y por eso un SMS/email/WhatsApp podría repetirse en esa ventana. No se promete entrega exactamente una vez.
 
 ## Mapeo JPA y SQL
 
-Los modelos bajo `repository.entity` son representaciones relacionales separadas. `StockEntity` usa el discriminador explícito `tipo`; el repositorio lo traduce a `StockSimple` o `ComboStock`. La única tabla `stock` y `linea_combo` conservan el diseño solicitado, sin anotar el dominio ni crear tablas separadas de subtipos.
+Los modelos bajo `repository.entity` son representaciones relacionales separadas. `StockEntity` usa el discriminador explícito `tipo`; el repositorio lo traduce a `StockSimple` o `ComboStock`. La única tabla `stock` y `linea_combo` conservan el diseño relacional original, sin anotar el dominio ni crear tablas separadas de subtipos.
 
 `ProductoEntity` genera el ID, y `StockEntity` comparte esa PK con `@MapsId`. Las identidades comienzan en 1000 para no colisionar con el fixture. El repositorio carga el catálogo y después enlaza componentes por ID; la construcción valida ciclos y reutiliza las hojas compartidas.
 
@@ -134,7 +134,7 @@ Las nuevas tablas son:
 
 Los valores `disponible` de auditoría/outbox son snapshots históricos o mensajes, nunca la fuente del disponible de inventario. Los contadores de combos permanecen `NULL`.
 
-El perfil demo inicializa H2 temporal; PostgreSQL se configura mediante variables de entorno y requiere inicialización manual única. El archivo `db/upgrade-etapa2.sql` permite actualizar el esquema universitario de la Etapa 1 sin modificar sus registros originales. No se utiliza Flyway ni se ejecuta este upgrade automáticamente.
+El perfil demo inicializa H2 temporal; PostgreSQL se configura mediante variables de entorno y requiere inicialización manual única. El archivo `db/upgrade-etapa2.sql` permite actualizar el esquema de la v0.1 sin modificar sus registros originales. No se utiliza Flyway ni se ejecuta este upgrade automáticamente.
 
 ## Pruebas y ejecución
 
@@ -144,6 +144,6 @@ La suite verifica dominio, contextos de Strategy/Adapter, Singleton real, carga 
 
 Referencias técnicas utilizadas: [Spring Boot: requisitos](https://docs.spring.io/spring-boot/system-requirements.html) y [Spring: transacciones programáticas](https://docs.spring.io/spring-framework/reference/data-access/transaction/programmatic.html).
 
-## Próximas etapas
+## Versiones siguientes
 
-La Etapa 3 agregará controladores REST, DTOs y manejo HTTP de errores sobre los contratos de aplicación existentes. La Etapa 4 agregará React y las cuatro vistas con el Design System COTO. Ambas requieren confirmación.
+La [v0.3](etapa-3.md) agrega controladores REST, DTOs y manejo HTTP de errores sobre los contratos de aplicación existentes. La [v0.4](etapa-4.md) agrega React y las cuatro vistas con el Design System COTO.
