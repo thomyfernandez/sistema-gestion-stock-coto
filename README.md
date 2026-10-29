@@ -27,6 +27,7 @@ Consultas iniciales en el navegador:
 - [Inventario completo](http://localhost:8080/api/productos).
 - [Combo promocional](http://localhost:8080/api/combos/6).
 - [Catálogo Coto Digital](http://localhost:8080/api/digital/catalogo).
+- [Documentación interactiva de la API (Swagger UI)](http://localhost:8080/swagger-ui.html) y [especificación OpenAPI](http://localhost:8080/v3/api-docs).
 
 Ejemplo de reserva por HTTP:
 
@@ -87,7 +88,7 @@ La compilación queda en `frontend/dist`; la vista previa abre en [127.0.0.1:417
 | JPA | Diez repositorios concretos, modelos relacionales separados del dominio y unidad de trabajo explícita |
 | Adapter | `AdaptadorProveedor`, `AdaptadorProveedorSMS`, `AdaptadorERP`, `AdaptadorCotoDigital` y APIs simuladas de firmas incompatibles |
 | Consistencia | Bloqueo SQL del inventario, auditoría y outbox en la misma transacción; entrega después del commit y reintentos |
-| REST | 47 operaciones HTTP, DTOs validados, errores RFC 9457, CORS local y simulación de proveedores en demo |
+| REST | 47 operaciones HTTP documentadas con OpenAPI/Swagger, DTOs validados, errores RFC 9457, CORS local y simulación de proveedores en demo |
 
 Se conserva `disponible = físico − exhibición − reservado`, sin columna de disponible en `stock`. Simples y combos siguen en una sola tabla con discriminador. Los combos no tienen contadores propios.
 
@@ -179,7 +180,7 @@ mvn -f backend/pom.xml test
 
 La suite incluye las pruebas de dominio y pruebas de integración reales con Spring, Hibernate y H2. Verifica reservas concurrentes, rollback tardío, auditoría correlacionada, reposición sin duplicados, reintentos FIFO, episodios de alerta persistidos, recepción única, alta de combos y promociones acumulables. Los proveedores son simulados: no se envían correos, SMS, WhatsApp ni pedidos reales.
 
-Verificación actual: **153 pruebas aprobadas, sin fallos ni errores** (65 HTTP), JAR empaquetado. Incluye regresiones por renovación de conexiones de H2 y pruebas de avisos compartidos, contactos internos, destinatarios por artículo/categoría, clasificación del catálogo e imágenes de productos. La validación de la API también comprobó **37 solicitudes de Postman contra el servidor HTTP real**. La prueba del servidor usó el puerto 18080; el puerto predeterminado para uso normal es 8080.
+Verificación actual: **155 pruebas aprobadas, sin fallos ni errores** (67 HTTP), JAR empaquetado. Incluye regresiones por renovación de conexiones de H2 y pruebas de avisos compartidos, contactos internos, destinatarios por artículo/categoría, clasificación del catálogo e imágenes de productos. La validación de la API también comprobó **37 solicitudes de Postman contra el servidor HTTP real**. La prueba del servidor usó el puerto 18080; el puerto predeterminado para uso normal es 8080.
 
 Los scripts y el mapeo JPA se verifican con H2 compatible con PostgreSQL. El perfil PostgreSQL está configurado; todavía no se validó contra un servidor PostgreSQL real.
 

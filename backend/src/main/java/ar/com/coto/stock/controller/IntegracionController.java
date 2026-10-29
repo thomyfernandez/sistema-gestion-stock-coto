@@ -3,10 +3,12 @@ package ar.com.coto.stock.controller;
 import ar.com.coto.stock.dto.*;
 import ar.com.coto.stock.service.*;
 import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api")
+@Tag(name = "Integraciones y avisos", description = "Entregas a ERP, mensajería y Coto Digital; canal y configuración general de avisos.")
 public class IntegracionController {
     private final GestionIntegraciones integraciones;
     private final GestionNotificaciones notificaciones;

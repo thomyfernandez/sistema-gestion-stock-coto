@@ -5,12 +5,14 @@ import ar.com.coto.stock.service.GestionInventario;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import org.springframework.http.ResponseEntity;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/combos")
+@Tag(name = "Combos", description = "Alta y consulta de combos promocionales; su disponible se calcula desde los componentes.")
 public class ComboController {
     private final GestionInventario inventario;
     public ComboController(GestionInventario inventario) { this.inventario = inventario; }

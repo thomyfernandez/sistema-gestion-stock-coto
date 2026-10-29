@@ -5,6 +5,7 @@ import ar.com.coto.stock.service.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import org.springframework.http.ResponseEntity;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.time.Clock;
@@ -13,6 +14,7 @@ import java.util.List;
 /** Entradas para las vistas operativas; toda modificación sigue pasando por el Singleton. */
 @RestController
 @RequestMapping("/api")
+@Tag(name = "Operaciones de sucursal y Coto Digital", description = "Recepción, movimientos de sucursal, catálogo digital, reservas, cancelaciones y despachos.")
 public class OperacionController {
     private final GestionInventario inventario;
     private final ConsultaPrecios precios;

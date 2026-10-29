@@ -5,11 +5,13 @@ import ar.com.coto.stock.service.GestionContactos;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import org.springframework.http.ResponseEntity;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.List;
 
 @RestController @RequestMapping({"/api/configuracion/contactos", "/api/configuracion/proveedores"})
+@Tag(name = "Contactos", description = "Agenda de contactos internos que reciben avisos de stock.")
 public class ContactoController {
     private final GestionContactos contactos;
     public ContactoController(GestionContactos contactos) { this.contactos = contactos; }
