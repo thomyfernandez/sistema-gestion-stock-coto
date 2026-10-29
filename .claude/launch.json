@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend-aislado",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--prefix", "frontend", "vite", "frontend", "--host", "127.0.0.1", "--port", "5174", "--strictPort"],
+      "port": 5174
+    }
+  ]
+}
