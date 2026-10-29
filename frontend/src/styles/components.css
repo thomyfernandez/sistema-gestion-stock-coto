@@ -1,0 +1,78 @@
+/* Design System COTO — Átomos. Anatomía y uso: docs/design-system/README.md
+   Se importa antes de app.css para que los ajustes de cada vista puedan refinarlos. */
+
+/* Buttons ------------------------------------------------------------------ */
+.button { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1); min-height: 44px; border: 1px solid transparent; padding: 10px 15px; border-radius: var(--radius-small); font-size: var(--body-medium); font-weight: var(--weight-bold); line-height: 1.35; white-space: nowrap; transition: background .14s, border-color .14s, box-shadow .14s; }
+.button.sm { min-height: 40px; padding: var(--space-1) 12px; font-size: var(--caption); }
+.button.lg { min-height: 56px; padding: 14px var(--space-3); font-size: var(--body-large); }
+.button.block { width: 100%; }
+/* Primary: acción principal, una por zona */
+.button.primary { background: var(--primary-500); color: var(--neutral-00); border-color: var(--primary-500); box-shadow: var(--shadow-100); }
+.button.primary:hover:not(:disabled) { background: var(--color-action-hover); border-color: var(--color-action-hover); box-shadow: var(--shadow-400); }
+.button.lineal { background: var(--neutral-00); color: var(--primary-500); border-color: var(--primary-500); }
+.button.lineal:hover:not(:disabled) { background: var(--primary-100); color: var(--primary-700); border-color: var(--primary-700); box-shadow: var(--shadow-400); }
+/* Secondary: fill oscuro (dark) y lineal (secondary) */
+.button.dark { background: var(--neutral-900); color: var(--neutral-00); border-color: var(--neutral-900); box-shadow: var(--shadow-100); }
+.button.dark:hover:not(:disabled) { background: var(--neutral-800); border-color: var(--neutral-800); box-shadow: var(--shadow-400); }
+.button.secondary { background: var(--neutral-00); border-color: var(--neutral-200); color: var(--neutral-800); box-shadow: var(--shadow-100); }
+.button.secondary:hover:not(:disabled) { background: var(--neutral-50); border-color: var(--neutral-400); box-shadow: var(--shadow-400); }
+.button.ghost { background: transparent; color: var(--neutral-700); }
+.button.ghost:hover:not(:disabled) { background: var(--neutral-50); }
+/* Semantics */
+.button.success { background: var(--success-500); color: var(--neutral-00); }
+.button.success:hover:not(:disabled) { background: var(--success-900); box-shadow: var(--shadow-400); }
+.button.warning { background: var(--warning-500); color: var(--neutral-900); }
+.button.warning:hover:not(:disabled) { background: var(--warning-800); color: var(--neutral-00); box-shadow: var(--shadow-400); }
+.button.danger { background: var(--danger-500); color: var(--neutral-00); }
+.button.danger:hover:not(:disabled) { background: var(--danger-800); box-shadow: var(--shadow-400); }
+.button.info { background: var(--info-500); color: var(--neutral-00); }
+.button.info:hover:not(:disabled) { background: var(--info-800); box-shadow: var(--shadow-400); }
+/* Disabled: fill gris en botones rellenos, trazo gris en lineales */
+.button:is(.primary, .dark, .success, .warning, .danger, .info):disabled { background: var(--color-disabled); border-color: var(--color-disabled); color: var(--neutral-00); box-shadow: none; opacity: 1; }
+.button:is(.lineal, .secondary):disabled { color: var(--color-disabled); border-color: var(--neutral-200); box-shadow: none; opacity: 1; }
+.button.icon-button { width: 42px; min-width: 42px; height: 42px; min-height: 42px; padding: var(--space-1); }
+/* Header button: ícono sobre etiqueta, para acciones de la barra superior */
+.button.header-button { flex-direction: column; gap: 2px; min-height: 48px; padding: 6px 12px; border-color: var(--neutral-200); background: var(--neutral-00); color: var(--neutral-700); font-size: var(--caption); font-weight: var(--weight-semibold); }
+.button.header-button:hover:not(:disabled) { border-color: var(--neutral-400); box-shadow: var(--shadow-400); }
+
+/* Links -------------------------------------------------------------------- */
+.link { color: var(--color-link); text-decoration: underline; text-underline-offset: 3px; font-weight: var(--weight-semibold); font-size: var(--body-medium); background: none; border: 0; padding: 0; cursor: pointer; }
+.link:hover { color: var(--info-800); }
+.link.sm { font-size: var(--caption); }
+.link.lg { font-size: var(--body-large); }
+
+/* Icon buttons: naked, lineal y fill en 24/32/40 px -------------------------- */
+.icon-btn { --icon-btn-size: 32px; display: inline-grid; place-items: center; width: var(--icon-btn-size); height: var(--icon-btn-size); padding: 0; border: 1px solid transparent; border-radius: var(--radius-pill); background: transparent; color: var(--neutral-700); transition: background .14s, color .14s, box-shadow .14s; }
+.icon-btn.sm { --icon-btn-size: 24px; }
+.icon-btn.lg { --icon-btn-size: 40px; }
+.icon-btn > svg { width: 60%; height: 60%; }
+.icon-btn.naked:hover:not(:disabled) { background: var(--neutral-50); color: var(--neutral-900); }
+.icon-btn.lineal { border-color: var(--neutral-700); }
+.icon-btn.lineal:hover:not(:disabled) { background: var(--neutral-50); color: var(--neutral-900); border-color: var(--neutral-900); }
+.icon-btn.fill { background: var(--neutral-700); color: var(--neutral-00); }
+.icon-btn.fill:hover:not(:disabled) { background: var(--neutral-900); box-shadow: var(--shadow-400); }
+.icon-btn:disabled { color: var(--neutral-300); opacity: 1; }
+.icon-btn.lineal:disabled { border-color: var(--neutral-300); }
+.icon-btn.fill:disabled { background: var(--neutral-300); color: var(--neutral-00); }
+
+/* Checkbox & Radio --------------------------------------------------------- */
+input[type=checkbox], input[type=radio] { appearance: none; flex: none; display: inline-grid; place-content: center; width: 18px; height: 18px; min-height: 0; margin: 0; padding: 0; border: 1.5px solid var(--primary-500); background: var(--neutral-00); cursor: pointer; transition: border-color .14s, box-shadow .14s, background .14s; }
+input[type=checkbox] { border-radius: 4px; }
+input[type=radio] { border-radius: var(--radius-pill); }
+input[type=checkbox]::before { content: ''; width: 10px; height: 6px; border: solid var(--neutral-00); border-width: 0 0 2px 2px; transform: translateY(-1px) rotate(-45deg) scale(0); transition: transform .12s; }
+input[type=checkbox]:checked { background: var(--primary-500); }
+input[type=checkbox]:checked::before { transform: translateY(-1px) rotate(-45deg) scale(1); }
+input[type=radio]::before { content: ''; width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--primary-500); transform: scale(0); transition: transform .12s; }
+input[type=radio]:checked::before { transform: scale(1); }
+:is(input[type=checkbox], input[type=radio]):hover:not(:disabled) { border-color: var(--primary-700); box-shadow: 0 0 0 4px var(--primary-100); }
+input[type=checkbox]:checked:hover:not(:disabled) { background: var(--primary-700); }
+:is(input[type=checkbox], input[type=radio]):disabled { border-color: var(--neutral-300); background: var(--neutral-50); cursor: not-allowed; }
+input[type=checkbox]:checked:disabled { background: var(--neutral-300); }
+.choice { display: inline-flex; align-items: center; gap: var(--space-1); cursor: pointer; }
+
+/* Keypad ------------------------------------------------------------------- */
+.keypad { display: grid; grid-template-columns: repeat(3, 40px); gap: var(--space-1); }
+.keypad-key { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1.5px solid var(--neutral-900); border-radius: var(--radius-small); background: var(--neutral-00); color: var(--neutral-900); font-size: var(--body-medium); font-weight: var(--weight-semibold); }
+.keypad-key:hover:not(:disabled) { background: var(--neutral-50); box-shadow: var(--shadow-400); }
+.keypad-key.fill { background: var(--neutral-900); color: var(--neutral-00); }
+.keypad-key.fill:hover:not(:disabled) { background: var(--neutral-800); }

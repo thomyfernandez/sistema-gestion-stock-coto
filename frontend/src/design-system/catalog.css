@@ -1,0 +1,44 @@
+.ds-page { min-height: 100vh; background: var(--color-background); }
+.ds-header { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-6); background: var(--color-surface); box-shadow: var(--shadow-100); }
+.ds-logo { height: var(--space-6); width: auto; }
+.ds-main { max-width: 1120px; margin: 0 auto; padding: var(--space-6) var(--space-3) var(--space-10); }
+.ds-section { margin-bottom: var(--space-8); }
+.ds-section h2 { margin-bottom: var(--space-1); }
+.ds-lead { max-width: 720px; color: var(--color-text-muted); margin-bottom: var(--space-3); }
+.ds-section h3 { margin-top: var(--space-3); }
+.ds-harmony { display: grid; grid-template-columns: 6fr 3fr 1fr; height: var(--space-8); border-radius: var(--radius-small); overflow: hidden; box-shadow: var(--shadow-200); font-size: var(--caption); font-weight: var(--weight-bold); }
+.ds-harmony span { padding: var(--space-1); background: var(--neutral-00); }
+.ds-harmony span:nth-child(2) { background: var(--neutral-900); color: var(--neutral-00); }
+.ds-harmony span:nth-child(3) { background: var(--primary-500); color: var(--neutral-00); white-space: nowrap; }
+.ds-swatches { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+.ds-swatch { width: 128px; margin: 0; border-radius: var(--radius-small); overflow: hidden; background: var(--color-surface); box-shadow: var(--shadow-200); }
+.ds-swatch > div { display: grid; place-items: center; height: var(--space-8); font-size: var(--caption); font-weight: var(--weight-bold); border-bottom: 1px solid var(--color-divider); }
+.ds-swatch figcaption { display: grid; gap: 2px; padding: var(--space-1); font-size: var(--caption); }
+.ds-swatch code { color: var(--color-text-subtle); overflow-wrap: anywhere; }
+.ds-specimen { font-size: 96px; font-weight: var(--weight-semibold); line-height: 1.1; color: var(--neutral-800); }
+.ds-type { display: grid; gap: var(--space-2); margin-top: var(--space-3); }
+.ds-type > div { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-2); padding-bottom: var(--space-1); border-bottom: 1px solid var(--color-divider); }
+.ds-grid-demo { display: grid; gap: var(--space-2); max-width: var(--grid-width); padding: var(--space-2) var(--grid-margin); background: var(--neutral-100); border-radius: var(--radius-small); overflow-x: auto; }
+.ds-columns { display: grid; grid-template-columns: repeat(var(--grid-columns), var(--grid-column)); gap: var(--grid-gutter); }
+.ds-columns span { display: grid; place-items: center; height: var(--space-6); background: var(--primary-100); color: var(--primary-700); font-size: var(--caption); font-weight: var(--weight-bold); }
+.ds-zones { display: grid; grid-template-columns: var(--zone-main) var(--zone-secondary); gap: var(--grid-gutter); }
+.ds-zones span { padding: var(--space-3) var(--space-2); background: var(--neutral-200); color: var(--neutral-800); font-size: var(--caption); font-weight: var(--weight-bold); text-align: center; }
+.ds-spaces { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); margin-top: var(--space-3); }
+.ds-spaces div { display: grid; gap: var(--space-1); justify-items: start; }
+.ds-spaces span { height: var(--space-6); background: var(--primary-100); }
+.ds-spaces code { font-size: var(--caption); color: var(--color-text-subtle); }
+.ds-elevations { display: grid; gap: var(--space-3); }
+.ds-elevations div { padding: var(--space-3) var(--space-4); background: var(--color-surface); border-radius: var(--radius-small); font-weight: var(--weight-semibold); color: var(--color-text-muted); }
+.ds-row { display: grid; grid-template-columns: 160px minmax(0, 1fr); align-items: center; gap: var(--space-2); padding-block: var(--space-2); border-bottom: 1px solid var(--color-divider); }
+.ds-row-label { font-size: var(--caption); font-weight: var(--weight-bold); color: var(--color-text-muted); }
+.ds-row-items { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
+.ds-row .ds-row-items { margin-top: 0; }
+.ds-icon-sizes span { display: inline-flex; align-items: center; gap: var(--space-2); margin-right: var(--space-4); }
+.ds-gap { width: var(--space-4); }
+@media (max-width: 640px) {
+  .ds-header { padding: var(--space-2); }
+  .ds-main { padding: var(--space-4) var(--space-2) var(--space-6); }
+  .ds-row { grid-template-columns: minmax(0, 1fr); }
+  .ds-specimen { font-size: var(--display-large); }
+  .ds-swatch { width: calc(50% - var(--space-1)); }
+}

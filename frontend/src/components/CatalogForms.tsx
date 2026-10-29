@@ -1,32 +1,38 @@
 import { useState, type FormEvent } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { api } from '../api';
+import { destinoAviso } from '../notifications';
 import { useStore } from '../store';
-import type { Politica, Producto, Promocion } from '../types';
+import type { Canal, Politica, Producto, Promocion } from '../types';
+import { ImageUpload, type ImageSelection } from './ImageUpload';
 import { Button, ErrorMessage, Field, Modal, ProductName } from './ui';
 
 export function ProductForm({ combo, onClose }: { combo: boolean; onClose: () => void }) {
   const { data, busy, run } = useStore();
+  const [image, setImage] = useState<ImageSelection>({ loading: false, error: null });
   const [nombre, setNombre] = useState('');
+  const [categoriaId, setCategoriaId] = useState<number | null>(null);
   const [descripcion, setDescripcion] = useState('');
   const [precio, setPrecio] = useState('');
   const [lineas, setLineas] = useState([{ stockId: data?.productos[0]?.id || 0, cantidad: 1 }]);
   const [error, setError] = useState<Error | null>(null);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); setError(null);
-    const body = { nombre: nombre.trim(), descripcion: descripcion.trim(), precio: Number(precio) };
+    const body = { nombre: nombre.trim(), descripcion: descripcion.trim(), precio: Number(precio), categoriaId, ...(image.imagen ? { imagen: image.imagen } : {}) };
     try { await run(() => combo ? api.crearCombo({ ...body, componentes: lineas }) : api.crearProducto(body), combo ? 'Combo creado. Su disponibilidad se calcula a partir de los componentes.' : 'Artículo creado con existencias cero. Ya podés recibir mercadería.'); onClose(); }
     catch (e) { setError(e as Error); }
   }
   return <Modal title={combo ? 'Nuevo combo promocional' : 'Nuevo artículo'} description={combo ? 'Combiná artículos o combos existentes.' : 'Incorporá un artículo al catálogo de la sucursal.'} onClose={onClose} wide={combo}>
     <form onSubmit={submit}><div className="modal-body form-stack"><Field label="Nombre"><input required maxLength={160} value={nombre} onChange={e => setNombre(e.target.value)} disabled={busy} /></Field><Field label="Descripción"><textarea required maxLength={500} rows={2} value={descripcion} onChange={e => setDescripcion(e.target.value)} disabled={busy} /></Field><Field label="Precio de lista (ARS)"><input required type="number" step="0.01" min="0" max="9999999999999.99" value={precio} onChange={e => setPrecio(e.target.value)} disabled={busy} /></Field>
+      <Field label="Categoría"><select value={categoriaId ?? ''} disabled={busy} onChange={e => setCategoriaId(e.target.value ? Number(e.target.value) : null)}><option value="">Sin categoría</option>{data?.categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></Field><a className="text-link" href="#/configuracion/categorias">Administrar categorías</a>
+      <ImageUpload value={image} onChange={setImage} disabled={busy} />
       {combo && <fieldset><legend>Componentes del combo</legend><p className="field-hint">Indicá cuántas unidades de cada componente incluye un combo.</p><div className="combo-lines">{lineas.map((linea, index) => <div className="combo-line" key={index}>
         <Field label={`Componente ${index + 1}`}><select required value={linea.stockId || ''} disabled={busy} onChange={e => setLineas(old => old.map((l, i) => i === index ? { ...l, stockId: Number(e.target.value) } : l))}>
           {!linea.stockId && <option value="">Seleccioná un artículo</option>}{data?.productos.filter(p => p.id === linea.stockId || !lineas.some(l => l.stockId === p.id)).map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></Field>
         <Field label={`Unidades ${index + 1}`}><input required type="number" min="1" max="2147483647" step="1" value={linea.cantidad || ''} disabled={busy} onChange={e => setLineas(old => old.map((l, i) => i === index ? { ...l, cantidad: Number(e.target.value) } : l))} /></Field>
         <Button variant="ghost" icon={Trash2} className="icon-button" aria-label={`Quitar componente ${index + 1}`} disabled={busy || lineas.length === 1} onClick={() => setLineas(old => old.filter((_, i) => i !== index))} /></div>)}</div>
         <Button icon={Plus} disabled={busy || lineas.length >= (data?.productos.length || 0)} onClick={() => { const next = data?.productos.find(p => !lineas.some(l => l.stockId === p.id)); if (next) setLineas(old => [...old, { stockId: next.id, cantidad: 1 }]); }}>Agregar componente</Button></fieldset>}
-      <ErrorMessage error={error} /></div><footer className="modal-footer"><Button onClick={onClose} disabled={busy}>Cancelar</Button><Button variant="primary" type="submit" loading={busy} disabled={combo && !data?.productos.length}>{combo ? 'Crear combo' : 'Crear artículo'}</Button></footer></form>
+      <ErrorMessage error={error} /></div><footer className="modal-footer"><Button onClick={onClose} disabled={busy}>Cancelar</Button><Button variant="primary" type="submit" loading={busy} disabled={image.loading || !!image.error || (combo && !data?.productos.length)}>{combo ? 'Crear combo' : 'Crear artículo'}</Button></footer></form>
   </Modal>;
 }
 
@@ -34,9 +40,12 @@ export function PolicyForm({ product, onClose }: { product: Producto; onClose: (
   const { data, busy, run } = useStore();
   const initial = data?.politicas[product.id];
   const [values, setValues] = useState<Omit<Politica, 'stockId'>>(initial ? (({ stockId: _, ...rest }) => rest)(initial) : {
-    tipo: 'PUNTO_PEDIDO', puntoPedido: 20, stockObjetivo: 100, demandaDiaria: 0, diasCobertura: 1, factorEstacional: 1, umbralAlerta: 10, destinoAlerta: 'compras@coto.example',
+    tipo: 'PUNTO_PEDIDO', puntoPedido: 20, stockObjetivo: 100, demandaDiaria: 0, diasCobertura: 1, factorEstacional: 1, umbralAlerta: 10, destinoAlerta: 'configuracion-global', contactoId: null, canalAlerta: null,
   });
   const [error, setError] = useState<Error | null>(null);
+  const contact = data?.contactos.find(p => p.id === values.contactoId);
+  const inherited = data ? destinoAviso({ ...data, politicas: { ...data.politicas, [product.id]: { ...values, stockId: product.id, contactoId: null, canalAlerta: null } } }, product) : null;
+  const destination = contact ? values.canalAlerta === 'EMAIL' ? contact.email : contact.telefono : inherited?.destino;
   const setNumber = (name: keyof typeof values, value: string) => setValues(old => ({ ...old, [name]: value === '' ? '' : Number(value) }));
   const descriptions = { PUNTO_PEDIDO: 'Al alcanzar el punto de pedido, se repone hasta el stock objetivo.', DEMANDA: 'Se calcula la mercadería necesaria para cubrir la demanda diaria.', ESTACIONAL: 'El objetivo se ajusta por el factor de la temporada.' };
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -49,7 +58,10 @@ export function PolicyForm({ product, onClose }: { product: Producto; onClose: (
     {values.tipo === 'PUNTO_PEDIDO' && <div className="form-grid"><Field label="Punto de pedido"><input required type="number" min="1" max="2147483646" step="1" value={values.puntoPedido} onChange={e => setNumber('puntoPedido', e.target.value)} disabled={busy} /></Field><Field label="Stock objetivo"><input required type="number" min={Number(values.puntoPedido) + 1} max="2147483647" step="1" value={values.stockObjetivo} onChange={e => setNumber('stockObjetivo', e.target.value)} disabled={busy} /></Field></div>}
     {values.tipo === 'DEMANDA' && <div className="form-grid"><Field label="Demanda diaria"><input required type="number" min="0" max="999999999.999" step="0.001" value={values.demandaDiaria} onChange={e => setNumber('demandaDiaria', e.target.value)} disabled={busy} /></Field><Field label="Días de cobertura"><input required type="number" min="1" max="2147483647" step="1" value={values.diasCobertura} onChange={e => setNumber('diasCobertura', e.target.value)} disabled={busy} /></Field></div>}
     {values.tipo === 'ESTACIONAL' && <div className="form-grid"><Field label="Objetivo base"><input required type="number" min="1" max="2147483647" step="1" value={values.stockObjetivo} onChange={e => setNumber('stockObjetivo', e.target.value)} disabled={busy} /></Field><Field label="Factor de temporada"><input required type="number" min="0.0001" max="99999999.9999" step="0.0001" value={values.factorEstacional} onChange={e => setNumber('factorEstacional', e.target.value)} disabled={busy} /></Field></div>}
-    <div className="form-divider" /><Field label="Umbral de alerta" hint="Se envía un aviso cuando el disponible cae por debajo de este valor."><input required type="number" min="1" max="2147483647" step="1" value={values.umbralAlerta} onChange={e => setNumber('umbralAlerta', e.target.value)} disabled={busy} /></Field><Field label="Destino del aviso" hint="Email o teléfono, según el canal de notificación seleccionado."><input required maxLength={200} value={values.destinoAlerta} onChange={e => setValues(old => ({ ...old, destinoAlerta: e.target.value }))} disabled={busy} /></Field><ErrorMessage error={error} /></div>
+    <div className="form-divider" /><Field label="Umbral de alerta" hint="Se envía un aviso cuando el disponible cae por debajo de este valor."><input required type="number" min="1" max="2147483647" step="1" value={values.umbralAlerta} onChange={e => setNumber('umbralAlerta', e.target.value)} disabled={busy} /></Field><Field label="Destinatario del aviso"><select value={values.contactoId ?? ''} disabled={busy} onChange={e => { const selected = data?.contactos.find(p => p.id === Number(e.target.value)); setValues(v => ({ ...v, contactoId: selected?.id ?? null, canalAlerta: selected ? selected.email ? 'EMAIL' : 'WHATSAPP' : null })); }}><option value="">Usar aviso de categoría o sucursal</option>{data?.contactos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></Field>
+    {contact && <Field label="Canal del aviso"><select required value={values.canalAlerta || ''} disabled={busy} onChange={e => setValues(v => ({ ...v, canalAlerta: e.target.value as Canal }))}><option value="EMAIL" disabled={!contact.email}>Email{!contact.email ? ' · sin email cargado' : ''}</option><option value="SMS" disabled={!contact.telefono}>SMS{!contact.telefono ? ' · sin teléfono cargado' : ''}</option><option value="WHATSAPP" disabled={!contact.telefono}>WhatsApp{!contact.telefono ? ' · sin teléfono cargado' : ''}</option></select></Field>}
+    <p className="form-info">{contact ? `Avisar a ${contact.nombre}` : `Avisar a ${inherited?.nombre} · ${inherited?.origen}`} · {contact ? values.canalAlerta : inherited?.canal}: {destination}</p>
+    <p className="field-hint"><a className="text-link" href="#/configuracion/avisos">Administrar contactos y avisos generales</a></p><ErrorMessage error={error} /></div>
     <footer className="modal-footer"><Button onClick={onClose} disabled={busy}>Cancelar</Button><Button type="submit" variant="primary" loading={busy}>Guardar política</Button></footer></form></Modal>;
 }
 

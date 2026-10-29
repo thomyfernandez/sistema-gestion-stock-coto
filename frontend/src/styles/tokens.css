@@ -1,30 +1,36 @@
+/* Design System COTO — Foundations. Fuente: docs/design-system/README.md */
 :root {
+  /* Primary: acciones e interactivos (10 %) */
   --primary-700: #A41908;
   --primary-500: #E2001A;
   --primary-100: #FFCCD2;
-  --neutral-900: #1E171C;
-  --neutral-800: #3B2F37;
-  --neutral-700: #594653;
-  --neutral-600: #8A6E8E;
+  /* Neutrals / Grays: gris con tono rojizo (30 %) */
+  --neutral-900: #1B171C;
+  --neutral-800: #352F37;
+  --neutral-700: #504653;
+  --neutral-600: #6A5E6E;
   --neutral-500: #1A171B;
   --neutral-400: #9D91A1;
-  --neutral-300: #B8ACBB;
-  --neutral-200: #CEC6D0;
+  --neutral-300: #B6ACB9;
+  --neutral-200: #CEC8D0;
   --neutral-100: #E7E3E8;
   --neutral-50: #F3F1F3;
   --neutral-00: #FFFFFF;
-  --info-900: #17274E;
-  --info-500: #2E4E97;
-  --info-100: #DCE4F9;
+  /* Semantic / Feedback */
+  --info-800: #17274F;
+  --info-500: #284387;
+  --info-100: #D8DFF3;
   --success-900: #033300;
-  --success-500: #056C00;
+  --success-500: #055E00;
   --success-100: #CFFFCC;
   --warning-800: #665000;
-  --warning-500: #CCA000;
-  --warning-100: #FFE273;
-  --danger-800: #522004;
-  --danger-500: #C04500;
-  --danger-100: #FDDCCC;
+  --warning-500: #DDAD00;
+  --warning-100: #FFE27B;
+  --danger-800: #622004;
+  --danger-500: #D34508;
+  --danger-100: #FDDCCE;
+
+  /* Tipografía: Gotham Rounded; Nunito se distribuye en el build como alternativa libre */
   --font-family: 'Gotham Rounded', 'Nunito Variable', 'Nunito', 'Montserrat', ui-rounded, sans-serif;
   --display-large: 56px;
   --display-medium: 40px;
@@ -41,21 +47,63 @@
   --weight-regular: 400;
   --weight-book: 350;
   --line-height: 1.4;
-  --shadow-100: 0 1px 2px rgb(30 23 28 / 4%), 0 1px 3px rgb(30 23 28 / 3%);
-  --shadow-200: 0 2px 4px rgb(30 23 28 / 7%), 0 3px 8px rgb(30 23 28 / 4%);
-  --shadow-300: 0 8px 24px rgb(30 23 28 / 14%), 0 4px 10px rgb(30 23 28 / 8%);
-  --shadow-400: 0 6px 12px rgb(30 23 28 / 10%), 0 3px 6px rgb(30 23 28 / 7%);
-  --shadow-500: 0 12px 20px rgb(30 23 28 / 12%), 0 5px 10px rgb(30 23 28 / 8%);
-  --shadow-600: 0 16px 30px rgb(30 23 28 / 15%), 0 8px 12px rgb(30 23 28 / 9%);
-  --shadow-700: 0 24px 48px rgb(30 23 28 / 18%), 0 12px 20px rgb(30 23 28 / 10%);
+
+  /* Grilla de 8 puntos */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 40px;
+  --space-6: 48px;
+  --space-7: 56px;
+  --space-8: 64px;
+  --space-10: 80px;
+  /* Grilla desktop 1024: 9 columnas de 94 px, carriles de 16 px, márgenes de 24 px */
+  --grid-width: 1024px;
+  --grid-content: 976px;
+  --grid-margin: 24px;
+  --grid-columns: 9;
+  --grid-column: 94px;
+  --grid-gutter: 16px;
+  --zone-main: 645px;
+  --zone-secondary: 315px;
+
+  /* Elevaciones: 100 reposo, 400 hover/active, 300 modales y popups */
+  --shadow-100: 0 1px 2px rgb(27 23 28 / 4%), 0 1px 3px rgb(27 23 28 / 3%);
+  --shadow-200: 0 2px 4px rgb(27 23 28 / 7%), 0 3px 8px rgb(27 23 28 / 4%);
+  --shadow-300: 0 8px 24px rgb(27 23 28 / 14%), 0 4px 10px rgb(27 23 28 / 8%);
+  --shadow-400: 0 6px 12px rgb(27 23 28 / 10%), 0 3px 6px rgb(27 23 28 / 7%);
+  --shadow-500: 0 12px 20px rgb(27 23 28 / 12%), 0 5px 10px rgb(27 23 28 / 8%);
+  --shadow-600: 0 16px 30px rgb(27 23 28 / 15%), 0 8px 12px rgb(27 23 28 / 9%);
+  --shadow-700: 0 24px 48px rgb(27 23 28 / 18%), 0 12px 20px rgb(27 23 28 / 10%);
+
+  /* Íconos Untitled UI / lucide outline */
   --icon-big: 48px;
   --icon-medium: 32px;
   --icon-small: 24px;
+  --icon-stroke: 2px;
+
   --radius-small: 6px;
   --radius-medium: 10px;
   --radius-large: 14px;
-  color: var(--neutral-900);
-  background: var(--neutral-50);
+  --radius-pill: 999px;
+
+  /* Roles semánticos: preferirlos a los tonos cuando el significado es el mismo */
+  --color-text: var(--neutral-900);
+  --color-text-muted: var(--neutral-700);
+  --color-text-subtle: var(--neutral-600);
+  --color-surface: var(--neutral-00);
+  --color-background: var(--neutral-50);
+  --color-border: var(--neutral-200);
+  --color-divider: var(--neutral-100);
+  --color-action: var(--primary-500);
+  --color-action-hover: var(--primary-700);
+  --color-link: var(--info-500);
+  --color-focus: var(--info-500);
+  --color-disabled: var(--neutral-400);
+
+  color: var(--color-text);
+  background: var(--color-background);
   font-family: var(--font-family);
   font-size: var(--body-medium);
   font-weight: var(--weight-regular);
@@ -73,6 +121,7 @@
 .heading-h4 { font-size: var(--heading-h4); font-weight: var(--weight-semibold); }
 .body-lg { font-size: var(--body-large); }
 .body-md { font-size: var(--body-medium); }
+.caption-text { font-size: var(--caption); }
 .weight-bold { font-weight: var(--weight-bold); }
 .weight-semibold { font-weight: var(--weight-semibold); }
 .weight-regular { font-weight: var(--weight-regular); }
@@ -80,3 +129,10 @@
 .icon-big { width: var(--icon-big); height: var(--icon-big); }
 .icon-medium { width: var(--icon-medium); height: var(--icon-medium); }
 .icon-small { width: var(--icon-small); height: var(--icon-small); }
+.elevation-100 { box-shadow: var(--shadow-100); }
+.elevation-200 { box-shadow: var(--shadow-200); }
+.elevation-300 { box-shadow: var(--shadow-300); }
+.elevation-400 { box-shadow: var(--shadow-400); }
+.elevation-500 { box-shadow: var(--shadow-500); }
+.elevation-600 { box-shadow: var(--shadow-600); }
+.elevation-700 { box-shadow: var(--shadow-700); }
