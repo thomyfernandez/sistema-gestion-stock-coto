@@ -1,4 +1,4 @@
-# Etapa 3 — API REST y contratos HTTP
+# v0.3 — API REST y contratos HTTP
 
 La API permite probar las cuatro vistas operativas y los seis patrones sin agregar todavía el frontend. Los controladores reciben contratos de aplicación por constructor; los DTOs traducen entradas y salidas. Las existencias persistidas siguen cambiando exclusivamente a través de `GestorInventario`.
 
@@ -118,7 +118,7 @@ curl -i http://localhost:8080/api/digital/reservas \
   -d '{"stockId":6,"cantidad":2,"motivo":"Compra web","usuario":"digital.demo"}'
 ```
 
-La cancelación/despacho opera sobre cantidades agregadas de stock. El modelo de las etapas previas no registra una entidad de orden web ni asigna reservas a compradores. Los clientes deben evitar reenviar una operación confirmada: cada POST válido genera un nuevo movimiento y no hay una clave de idempotencia de compra.
+La cancelación/despacho opera sobre cantidades agregadas de stock. El modelo de las versiones previas no registra una entidad de orden web ni asigna reservas a compradores. Los clientes deben evitar reenviar una operación confirmada: cada POST válido genera un nuevo movimiento y no hay una clave de idempotencia de compra.
 
 El catálogo acepta `cantidad` (por defecto 1) y `medioPago`. La cantidad valoriza la línea homogénea; `disponible` siempre expresa unidades de producto/combo que se pueden reservar. El precio se calcula aunque la cantidad solicitada supere el disponible; la reserva posterior es la operación que valida existencias.
 
@@ -228,7 +228,7 @@ Para comprobar una recuperación:
 6. POST `/api/integraciones/reintentos`: se entregan las sincronizaciones en orden.
 7. GET `/api/integraciones`: el catálogo refleja el último disponible y ya no hay entregas pendientes del recorrido.
 
-El esquema FIFO, las garantías de entrega al menos una vez y sus límites están documentados en la Etapa 2. Los mensajes y proveedores simulados se inspeccionan en memoria; la outbox reside en SQL.
+El esquema FIFO, las garantías de entrega al menos una vez y sus límites están documentados en la v0.2. Los mensajes y proveedores simulados se inspeccionan en memoria; la outbox reside en SQL.
 
 ## Validación y errores
 
@@ -266,7 +266,7 @@ Las listas del prototipo son completas, sin paginación. Los filtros de listas q
 
 ## CORS y frontend futuro
 
-Se permiten solicitudes a `/api/**` desde `http://localhost:5173` y `http://127.0.0.1:5173`, con Content-Type JSON. Se puede ajustar `coto.web.origenes`. Los orígenes ajenos son rechazados en el preflight. No se agrega una interfaz web ni autenticación en esta etapa.
+Se permiten solicitudes a `/api/**` desde `http://localhost:5173` y `http://127.0.0.1:5173`, con Content-Type JSON. Se puede ajustar `coto.web.origenes`. Los orígenes ajenos son rechazados en el preflight. No se agrega una interfaz web ni autenticación en esta versión.
 
 ## Cómo demostrar los seis patrones
 
@@ -287,4 +287,4 @@ Se permiten solicitudes a `/api/**` desde `http://localhost:5173` y `http://127.
 
 Referencias técnicas: [validación MVC](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-validation.html), [respuestas de error](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-rest-exceptions.html) y [MockMvc en Spring Boot](https://docs.spring.io/spring-boot/api/java/org/springframework/boot/webmvc/test/autoconfigure/AutoConfigureMockMvc.html).
 
-La Etapa 4 (React, Design System COTO y las cuatro vistas) queda pendiente de confirmación.
+La [v0.4](etapa-4.md) agrega React, el Design System COTO y las cuatro vistas.
