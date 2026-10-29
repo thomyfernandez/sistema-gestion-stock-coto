@@ -21,11 +21,17 @@ public class ConfiguracionAplicacion {
     @Bean MonitorSistemasExternos monitor(SistemaERPExterno erp, ApiProveedorExterno mensajes, ApiCotoDigitalExterna digital) {
         return new MonitorSimulado(erp, mensajes, digital);
     }
-    @Bean ServicioNotificaciones notificaciones(ApiProveedorExterno api) {
+    @Bean ServicioNotificaciones notificaciones(ApiProveedorExterno api, RepositorioAvisos avisos, UnidadDeTrabajo unidad) {
         return new ServicioNotificaciones(Map.of(
                 ServicioNotificaciones.Canal.EMAIL, new EmailNotificador(new AdaptadorProveedor(api, "EMAIL")),
                 ServicioNotificaciones.Canal.SMS, new SmsNotificador(new AdaptadorProveedorSMS(api)),
-                ServicioNotificaciones.Canal.WHATSAPP, new WhatsAppNotificador(new AdaptadorProveedor(api, "WHATSAPP"))));
+                ServicioNotificaciones.Canal.WHATSAPP, new WhatsAppNotificador(new AdaptadorProveedor(api, "WHATSAPP"))), avisos, unidad);
+    }
+    @Bean ServicioContactos contactos(RepositorioContactos contactos, RepositorioPoliticas politicas, RepositorioStock stocks, UnidadDeTrabajo unidad, RepositorioCategorias categorias) {
+        return new ServicioContactos(contactos, politicas, stocks, unidad, categorias);
+    }
+    @Bean ServicioCategorias categorias(RepositorioCategorias categorias, RepositorioContactos contactos, RepositorioStock stocks, UnidadDeTrabajo unidad) {
+        return new ServicioCategorias(categorias, contactos, stocks, unidad);
     }
     @Bean ServicioReposicion reposicion(Clock reloj) { return new ServicioReposicion(new ReposicionPuntoDePedido(20, 100), reloj); }
     @Bean ServicioValorizacion valorizacion(RepositorioStock stock, RepositorioPromociones promociones, UnidadDeTrabajo unidad) {
@@ -39,10 +45,10 @@ public class ConfiguracionAplicacion {
     @Bean(destroyMethod = "cerrar") GestorInventario gestor(UnidadDeTrabajo unidad, RepositorioStock stocks,
             RepositorioMovimientos movimientos, RepositorioPedidos pedidos, RepositorioAuditoria auditoria,
             RepositorioPoliticas politicas, RepositorioPromociones promociones, RepositorioIntegraciones eventos,
-            ServicioReposicion reposicion, ServicioNotificaciones notificaciones, ServicioIntegraciones integraciones, Clock reloj) {
+            ServicioReposicion reposicion, ServicioNotificaciones notificaciones, ServicioIntegraciones integraciones, ServicioContactos contactos, ServicioCategorias categorias, Clock reloj) {
         GestorInventario gestor = GestorInventario.getInstancia();
         gestor.configurar(new GestorInventario.Dependencias(unidad, stocks, movimientos, pedidos, auditoria,
-                politicas, promociones, eventos, reposicion, notificaciones, integraciones, reloj));
+                politicas, promociones, eventos, reposicion, notificaciones, integraciones, contactos, categorias, reloj));
         return gestor;
     }
 }

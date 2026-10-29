@@ -131,3 +131,63 @@ POST {{baseUrl}}/api/recepcion/ingresos
 Content-Type: application/json
 
 {"stockId":1,"cantidad":0,"motivo":"Cantidad inválida","usuario":"demo"}
+
+
+### Configuración compartida de alertas y avisos
+GET {{baseUrl}}/api/configuracion/avisos
+
+### Guardar canal y destinatarios para todos los productos
+PUT {{baseUrl}}/api/configuracion/avisos
+Content-Type: application/json
+
+{"canal":"EMAIL","email":"compras@coto.example","telefono":"+541100000000"}
+
+### Imagen de un artículo que se creó con imagen (reemplazar el ID)
+GET {{baseUrl}}/api/productos/1000/imagen
+
+
+### Agenda de contactos internos
+GET {{baseUrl}}/api/configuracion/contactos
+
+### Crear contacto; copiar el id de la respuesta para asignarlo
+POST {{baseUrl}}/api/configuracion/contactos
+Content-Type: application/json
+
+{"nombre":"Compras de Almacén","email":"almacen@coto.example","telefono":"+541155551111"}
+
+### Aviso particular del arroz (reemplazar contactoId con el id creado)
+PUT {{baseUrl}}/api/productos/1/politica-reposicion
+Content-Type: application/json
+
+{"tipo":"PUNTO_PEDIDO","puntoPedido":20,"stockObjetivo":100,"demandaDiaria":0,"diasCobertura":1,"factorEstacional":1,"umbralAlerta":20,"contactoId":1000,"canalAlerta":"EMAIL"}
+
+### Volver a usar el destinatario general de la sucursal
+PUT {{baseUrl}}/api/productos/1/politica-reposicion
+Content-Type: application/json
+
+{"tipo":"PUNTO_PEDIDO","puntoPedido":20,"stockObjetivo":100,"demandaDiaria":0,"diasCobertura":1,"factorEstacional":1,"umbralAlerta":20,"contactoId":null,"canalAlerta":null}
+
+
+### Categorías del catálogo
+GET {{baseUrl}}/api/categorias
+
+### Crear una categoría
+POST {{baseUrl}}/api/categorias
+Content-Type: application/json
+
+{"nombre":"Bazar","contactoId":null,"canalAlerta":null}
+
+### Productos de Verdulería
+GET {{baseUrl}}/api/productos?categoriaId=3
+
+### Asignar categoría a un producto existente
+PUT {{baseUrl}}/api/productos/4/categoria
+Content-Type: application/json
+
+{"categoriaId":3}
+
+### Editar categoría y su destinatario (reemplazar contactoId)
+PUT {{baseUrl}}/api/categorias/3
+Content-Type: application/json
+
+{"nombre":"Verdulería","contactoId":1000,"canalAlerta":"EMAIL"}

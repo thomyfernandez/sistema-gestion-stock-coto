@@ -20,12 +20,12 @@ public final class GestorInventario implements GestionInventario {
                                RepositorioPedidos pedidos, RepositorioAuditoria auditoria, RepositorioPoliticas politicas,
                                RepositorioPromociones promociones, RepositorioIntegraciones eventos,
                                ServicioReposicion reposicion, ServicioNotificaciones notificaciones,
-                               ServicioIntegraciones integraciones, Clock reloj) {
+                               ServicioIntegraciones integraciones, ServicioContactos contactos, ServicioCategorias categorias, Clock reloj) {
         public Dependencias {
             Objects.requireNonNull(unidad); Objects.requireNonNull(stocks); Objects.requireNonNull(movimientos);
             Objects.requireNonNull(pedidos); Objects.requireNonNull(auditoria); Objects.requireNonNull(politicas);
             Objects.requireNonNull(promociones); Objects.requireNonNull(eventos); Objects.requireNonNull(reposicion);
-            Objects.requireNonNull(notificaciones); Objects.requireNonNull(integraciones); Objects.requireNonNull(reloj);
+            Objects.requireNonNull(notificaciones); Objects.requireNonNull(integraciones); Objects.requireNonNull(reloj); Objects.requireNonNull(contactos); Objects.requireNonNull(categorias);
         }
     }
     public synchronized void configurar(Dependencias dependencias) {
@@ -133,9 +133,15 @@ public final class GestorInventario implements GestionInventario {
 
     private void guardarAlertas(Dependencias d, Observaciones o, Map<Integer, PoliticaReposicion> politicas,
                                 Map<Integer, Stock> grafo, String clave) {
-        o.avisos.forEach((id, aviso) -> d.eventos.encolar(new EventoIntegracion(0, clave + ":alerta:" + id,
-                EventoIntegracion.Tipo.ALERTA, id, null, null, d.notificaciones.getCanal().name(),
-                aviso.destino(), aviso.getTexto(), d.reloj.instant())));
+        if (!o.avisos.isEmpty()) {
+            var general = d.notificaciones.consultarConfiguracion();
+            o.avisos.forEach((id, aviso) -> {
+                var configuracion = d.contactos.resolver(politicas.get(id), grafo.get(id).getProducto(), general);
+                d.eventos.encolar(new EventoIntegracion(0, clave + ":alerta:" + id,
+                        EventoIntegracion.Tipo.ALERTA, id, null, null, configuracion.canal(),
+                        configuracion.destino(), aviso.getTexto(), d.reloj.instant()));
+            });
+        }
         o.disponibilidades.keySet().forEach(id -> {
             PoliticaReposicion p = politicas.get(id);
             if (p != null) d.politicas.marcarAlerta(id, grafo.get(id).getDisponible() < p.umbralAlerta());
@@ -154,11 +160,16 @@ public final class GestorInventario implements GestionInventario {
         Dependencias d = d();
         return d.unidad.consultar(() -> List.copyOf(d.stocks.cargarInventario().values()));
     }
+    @Override public ImagenProducto consultarImagen(int id) {
+        Dependencias d = d();
+        return d.unidad.consultar(() -> d.stocks.consultarImagen(id).orElseThrow(() -> new EntidadNoEncontradaException("Imagen de producto", id)));
+    }
     @Override public Stock crearProducto(AltaProducto datos) {
         Objects.requireNonNull(datos);
         Dependencias d = d();
         return d.unidad.ejecutar(() -> {
             d.stocks.bloquearInventario();
+            if (datos.categoriaId() != null) d.categorias.consultar(datos.categoriaId());
             Stock stock = d.stocks.crear(datos, false);
             encolarStock(d, "alta:" + stock.getProducto().getId(), stock.getProducto().getId(), 0);
             d.unidad.despuesDeConfirmar(d.integraciones::procesarPendientes);
@@ -173,6 +184,7 @@ public final class GestorInventario implements GestionInventario {
         return d.unidad.ejecutar(() -> {
             d.stocks.bloquearInventario();
             Map<Integer, Stock> grafo = d.stocks.cargarInventario();
+            if (datos.categoriaId() != null) d.categorias.consultar(datos.categoriaId());
             ComboStock combo = (ComboStock) d.stocks.crear(datos, true);
             lineas.forEach(l -> combo.agregar(exigirStock(grafo, l.stockId()), l.cantidad()));
             if (combo.getComponentes().stream().anyMatch(l -> l.getComponente() instanceof ComboStock c && c.getComponentes().isEmpty())) {
@@ -184,6 +196,16 @@ public final class GestorInventario implements GestionInventario {
             return combo;
         });
     }
+    @Override public void asignarCategoria(int productoId, Integer categoriaId) {
+        Dependencias d = d();
+        d.unidad.ejecutar(() -> {
+            d.stocks.bloquearInventario();
+            exigirStock(d.stocks.cargarInventario(), productoId);
+            if (categoriaId != null) d.categorias.consultar(categoriaId);
+            d.stocks.guardarCategoria(productoId, categoriaId);
+            return null;
+        });
+    }
     @Override public void configurarPolitica(PoliticaReposicion politica) {
         Dependencias d = d();
         d.unidad.ejecutar(() -> {
@@ -191,6 +213,7 @@ public final class GestorInventario implements GestionInventario {
             if (!(exigirStock(d.stocks.cargarInventario(), politica.stockId()) instanceof StockSimple)) {
                 throw new IllegalArgumentException("La política requiere un producto simple");
             }
+            d.contactos.resolver(politica, exigirStock(d.stocks.cargarInventario(), politica.stockId()).getProducto(), d.notificaciones.consultarConfiguracion());
             d.politicas.guardar(politica);
             return null;
         });

@@ -11,8 +11,15 @@ import java.util.stream.Collectors;
 
 public final class MapeadorDto {
     private MapeadorDto() { }
-    public static AltaProducto alta(Solicitudes.Producto s) { return new AltaProducto(s.nombre(), s.descripcion(), s.precio().doubleValue()); }
-    public static AltaProducto alta(Solicitudes.Combo s) { return new AltaProducto(s.nombre(), s.descripcion(), s.precio().doubleValue()); }
+    public static AltaProducto alta(Solicitudes.Producto s) { return new AltaProducto(s.nombre(), s.descripcion(), s.precio().doubleValue(), imagen(s.imagen()), s.categoriaId()); }
+    public static AltaProducto alta(Solicitudes.Combo s) { return new AltaProducto(s.nombre(), s.descripcion(), s.precio().doubleValue(), imagen(s.imagen()), s.categoriaId()); }
+    private static ImagenProducto imagen(Solicitudes.Imagen imagen) {
+        if (imagen == null) return null;
+        byte[] contenido;
+        try { contenido = java.util.Base64.getDecoder().decode(imagen.contenido()); }
+        catch (IllegalArgumentException e) { throw new IllegalArgumentException("La imagen no tiene una codificación válida"); }
+        return new ImagenProducto(imagen.tipo(), contenido);
+    }
     public static List<ComponenteCombo> componentes(Solicitudes.Combo s) {
         return s.componentes().stream().map(c -> new ComponenteCombo(c.stockId(), c.cantidad())).toList();
     }
@@ -24,7 +31,8 @@ public final class MapeadorDto {
         return new Respuestas.Producto(s.getProducto().getId(), s.getProducto().getNombre(), s.getProducto().getDescripcion(),
                 BigDecimal.valueOf(s.getProducto().getPrecio()).setScale(2), tipo(s), s.getDisponible(),
                 simple == null ? null : simple.getStockFisico(), simple == null ? null : simple.getStockExhibicion(),
-                simple == null ? null : simple.getStockReservado(), componentes);
+                simple == null ? null : simple.getStockReservado(), componentes,
+                s.getProducto().getImagenVersion() == null ? null : "/api/productos/" + s.getProducto().getId() + "/imagen?v=" + s.getProducto().getImagenVersion(), s.getProducto().getCategoriaId());
     }
     private static String tipo(Stock s) { return s instanceof StockSimple ? "SIMPLE" : "COMBO"; }
     public static MovimientoStock movimiento(Solicitudes.Movimiento s, Clock reloj) {
@@ -51,11 +59,11 @@ public final class MapeadorDto {
     }
     public static PoliticaReposicion politica(int id, Solicitudes.Politica p) {
         return new PoliticaReposicion(id, PoliticaReposicion.Tipo.valueOf(p.tipo().name()), p.puntoPedido(), p.stockObjetivo(),
-                p.demandaDiaria().doubleValue(), p.diasCobertura(), p.factorEstacional().doubleValue(), p.umbralAlerta(), p.destinoAlerta());
+                p.demandaDiaria().doubleValue(), p.diasCobertura(), p.factorEstacional().doubleValue(), p.umbralAlerta(), p.destinoAlerta() == null ? "configuracion-global" : p.destinoAlerta(), p.contactoId(), p.canalAlerta() == null ? null : p.canalAlerta().name());
     }
     public static Respuestas.Politica politica(PoliticaReposicion p) {
         return new Respuestas.Politica(p.stockId(), p.tipo().name(), p.puntoPedido(), p.stockObjetivo(), BigDecimal.valueOf(p.demandaDiaria()),
-                p.diasCobertura(), BigDecimal.valueOf(p.factorEstacional()), p.umbralAlerta(), p.destinoAlerta());
+                p.diasCobertura(), BigDecimal.valueOf(p.factorEstacional()), p.umbralAlerta(), p.destinoAlerta(), p.contactoId(), p.canalAlerta());
     }
     public static Promocion promocion(int productoId, long id, Solicitudes.Promocion p) {
         return new Promocion(id, productoId, Promocion.Tipo.valueOf(p.tipo().name()), p.porcentaje().doubleValue(), p.orden(), p.activa(), p.medioPago());

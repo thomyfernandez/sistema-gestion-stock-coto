@@ -1,12 +1,16 @@
--- Datos universitarios ficticios: precios, cantidades y pedidos no representan información real de COTO.
+-- Datos de demostración ficticios: precios, cantidades y pedidos no representan información real de COTO.
 -- Ejecutar UNA vez después de schema.sql sobre una base vacía.
-INSERT INTO producto (id, nombre, descripcion, precio) VALUES
-    (1, 'Arroz COTO largo fino 1 kg', 'Paquete de arroz seco, almacén', 1890.00),
-    (2, 'Aceite de girasol COTO 900 ml', 'Botella de aceite, almacén', 3290.00),
-    (3, 'Leche entera COTO 1 l', 'Leche refrigerada, frescos', 1590.00),
-    (4, 'Bananas por kg', 'Unidad de inventario: un kilogramo entero', 2490.00),
-    (5, 'Pan dulce COTO 500 g', 'Producto estacional de fin de año', 5490.00),
-    (6, 'Combo Ahorro COTO', 'Dos paquetes de arroz y una botella de aceite', 6490.00);
+INSERT INTO categoria (id, nombre, nombre_clave) VALUES
+    (1, 'Almacén', 'almacén'), (2, 'Frescos', 'frescos'), (3, 'Verdulería', 'verdulería'),
+    (4, 'Electro', 'electro'), (5, 'Limpieza', 'limpieza');
+
+INSERT INTO producto (id, nombre, descripcion, precio, categoria_id) VALUES
+    (1, 'Arroz COTO largo fino 1 kg', 'Paquete de arroz seco, almacén', 1890.00, 1),
+    (2, 'Aceite de girasol COTO 900 ml', 'Botella de aceite, almacén', 3290.00, 1),
+    (3, 'Leche entera COTO 1 l', 'Leche refrigerada, frescos', 1590.00, 2),
+    (4, 'Bananas por kg', 'Unidad de inventario: un kilogramo entero', 2490.00, 3),
+    (5, 'Pan dulce COTO 500 g', 'Producto estacional de fin de año', 5490.00, 1),
+    (6, 'Combo Ahorro COTO', 'Dos paquetes de arroz y una botella de aceite', 6490.00, 1);
 
 INSERT INTO stock (id, tipo, stock_fisico, stock_exhibicion, stock_reservado) VALUES
     (1, 'SIMPLE', 120, 30, 10), -- Disponible 80.
@@ -69,3 +73,5 @@ INSERT INTO promocion (id, producto_id, tipo, porcentaje, orden, activa, medio_p
 -- El pedido inicial también participa del despacho simulado y recuperable al ERP.
 INSERT INTO evento_integracion (id, clave, tipo, stock_id, pedido_id, fecha) VALUES
     (1, 'pedido:1', 'PEDIDO_ERP', 3, 1, TIMESTAMP WITH TIME ZONE '2026-10-15 09:01:00-03:00');
+
+INSERT INTO configuracion_avisos (id, canal, email, telefono) VALUES (1, 'EMAIL', 'compras@coto.example', '+541100000000');

@@ -1,4 +1,4 @@
--- Datos universitarios ficticios: precios, cantidades y pedidos no representan información real de COTO.
+-- Datos de demostración ficticios: precios, cantidades y pedidos no representan información real de COTO.
 -- Ejecutar UNA vez después de schema.sql sobre una base vacía.
 INSERT INTO producto (id, nombre, descripcion, precio) VALUES
     (1, 'Arroz COTO largo fino 1 kg', 'Paquete de arroz seco, almacén', 1890.00),

@@ -13,7 +13,7 @@ import java.util.Objects;
 import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Ejecuta el SQL real; H2 sólo es una dependencia de prueba, no un repositorio productivo. */
+/** Ejecuta el SQL real sobre el mismo motor H2 que utiliza el perfil demo. */
 class SchemaTest {
     private String url;
 
@@ -110,6 +110,24 @@ class SchemaTest {
                 assertTrue(resultado.next());
                 assertTrue(resultado.getInt(1) >= 1000);
             }
+        }
+    }
+
+    @Test void recepcionValidaTrasCerrarLaConexionQueCreoLosChecks() throws Exception {
+        // prepararBase ya cerró la conexión del DDL. La nueva sesión debe poder
+        // evaluar CHECK(tipo IN (...)) aunque se haya retirado la sesión original.
+        try (Connection conexion = DriverManager.getConnection(url);
+             PreparedStatement insertar = conexion.prepareStatement(
+                     "INSERT INTO movimiento_stock(stock_id,tipo,cantidad,motivo,usuario) VALUES(3,?,30,?,?)")) {
+            insertar.setString(1, "RECEPCION");
+            insertar.setString(2, "Recepción del pedido 1");
+            insertar.setString(3, "recepcion.demo");
+            assertEquals(1, insertar.executeUpdate());
+
+            // Actualizar el motor no debe desactivar la validación SQL.
+            insertar.setString(1, "TIPO_INEXISTENTE");
+            SQLException error = assertThrows(SQLException.class, insertar::executeUpdate);
+            assertEquals("23513", error.getSQLState());
         }
     }
 

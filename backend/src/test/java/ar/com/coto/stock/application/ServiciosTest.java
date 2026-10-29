@@ -9,6 +9,8 @@ import ar.com.coto.stock.service.*;
 import org.junit.jupiter.api.Test;
 import java.time.*;
 import java.util.Map;
+import ar.com.coto.stock.domain.port.*;
+import java.util.function.Supplier;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ServiciosTest {
@@ -31,13 +33,22 @@ class ServiciosTest {
         ServicioNotificaciones servicio = new ServicioNotificaciones(Map.of(
                 ServicioNotificaciones.Canal.EMAIL, new EmailNotificador(new AdaptadorProveedor(api, "EMAIL")),
                 ServicioNotificaciones.Canal.SMS, new SmsNotificador(new AdaptadorProveedorSMS(api)),
-                ServicioNotificaciones.Canal.WHATSAPP, new WhatsAppNotificador(new AdaptadorProveedor(api, "WHATSAPP"))));
+                ServicioNotificaciones.Canal.WHATSAPP, new WhatsAppNotificador(new AdaptadorProveedor(api, "WHATSAPP"))), new RepositorioAvisos() {
+                    private ConfiguracionAvisos c = new ConfiguracionAvisos("EMAIL", "compras@coto.example", "+541100000000");
+                    public ConfiguracionAvisos obtener() { return c; }
+                    public void guardar(ConfiguracionAvisos nuevo) { c = nuevo; }
+                }, new UnidadDeTrabajo() {
+                    public <T> T ejecutar(Supplier<T> s) { return s.get(); }
+                    public <T> T consultar(Supplier<T> s) { return s.get(); }
+                    public <T> T ejecutarNueva(Supplier<T> s) { return s.get(); }
+                    public void despuesDeConfirmar(Runnable r) { r.run(); }
+                });
         StockSimple stock = new StockSimple(new Producto(1, "Arroz", "COTO", 100), 10, 0, 0);
         stock.agregarObservador(new AlertaStockBajo(10, "destino.demo", servicio));
         servicio.setCanal(ServicioNotificaciones.Canal.WHATSAPP);
         stock.reservar(1);
         assertEquals("WHATSAPP", api.getMensajes().getFirst().canal());
-        assertEquals("destino.demo", api.getMensajes().getFirst().to());
+        assertEquals("+541100000000", api.getMensajes().getFirst().to());
     }
 
     @Test void adaptadorERPUtilizaReferenciaIdempotente() {
