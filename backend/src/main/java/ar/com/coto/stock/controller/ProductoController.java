@@ -5,12 +5,14 @@ import ar.com.coto.stock.service.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import org.springframework.http.ResponseEntity;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/productos")
+@Tag(name = "Productos", description = "Inventario, imágenes, categoría, precio con promociones y políticas de reposición.")
 public class ProductoController {
     private final GestionInventario inventario;
     private final ConsultaPrecios precios;

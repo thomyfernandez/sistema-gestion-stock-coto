@@ -5,6 +5,7 @@ import ar.com.coto.stock.service.GestionInventario;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import org.springframework.http.ResponseEntity;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.time.Clock;
@@ -12,6 +13,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api")
+@Tag(name = "Movimientos y auditoría", description = "Historial de movimientos de stock y auditoría de cambios.")
 public class MovimientoController {
     private final GestionInventario inventario;
     private final Clock reloj;
