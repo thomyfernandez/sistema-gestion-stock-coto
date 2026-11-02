@@ -47,6 +47,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setAuthToken(null);
     setUsuario(null);
     setData(null);
+    window.location.hash = '#/';
   }, []);
 
   useEffect(() => {
@@ -82,8 +83,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       const [productos, pedidos, movimientos, auditoria, integraciones, avisos, contactos, categorias] = await Promise.all([
-        api.productos(controller.signal), api.pedidos(controller.signal), api.movimientos(controller.signal),
-        api.auditoria(controller.signal), api.integraciones(controller.signal), api.avisos(controller.signal), api.contactos(controller.signal), api.categorias(controller.signal),
+        api.productos(controller.signal).catch(() => []),
+        api.pedidos(controller.signal).catch(() => []),
+        api.movimientos(controller.signal).catch(() => []),
+        api.auditoria(controller.signal).catch(() => []),
+        api.integraciones(controller.signal).catch(() => ({ entregas: [], proveedoresDisponibles: { ERP: true, MENSAJERIA: true, COTO_DIGITAL: true }, mensajes: [], pedidosERP: [], catalogoDigital: {} })),
+        api.avisos(controller.signal).catch(() => ({ canal: 'EMAIL' as const, email: '', telefono: '' })),
+        api.contactos(controller.signal).catch(() => []),
+        api.categorias(controller.signal).catch(() => []),
       ]);
       const entries = await Promise.all(productos.filter(p => p.tipo === 'SIMPLE').map(async p => {
         try { return [p.id, await api.politica(p.id, controller.signal)] as const; }

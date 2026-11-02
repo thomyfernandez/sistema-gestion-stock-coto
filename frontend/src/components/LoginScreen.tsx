@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useStore } from '../store';
 import { Button, Field } from './ui';
-import { LogIn, UserCheck, ShieldCheck, Truck, ShoppingCart } from 'lucide-react';
+import { LogIn, UserCheck, ShieldCheck, Truck, ShoppingCart, AlertCircle } from 'lucide-react';
 import logo from '../assets/coto-superapp.png';
 import type { RolUsuario } from '../types';
 
@@ -14,10 +14,10 @@ interface DemoUser {
 }
 
 const USUARIOS_DEMO: DemoUser[] = [
-  { username: 'recepcion.demo', nombre: 'Operador de Recepción', rol: 'RECEPCION', icono: Truck, descripcion: 'Recepción y descarga de pedidos' },
-  { username: 'repositor.demo', nombre: 'Repositor de Salón', rol: 'REPOSITOR', icono: UserCheck, descripcion: 'Góndolas, devoluciones y mermas' },
-  { username: 'compras.demo', nombre: 'Analista de Compras', rol: 'COMPRAS', icono: ShoppingCart, descripcion: 'Altas, políticas y promociones' },
-  { username: 'supervisor.demo', nombre: 'Supervisor de Sucursal', rol: 'SUPERVISOR', icono: ShieldCheck, descripcion: 'Control total de inventario y canal digital' },
+  { username: 'supervisor.demo', nombre: 'Supervisor de Sucursal', rol: 'SUPERVISOR', icono: ShieldCheck, descripcion: 'Control total de inventario y canales' },
+  { username: 'repositor.demo', nombre: 'Repositor de Salón', rol: 'REPOSITOR', icono: UserCheck, descripcion: 'Stock, armado de combos y góndolas' },
+  { username: 'recepcion.demo', nombre: 'Operador de Recepción', rol: 'RECEPCION', icono: Truck, descripcion: 'Recepción e ingreso de pedidos' },
+  { username: 'compras.demo', nombre: 'Analista de Compras', rol: 'COMPRAS', icono: ShoppingCart, descripcion: 'Reposición, políticas y promociones' },
 ];
 
 export function LoginScreen() {
@@ -50,46 +50,62 @@ export function LoginScreen() {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      minHeight: '100dvh',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: 'var(--color-bg)',
-      padding: 'var(--space-24)',
+      backgroundColor: 'var(--neutral-50)',
+      padding: 'var(--space-3)',
+      boxSizing: 'border-box',
     }}>
       <div style={{ width: '100%', maxWidth: '440px' }}>
         <div style={{
-          backgroundColor: 'var(--color-surface)',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--color-border)',
-          padding: 'var(--space-32)',
+          backgroundColor: 'var(--neutral-00)',
+          borderRadius: 'var(--radius-medium)',
+          border: '1px solid var(--neutral-100)',
+          padding: 'var(--space-4)',
           textAlign: 'center',
           boxShadow: 'var(--shadow-300)',
+          boxSizing: 'border-box',
         }}>
-          <img src={logo} alt="COTO" style={{ height: '56px', objectFit: 'contain', marginBottom: 'var(--space-16)' }} />
-          <h1 style={{ fontSize: 'var(--text-heading-24)', fontWeight: 'bold', margin: '0 0 var(--space-8) 0', color: 'var(--color-text)' }}>
+          <img
+            src={logo}
+            alt="COTO"
+            style={{
+              width: '160px',
+              height: 'auto',
+              maxHeight: '64px',
+              objectFit: 'contain',
+              display: 'block',
+              margin: '0 auto var(--space-2)',
+            }}
+          />
+          <h1 style={{
+            fontSize: 'var(--heading-h2)',
+            fontWeight: 'var(--weight-bold)',
+            margin: '0 0 var(--space-1) 0',
+            color: 'var(--neutral-900)',
+            lineHeight: 1.25,
+          }}>
             Gestión de Stock
           </h1>
-          <p style={{ margin: '0 0 var(--space-24) 0', color: 'var(--color-text-secondary)', fontSize: 'var(--text-body-14)' }}>
+          <p style={{
+            margin: '0 0 var(--space-3) 0',
+            color: 'var(--neutral-700)',
+            fontSize: 'var(--body-medium)',
+            lineHeight: 1.4,
+          }}>
             Ingresá tus credenciales para acceder al inventario de sucursal.
           </p>
 
           {errorMsg && (
-            <div style={{
-              backgroundColor: 'var(--danger-100)',
-              color: 'var(--danger-700)',
-              padding: 'var(--space-12)',
-              borderRadius: 'var(--radius-sm)',
-              marginBottom: 'var(--space-16)',
-              fontSize: 'var(--text-body-14)',
-              textAlign: 'left',
-              border: '1px solid var(--danger-300)',
-            }}>
-              {errorMsg}
+            <div className="message danger" style={{ marginBottom: 'var(--space-3)', textAlign: 'left' }}>
+              <AlertCircle size={20} aria-hidden="true" />
+              <div><strong>Error al iniciar sesión</strong><p>{errorMsg}</p></div>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 'var(--space-16)' }}>
+          <form onSubmit={handleSubmit} className="form-stack" style={{ textAlign: 'left' }}>
             <Field label="Usuario">
               <input
                 type="text"
@@ -98,7 +114,7 @@ export function LoginScreen() {
                 placeholder="ej. supervisor.demo"
                 required
                 disabled={cargando}
-                style={{ width: '100%', boxSizing: 'border-box' }}
+                autoComplete="username"
               />
             </Field>
 
@@ -110,26 +126,36 @@ export function LoginScreen() {
                 placeholder="Contraseña de sucursal"
                 required
                 disabled={cargando}
-                style={{ width: '100%', boxSizing: 'border-box' }}
+                autoComplete="current-password"
               />
             </Field>
 
             <Button
               type="submit"
               variant="primary"
+              className="block"
               disabled={cargando}
-              style={{ width: '100%', justifyContent: 'center', marginTop: 'var(--space-8)' }}
+              loading={cargando}
+              icon={LogIn}
+              style={{ marginTop: 'var(--space-1)' }}
             >
-              <LogIn size={18} />
-              {cargando ? 'Iniciando sesión…' : 'Iniciar sesión'}
+              Iniciar sesión
             </Button>
           </form>
 
-          <div style={{ marginTop: 'var(--space-32)', borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-20)' }}>
-            <span style={{ fontSize: 'var(--text-caption-12)', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--color-text-tertiary)', fontWeight: 'bold' }}>
+          <div style={{
+            marginTop: 'var(--space-4)',
+            borderTop: '1px solid var(--neutral-100)',
+            paddingTop: 'var(--space-3)',
+          }}>
+            <span className="eyebrow" style={{ display: 'block', marginBottom: 'var(--space-2)', textAlign: 'center' }}>
               Acceso rápido para demostración
             </span>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-8)', marginTop: 'var(--space-12)' }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+              gap: 'var(--space-1)',
+            }}>
               {USUARIOS_DEMO.map(u => {
                 const Icono = u.icono;
                 const seleccionado = username === u.username;
@@ -139,23 +165,39 @@ export function LoginScreen() {
                     type="button"
                     onClick={() => seleccionarDemo(u)}
                     style={{
-                      background: seleccionado ? 'var(--primary-100)' : 'var(--color-surface)',
-                      border: `1px solid ${seleccionado ? 'var(--primary-500)' : 'var(--color-border)'}`,
-                      borderRadius: 'var(--radius-sm)',
-                      padding: 'var(--space-8)',
+                      background: seleccionado ? 'color-mix(in srgb, var(--primary-100) 45%, var(--neutral-00))' : 'var(--neutral-00)',
+                      border: `1.5px solid ${seleccionado ? 'var(--primary-500)' : 'var(--neutral-200)'}`,
+                      borderRadius: 'var(--radius-small)',
+                      padding: 'var(--space-1) var(--space-2)',
                       cursor: 'pointer',
                       textAlign: 'left',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '4px',
+                      gap: '2px',
                       transition: 'all 0.15s ease',
+                      boxSizing: 'border-box',
+                      boxShadow: seleccionado ? 'var(--shadow-100)' : 'none',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-6)', fontWeight: 'bold', fontSize: 'var(--text-body-12)', color: seleccionado ? 'var(--primary-700)' : 'var(--color-text)' }}>
-                      <Icono size={14} />
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 'var(--space-1)',
+                      fontWeight: 'var(--weight-bold)',
+                      fontSize: 'var(--caption)',
+                      color: seleccionado ? 'var(--primary-700)' : 'var(--neutral-900)',
+                    }}>
+                      <Icono size={14} aria-hidden="true" />
                       <span>{u.rol}</span>
                     </div>
-                    <span style={{ fontSize: '10px', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span style={{
+                      fontSize: '11px',
+                      color: 'var(--neutral-700)',
+                      fontFamily: 'monospace',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}>
                       {u.username}
                     </span>
                   </button>

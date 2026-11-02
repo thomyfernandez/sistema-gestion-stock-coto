@@ -48,6 +48,24 @@ export default function App() {
 
   useEffect(() => { try { localStorage.setItem('coto.sidebar.collapsed', String(collapsed)); } catch { /* La navegación sigue funcionando sin almacenamiento local. */ } }, [collapsed]);
 
+  const currentViewObj = allViews.find(v => v.id === route.view);
+  const title = currentViewObj?.name || 'Stock';
+
+  useEffect(() => {
+    document.title = store.usuario ? `${title} · COTO Gestión de stock` : 'Iniciar sesión · COTO Gestión de stock';
+  }, [title, store.usuario]);
+
+  // Si el usuario cambia o inicia sesión, verificar si la ruta actual es accesible por su rol; si no, redirigir a su primera vista permitida
+  useEffect(() => {
+    if (store.usuario) {
+      const allowedViews = allViews.filter(v => v.roles.includes(store.usuario?.rol || ''));
+      const hasAccess = allowedViews.some(v => v.id === route.view);
+      if (!hasAccess && allowedViews[0]) {
+        window.location.hash = `#/${allowedViews[0].id}`;
+      }
+    }
+  }, [store.usuario, route.view]);
+
   // Si no hay usuario autenticado, mostramos la pantalla de login con el Design System
   if (!store.usuario) {
     return <LoginScreen />;
@@ -55,11 +73,7 @@ export default function App() {
 
   // Filtrado de vistas accesibles según el rol del usuario conectado
   const visibleViews = allViews.filter(v => v.roles.includes(store.usuario?.rol || ''));
-  const currentViewObj = allViews.find(v => v.id === route.view);
   const hasAccessToCurrent = currentViewObj && currentViewObj.roles.includes(store.usuario.rol);
-
-  const title = currentViewObj?.name || 'Stock';
-  useEffect(() => { document.title = `${title} · COTO Gestión de stock`; }, [title]);
 
   const low = store.data?.productos.filter(p => store.data?.politicas[p.id] && p.disponible < store.data.politicas[p.id].umbralAlerta) || [];
   const online = !!store.data && !store.error;
@@ -92,12 +106,12 @@ export default function App() {
             {low.length > 0 && <span>{low.length}</span>}
           </button>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-8)', paddingLeft: 'var(--space-8)', borderLeft: '1px solid var(--color-border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', paddingLeft: 'var(--space-2)', borderLeft: '1px solid var(--neutral-100)' }}>
             <button className="operator-avatar" aria-label={`Usuario: ${store.usuario.nombreCompleto} (${store.usuario.rol})`} title={`${store.usuario.nombreCompleto} - ${store.usuario.rol}`} aria-expanded={help} onClick={() => { setHelp(v => !v); setAlerts(false); }}>
               {store.usuario.username.slice(0, 2).toUpperCase()}
             </button>
             <div className="operator-info-chip" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.2 }}>
-              <span style={{ fontSize: 'var(--text-body-12)', fontWeight: 'bold', color: 'var(--color-text)' }}>{store.usuario.nombreCompleto}</span>
+              <span style={{ fontSize: 'var(--caption)', fontWeight: 'var(--weight-bold)', color: 'var(--neutral-900)' }}>{store.usuario.nombreCompleto}</span>
               <span style={{ fontSize: '10px', color: 'var(--primary-700)', textTransform: 'uppercase', fontWeight: 'bold' }}>{store.usuario.rol}</span>
             </div>
             <Button variant="ghost" className="icon-button" icon={LogOut} aria-label="Cerrar sesión" title="Cerrar sesión" onClick={store.logout} />
@@ -171,18 +185,18 @@ export default function App() {
       {help && (
         <section className="header-popover" aria-label="Información del operador">
           <div className="split-line">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-8)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
               <ShieldCheck size={24} style={{ color: 'var(--primary-500)' }} aria-hidden="true" />
-              <h2 style={{ margin: 0, fontSize: 'var(--text-heading-18)' }}>Sesión activa</h2>
+              <h2 style={{ margin: 0, fontSize: 'var(--body-large)' }}>Sesión activa</h2>
             </div>
             <Button variant="ghost" className="icon-button" icon={X} aria-label="Cerrar información" onClick={() => setHelp(false)} />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', marginTop: 'var(--space-12)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', marginTop: 'var(--space-2)' }}>
             <div><strong>Operador:</strong> {store.usuario.nombreCompleto}</div>
             <div><strong>Usuario:</strong> {store.usuario.username}</div>
             <div><strong>Rol:</strong> {store.usuario.rol}</div>
           </div>
-          <Button variant="secondary" style={{ marginTop: 'var(--space-16)', width: '100%', justifyContent: 'center' }} onClick={store.logout}>
+          <Button variant="secondary" className="block" style={{ marginTop: 'var(--space-2)' }} onClick={store.logout}>
             Cerrar sesión
           </Button>
         </section>
