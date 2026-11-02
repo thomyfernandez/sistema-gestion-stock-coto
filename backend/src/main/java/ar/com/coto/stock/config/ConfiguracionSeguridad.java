@@ -155,6 +155,7 @@ public class ConfiguracionSeguridad {
 
                         // 2. Reposición / Sucursal física
                         .requestMatchers(HttpMethod.POST, "/api/sucursal/movimientos").hasAnyRole("REPOSITOR", "SUPERVISOR")
+                        .requestMatchers(HttpMethod.POST, "/api/combos/*/armado", "/api/combos/*/desarmado").hasAnyRole("REPOSITOR", "SUPERVISOR")
 
                         // 3. Compras
                         .requestMatchers(HttpMethod.POST, "/api/productos/**").hasAnyRole("COMPRAS", "SUPERVISOR")

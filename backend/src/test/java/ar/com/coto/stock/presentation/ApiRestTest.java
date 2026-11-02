@@ -128,6 +128,33 @@ class ApiRestTest {
         mvc.perform(get("/api/movimientos?stockId=6")).andExpect(jsonPath("$", hasSize(3)));
         mvc.perform(get("/api/auditoria?stockId=6")).andExpect(jsonPath("$", hasSize(4)));
     }
+    @Test void armadoYDesarmadoDeCombosPorHttp() throws Exception {
+        enviar("/api/combos/6/armado", """
+                {"cantidad":5,"motivo":"Armado canastas para góndola","usuario":"repositor.demo"}
+                """).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.disponibilidades.6").value(35))
+                .andExpect(jsonPath("$.disponibilidades.1").value(70))
+                .andExpect(jsonPath("$.disponibilidades.2").value(30));
+
+        mvc.perform(get("/api/combos/6")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.stockFisico").value(5))
+                .andExpect(jsonPath("$.disponible").value(35));
+
+        enviar("/api/combos/6/desarmado", """
+                {"cantidad":2,"motivo":"Desarmado por devolución","usuario":"repositor.demo"}
+                """).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.disponibilidades.6").value(35));
+
+        mvc.perform(get("/api/combos/6")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.stockFisico").value(3))
+                .andExpect(jsonPath("$.disponible").value(35));
+    }
+    @Test void armadoDeComboConStockInsuficienteDevuelve409() throws Exception {
+        enviar("/api/combos/6/armado", """
+                {"cantidad":50,"motivo":"Armado excesivo","usuario":"repositor.demo"}
+                """).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo").value("STOCK_INSUFICIENTE"));
+    }
     @Test void movimientoGenericoTambienPasaPorElGestor() throws Exception {
         enviar("/api/movimientos", """
                 {"stockId":1,"tipo":"DEVOLUCION","cantidad":2,"motivo":"Devolución apta","usuario":"demo"}

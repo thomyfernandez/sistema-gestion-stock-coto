@@ -7,6 +7,7 @@ public interface RepositorioStock {
     void bloquearInventario();
     Map<Integer, Stock> cargarInventario();
     void guardarEstado(StockSimple stock);
+    void guardarEstadoCombo(ComboStock combo);
     Stock crear(AltaProducto producto, boolean combo);
     void guardarCategoria(int productoId, Integer categoriaId);
     void guardarComposicion(ComboStock combo);

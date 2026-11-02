@@ -85,7 +85,7 @@ La compilación queda en `frontend/dist`; la vista previa abre en [127.0.0.1:417
 | --- | --- |
 | Singleton | `GestorInventario`: constructor privado, instancia estática privada y `getInstancia()`; Spring registra esa misma instancia |
 | Casos de uso | Contrato `GestionInventario`: movimientos, reservas, recepción/cancelación de pedidos, altas de productos y combos, políticas y promociones |
-| Strategy | Contextos `ServicioReposicion` y `ServicioNotificaciones`, con estrategias explícitas |
+| Strategy | Contextos `ServicioReposicion` y `ServicioNotificaciones`; estrategia de reserva de combos `EstrategiaReservaCombo` (`ReservaFisicoPrimero` por defecto, `ReservaVirtualPrimero` configurable) |
 | Decorator | `ServicioValorizacion` construye la cadena desde promociones SQL y redondea el total al final |
 | JPA | Diez repositorios concretos, modelos relacionales separados del dominio y unidad de trabajo explícita |
 | Adapter | `AdaptadorProveedor`, `AdaptadorProveedorSMS`, `AdaptadorERP`, `AdaptadorCotoDigital` y APIs simuladas de firmas incompatibles |
@@ -93,7 +93,7 @@ La compilación queda en `frontend/dist`; la vista previa abre en [127.0.0.1:417
 | REST | 49 operaciones HTTP documentadas con OpenAPI/Swagger, DTOs validados, errores RFC 9457, CORS local y simulación de proveedores en demo |
 | Seguridad | Spring Security sin estado con JWT y permisos por rol de sucursal. Adapter: `UsuarioSecurityAdapter` adapta `UsuarioEntity` a `UserDetails`. Strategy: `PasswordEncoder` con `BCryptPasswordEncoder` como algoritmo de hash intercambiable |
 
-Se conserva `disponible = físico − exhibición − reservado`, sin columna de disponible en `stock`. Simples y combos siguen en una sola tabla con discriminador. Los combos no tienen contadores propios.
+Se conserva `disponible = físico − exhibición − reservado` en artículos simples, sin columna de disponible en `stock`. Simples y combos siguen en una sola tabla con discriminador. Los combos cuentan con stock propio cuando se arman físicamente mediante movimientos de sucursal, integrando stock propio y disponible virtual.
 
 ## Trabajo en equipo con IA
 
@@ -165,6 +165,26 @@ Contraseña unificada para los operadores de demostración: `coto123`.
 - `POST /api/auth/login`: Recibe `{"username": "...", "password": "..."}` y devuelve `{token, username, nombreCompleto, rol}`.
 - `GET /api/auth/perfil`: Con encabezado `Authorization: Bearer <token>`, retorna el perfil activo del operador autenticado.
 
+## Combos: armado, desarmado y stock propio
+
+El modelo conserva el patrón **Composite** (`ComboStock` y `StockSimple`) y añade soporte para armado físico de combos (por ejemplo, canastas navideñas o canastas promocionales) con stock propio:
+
+- **Movimientos de armado y desarmado:**
+  - `ARMADO_COMBO`: traslada unidades de cada componente del combo hacia el stock propio del combo en un único movimiento transaccional. Requiere disponibilidad suficiente en todos los artículos componentes.
+  - `DESARMADO_COMBO`: descuenta stock físico del combo y restituye las unidades correspondientes a los artículos componentes.
+- **Convivencia de existencias:**
+  - `disponibleTotal = disponiblePropio + disponibleVirtual`.
+  - El disponible propio descuenta exhibición y reservas digitales del stock físico del combo.
+  - El disponible virtual se calcula recursivamente a partir del disponible restante en sus componentes.
+- **Patrón Strategy en reserva de combos:**
+  - Interfaz `EstrategiaReservaCombo` con dos estrategias:
+    - `ReservaFisicoPrimero` (**por defecto**): compromete primero unidades armadas en stock propio para minimizar impacto en los componentes sueltos; si no alcanza, reserva componentes virtuales.
+    - `ReservaVirtualPrimero` (**configurable**): reserva primero componentes virtuales preservando los bultos ya armados en góndola o depósito.
+- **Endpoints REST y seguridad:**
+  - `POST /api/combos/{id}/armado`: recibe `{cantidad, motivo, usuario}` y confirma el armado.
+  - `POST /api/combos/{id}/desarmado`: recibe `{cantidad, motivo, usuario}` y confirma el desarmado.
+  - Autorización: restringido a operadores con rol `REPOSITOR` y `SUPERVISOR`.
+
 ## Base de datos
 
 `schema.sql` y `data.sql` inicializan una base vacía. Además de las seis tablas del esquema inicial, se agregan `politica_reposicion`, `promocion`, `evento_integracion` y `bloqueo_operacion`. Los ajustes de backoffice agregan `configuracion_avisos`, `imagen_producto`, `proveedor` (agenda de contactos internos) y `categoria`. La autenticación agrega `usuario`, con los cuatro operadores de prueba.
@@ -192,7 +212,8 @@ psql -v ON_ERROR_STOP=1 -1 -d coto_stock \
   -f backend/src/main/resources/db/upgrade-backoffice.sql \
   -f backend/src/main/resources/db/upgrade-proveedores.sql \
   -f backend/src/main/resources/db/upgrade-categorias.sql \
-  -f backend/src/main/resources/db/upgrade-auth.sql
+  -f backend/src/main/resources/db/upgrade-auth.sql \
+  -f backend/src/main/resources/db/upgrade-combos-stock.sql
 ```
 
 Estas actualizaciones agregan las tablas/configuraciones de reposición, avisos, imágenes, contactos y categorías, y encolan pedidos pendientes sin borrar el inventario existente. Se ejecuta una sola vez y está pensada para bases creadas con el esquema v0.1. El modo `-1` aplica todo en una transacción. Si ya se aplicaron migraciones anteriores, ejecutar solamente las que falten, en el orden indicado.

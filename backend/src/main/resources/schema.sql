@@ -25,7 +25,13 @@ CREATE TABLE stock (
             AND CAST(stock_exhibicion AS BIGINT) + stock_reservado <= stock_fisico)
         OR
         (tipo = 'COMBO'
-            AND stock_fisico IS NULL AND stock_exhibicion IS NULL AND stock_reservado IS NULL)
+            AND (
+                (stock_fisico IS NULL AND stock_exhibicion IS NULL AND stock_reservado IS NULL)
+                OR
+                (stock_fisico IS NOT NULL AND stock_exhibicion IS NOT NULL AND stock_reservado IS NOT NULL
+                    AND stock_fisico >= 0 AND stock_exhibicion >= 0 AND stock_reservado >= 0
+                    AND CAST(stock_exhibicion AS BIGINT) + stock_reservado <= stock_fisico)
+            ))
     )
 );
 
@@ -46,7 +52,8 @@ CREATE TABLE movimiento_stock (
     stock_id INTEGER NOT NULL REFERENCES stock(id),
     tipo VARCHAR(30) NOT NULL CHECK (tipo IN (
         'RECEPCION', 'TRASLADO_A_GONDOLA', 'RETORNO_A_DEPOSITO', 'DEVOLUCION',
-        'MERMA_DEPOSITO', 'MERMA_GONDOLA', 'RESERVA_DIGITAL', 'CANCELACION_RESERVA', 'DESPACHO_DIGITAL'
+        'MERMA_DEPOSITO', 'MERMA_GONDOLA', 'RESERVA_DIGITAL', 'CANCELACION_RESERVA', 'DESPACHO_DIGITAL',
+        'ARMADO_COMBO', 'DESARMADO_COMBO'
     )),
     cantidad INTEGER NOT NULL CHECK (cantidad > 0),
     fecha TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -263,6 +263,32 @@ class AplicacionIntegracionTest {
         assertTrue(digital.getInventario().isEmpty());
     }
 
+    @Test void armadoYDesarmadoDeComboPersisteStockFisicoYComponentes() {
+        var resArmado = gestor.registrarMovimiento(movimiento(6, TipoMovimiento.ARMADO_COMBO, 5));
+        assertEquals(35, resArmado.disponibilidades().get(6));
+        assertEquals(70, resArmado.disponibilidades().get(1));
+        assertEquals(30, resArmado.disponibilidades().get(2));
+
+        ComboStock comboBD = (ComboStock) gestor.consultarStock(6);
+        assertEquals(5, comboBD.getStockFisico());
+        assertEquals(5, comboBD.getDisponiblePropio());
+        assertEquals(30, comboBD.getDisponibleVirtual());
+        assertEquals(35, comboBD.getDisponible());
+
+        StockSimple arrozBD = (StockSimple) gestor.consultarStock(1);
+        assertEquals(110, arrozBD.getStockFisico());
+
+        var resDesarmado = gestor.registrarMovimiento(movimiento(6, TipoMovimiento.DESARMADO_COMBO, 2));
+        assertEquals(35, resDesarmado.disponibilidades().get(6));
+
+        ComboStock comboDesarmado = (ComboStock) gestor.consultarStock(6);
+        assertEquals(3, comboDesarmado.getStockFisico());
+        assertEquals(3, comboDesarmado.getDisponiblePropio());
+
+        StockSimple arrozRestituido = (StockSimple) gestor.consultarStock(1);
+        assertEquals(114, arrozRestituido.getStockFisico());
+    }
+
     @Test void comboNoRecibeMercaderiaFisicaNiPoliticaDeReposicion() {
         assertThrows(IllegalArgumentException.class, () -> gestor.registrarMovimiento(movimiento(6, TipoMovimiento.RECEPCION, 1)));
         assertThrows(IllegalArgumentException.class, () -> gestor.configurarPolitica(new PoliticaReposicion(6,

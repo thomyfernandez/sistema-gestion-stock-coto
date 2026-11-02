@@ -6,10 +6,13 @@ import { useStore } from '../store';
 import type { Pedido, Producto } from '../types';
 import { InventoryTable } from '../components/InventoryTable';
 import { OperationForm } from '../components/OperationForm';
+import { ComboArmadoForm } from '../components/CatalogForms';
 import { Badge, Button, Confirmation, Empty, Field, Metric, Modal, PageHeading, ProductDetail } from '../components/ui';
 
 export function SucursalPage({ embedded = false }: { embedded?: boolean }) {
-  const { data } = useStore();
+  const { data, tienePermiso } = useStore();
+  const [comboOperation, setComboOperation] = useState<{ combo: Producto; mode: 'armar' | 'desarmar' } | null>(null);
+  const puedeOperarCombo = tienePermiso(['REPOSITOR', 'SUPERVISOR']);
   const [detail, setDetail] = useState<Producto | null>(null);
   const [move, setMove] = useState<number | null>(null);
   if (!data) return null;
@@ -19,7 +22,11 @@ export function SucursalPage({ embedded = false }: { embedded?: boolean }) {
     {!embedded && <div className="metrics-grid"><Metric label="Artículos en catálogo" value={data.productos.length} hint={`${simples.length} simples · ${data.productos.length - simples.length} ${data.productos.length - simples.length === 1 ? 'combo' : 'combos'}`} icon={Boxes} /><Metric label="Disponible en depósito" value={simples.reduce((s, p) => s + p.disponible, 0)} hint="Unidades de artículos simples" icon={PackageCheck} /><Metric label="En góndola" value={simples.reduce((s, p) => s + (p.stockExhibicion || 0), 0)} hint="Listas para la venta en sucursal" icon={Layers3} /><Metric label="Reservas digitales" value={simples.reduce((s, p) => s + (p.stockReservado || 0), 0)} hint="Unidades comprometidas" icon={ClipboardList} /></div>}
     {low.length > 0 && <div className="stock-notice"><span className="notice-icon"><AlertTriangle size={24} aria-hidden="true" /></span><div><strong>{low.length === 1 ? 'Un artículo necesita atención' : `${low.length} artículos necesitan atención`}</strong><p>{low.length === 1 ? `${low[0].nombre} está por debajo del umbral de alerta.` : 'Hay artículos por debajo de su umbral de alerta.'}</p></div><a className="text-link" href="#/compras/reposicion">Revisar reposición <ArrowRight size={24} aria-hidden="true" /></a></div>}
     <InventoryTable onSelect={setDetail} /><div className="page-footnote"><span className="dot success" />Disponibilidad calculada a partir de las existencias confirmadas.</div>
-    {detail && <ProductDetail product={data.productos.find(p => p.id === detail.id) || detail} onClose={() => setDetail(null)} onMove={detail.tipo === 'SIMPLE' ? () => { setMove(detail.id); setDetail(null); } : undefined} />}
+    {detail && <ProductDetail product={data.productos.find(p => p.id === detail.id) || detail} onClose={() => setDetail(null)}
+      onMove={detail.tipo === 'SIMPLE' ? () => { setMove(detail.id); setDetail(null); } : undefined}
+      onArmar={detail.tipo === 'COMBO' && puedeOperarCombo ? () => { setComboOperation({ combo: detail, mode: 'armar' }); setDetail(null); } : undefined}
+      onDesarmar={detail.tipo === 'COMBO' && puedeOperarCombo && (detail.stockFisico || 0) > 0 ? () => { setComboOperation({ combo: detail, mode: 'desarmar' }); setDetail(null); } : undefined} />}
+    {comboOperation && <ComboArmadoForm combo={data.productos.find(p => p.id === comboOperation.combo.id) || comboOperation.combo} mode={comboOperation.mode} onClose={() => setComboOperation(null)} />}
     {move !== null && <Modal title="Registrar movimiento" description="Mové artículos entre depósito y góndola, o registrá un ajuste." onClose={() => setMove(null)}><div className="modal-body"><OperationForm mode="sucursal" initialId={move} compact onComplete={() => setMove(null)} onCancel={() => setMove(null)} /></div></Modal>}
   </>;
 }
