@@ -232,6 +232,8 @@ Los scripts y el mapeo JPA se verifican con H2 compatible con PostgreSQL. El per
 
 ## Documentación
 
+- [Especificación funcional de los tres ejes: descuentos, combos y alertas](docs/tres-ejes-funcionales.md).
+
 - [Design System COTO: color, tipografía, grillas, elevaciones, íconos y átomos](docs/design-system/README.md).
 
 - [Equipo de agentes (harness) y memoria compartida](docs/harness-engineering.md).
