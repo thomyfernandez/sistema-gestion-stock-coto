@@ -28,7 +28,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "coto.integraciones.automaticas=false",
         "spring.datasource.url=jdbc:h2:mem:etapa3test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=15000"
 })
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(addFilters = false)
+@org.springframework.security.test.context.support.WithMockUser(username = "supervisor.demo", roles = {"SUPERVISOR", "COMPRAS", "RECEPCION", "REPOSITOR"})
 @ActiveProfiles("demo")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class ApiRestTest {
@@ -39,17 +40,20 @@ class ApiRestTest {
     @Autowired SistemaERPExterno erp;
     @Autowired ApiCotoDigitalExterna digital;
     @Autowired GestionNotificaciones notificaciones;
+    @Autowired ar.com.coto.stock.config.JwtTokenService jwtTokenService;
+    private String tokenPruebas;
 
     @BeforeEach void reiniciar() {
-        for (String tabla : List.of("imagen_producto", "configuracion_avisos", "evento_integracion", "promocion", "politica_reposicion", "auditoria_stock", "pedido_reposicion",
+        for (String tabla : List.of("usuario", "imagen_producto", "configuracion_avisos", "evento_integracion", "promocion", "politica_reposicion", "auditoria_stock", "pedido_reposicion",
                 "movimiento_stock", "linea_combo", "stock", "producto", "categoria", "proveedor", "bloqueo_operacion")) jdbc.update("DELETE FROM " + tabla);
         new ResourceDatabasePopulator(new ClassPathResource("data.sql")).execute(dataSource);
         mensajes.setDisponible(true); erp.setDisponible(true); digital.setDisponible(true);
         mensajes.limpiar(); erp.limpiar(); digital.limpiar();
         notificaciones.setCanal(GestionNotificaciones.Canal.EMAIL);
+        tokenPruebas = jwtTokenService.generarToken("supervisor.demo", "SUPERVISOR", "Supervisor de Sucursal");
     }
     private ResultActions enviar(String ruta, String json) throws Exception {
-        return mvc.perform(post(ruta).contentType(MediaType.APPLICATION_JSON).content(json));
+        return mvc.perform(post(ruta).header("Authorization", "Bearer " + tokenPruebas).contentType(MediaType.APPLICATION_JSON).content(json));
     }
     private String operacion(int id, int cantidad) {
         return """

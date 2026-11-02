@@ -1,4 +1,4 @@
-import type { Categoria, Contacto, ConfiguracionAvisos, ImagenCarga, Auditoria, Canal, Integraciones, ItemCatalogo, Movimiento, Operacion, Pedido, Politica, Precio, Producto, Promocion, ResultadoMovimiento, Sistema, TipoMovimiento } from './types';
+import type { Producto, Pedido, TipoMovimiento, Movimiento, Operacion, ResultadoMovimiento, Auditoria, Politica, Promocion, Precio, ItemCatalogo, Canal, Sistema, Integraciones, Contacto, Categoria, ConfiguracionAvisos, ImagenCarga, RolUsuario, UsuarioSesion } from './types';
 
 export class ApiError extends Error {
   constructor(message: string, public status: number, public codigo = '', public errores: Record<string, string[]> = {}) { super(message); }
@@ -7,13 +7,38 @@ const base = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
 export const imagenSrc = (url: string) => `${base}${url}`;
 
+let authToken: string | null = null;
+let onUnauthorizedCallback: (() => void) | null = null;
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+}
+
+export function setOnUnauthorized(cb: () => void) {
+  onUnauthorizedCallback = cb;
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const mutation = options.method && options.method !== 'GET';
   const timeout = AbortSignal.timeout(20000);
   const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
   let response: Response;
   try {
-    response = await fetch(`${base}/api${path}`, { ...options, signal, headers: { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...options.headers } });
+    const headers: Record<string, string> = {
+      ...(options.headers as Record<string, string> || {}),
+    };
+    if (options.body) {
+      headers['Content-Type'] = 'application/json';
+    }
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+
+    response = await fetch(`${base}/api${path}`, {
+      ...options,
+      signal,
+      headers,
+    });
   } catch (error) {
     if (options.signal?.aborted) throw error;
     throw new ApiError(mutation
@@ -22,13 +47,19 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
   if (response.status === 204) return undefined as T;
   const body = await response.json().catch(() => null);
+  if (response.status === 401 && !path.startsWith('/auth/login')) {
+    onUnauthorizedCallback?.();
+  }
   if (!response.ok) throw new ApiError(body?.detail || `No se pudo completar la solicitud (${response.status}).`, response.status, body?.codigo, body?.errores);
   if (body === null) throw new ApiError('El servidor devolvió una respuesta inesperada.', response.status);
   return body as T;
 }
 const json = (method: string, body?: unknown): RequestInit => ({ method, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
 const query = (values: Record<string, string | number>) => new URLSearchParams(Object.entries(values).map(([k, v]) => [k, String(v)])).toString();
+
 export const api = {
+  login: (credenciales: { username: string; password: string }) => request<UsuarioSesion>('/auth/login', json('POST', credenciales)),
+  perfil: (signal?: AbortSignal) => request<{ username: string; nombreCompleto: string; rol: RolUsuario }>('/auth/perfil', { signal }),
   categorias: (signal?: AbortSignal) => request<Categoria[]>('/categorias', { signal }),
   guardarCategoria: (body: Omit<Categoria, 'id'>, id?: number) => request<Categoria>(`/categorias${id ? `/${id}` : ''}`, json(id ? 'PUT' : 'POST', body)),
   asignarCategoria: (id: number, categoriaId: number | null) => request<Producto>(`/productos/${id}/categoria`, json('PUT', { categoriaId })),

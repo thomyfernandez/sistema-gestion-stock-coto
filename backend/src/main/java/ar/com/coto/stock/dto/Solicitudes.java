@@ -50,6 +50,7 @@ public final class Solicitudes {
             @NotNull @Positive Integer cantidad,
             @NotBlank @Size(max = 500) String motivo,
             @NotBlank @Size(max = 100) String usuario) { }
+    public record Login(@NotBlank @Size(max = 60) String username, @NotBlank @Size(max = 100) String password) { }
     public record Usuario(@NotBlank @Size(max = 100) String usuario) { }
     public record Politica(
             @NotNull Estrategia tipo,

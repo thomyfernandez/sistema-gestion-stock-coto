@@ -75,3 +75,12 @@ INSERT INTO evento_integracion (id, clave, tipo, stock_id, pedido_id, fecha) VAL
     (1, 'pedido:1', 'PEDIDO_ERP', 3, 1, TIMESTAMP WITH TIME ZONE '2026-10-15 09:01:00-03:00');
 
 INSERT INTO configuracion_avisos (id, canal, email, telefono) VALUES (1, 'EMAIL', 'compras@coto.example', '+541100000000');
+
+
+-- Usuarios de demostración para pruebas y roles de sucursal.
+-- Contraseña de prueba para los usuarios demo: coto123
+INSERT INTO usuario (id, username, password_hash, nombre_completo, rol, activo) VALUES
+    (1, 'recepcion.demo', '$2a$10$K/Gt6duDkNjPqXkUH8.RleiRwuO5EMYvAZ5g12r0SvN92SOQpaLvi', 'Operador de Recepción', 'RECEPCION', TRUE),
+    (2, 'repositor.demo', '$2a$10$K/Gt6duDkNjPqXkUH8.RleiRwuO5EMYvAZ5g12r0SvN92SOQpaLvi', 'Repositor de Salón', 'REPOSITOR', TRUE),
+    (3, 'compras.demo', '$2a$10$K/Gt6duDkNjPqXkUH8.RleiRwuO5EMYvAZ5g12r0SvN92SOQpaLvi', 'Analista de Compras', 'COMPRAS', TRUE),
+    (4, 'supervisor.demo', '$2a$10$K/Gt6duDkNjPqXkUH8.RleiRwuO5EMYvAZ5g12r0SvN92SOQpaLvi', 'Supervisor de Sucursal', 'SUPERVISOR', TRUE);

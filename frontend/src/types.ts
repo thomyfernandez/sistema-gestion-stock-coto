@@ -32,3 +32,6 @@ export interface Snapshot { categorias: Categoria[]; contactos: Contacto[]; avis
 
 export interface ConfiguracionAvisos { canal: Canal; email: string; telefono: string }
 export interface ImagenCarga { tipo: string; contenido: string }
+
+export type RolUsuario = 'RECEPCION' | 'REPOSITOR' | 'COMPRAS' | 'SUPERVISOR';
+export interface UsuarioSesion { token: string; username: string; nombreCompleto: string; rol: RolUsuario }
