@@ -3,6 +3,7 @@ import { AlertTriangle, ArrowDownToLine, ArrowRight, ArrowRightLeft, Boxes, Clip
 import { api } from '../api';
 import { date, number, sku } from '../format';
 import { useStore } from '../store';
+import { useResource } from '../useResource';
 import type { Pedido, Producto } from '../types';
 import { InventoryTable } from '../components/InventoryTable';
 import { OperationForm } from '../components/OperationForm';
@@ -41,16 +42,18 @@ export function ReceiveOrder({ order, onClose }: { order: Pedido; onClose: () =>
   </Confirmation>;
 }
 
+const ULTIMOS_INGRESOS = 8;
 export function RecepcionPage() {
-  const { data } = useStore();
+  const { data, revision } = useStore();
   const [receiving, setReceiving] = useState<Pedido | null>(null);
+  const ultimos = useResource('ingresos', signal => api.movimientos({ tipos: ['RECEPCION'], limite: ULTIMOS_INGRESOS }, signal), revision);
   if (!data) return null;
-  const ingresos = data.movimientos.filter(m => m.tipo === 'RECEPCION').slice().reverse();
+  const ingresos = ultimos.data?.elementos ?? [];
   const enviados = data.pedidos.filter(p => p.estado === 'ENVIADO');
   return <><PageHeading eyebrow="Depósito" title="Recepción de mercadería" text="Registrá los ingresos y mantené las existencias al día." />
     <div className="reception-grid"><section className="panel"><div className="panel-heading"><div><h2>Ingreso directo de mercadería</h2><p>Sin pedido asociado. Aumenta el stock inmediatamente.</p></div><span className="heading-symbol"><ArrowDownToLine size={24} aria-hidden="true" /></span></div><div className="panel-body"><OperationForm mode="recepcion" /></div></section>
       <aside className="panel orders-arriving"><div className="panel-heading"><div><h2>Pedidos por recibir</h2><p>Enviados por el centro de distribución.</p></div><span className="count-tag">{enviados.length}</span></div><div className="arriving-list">{enviados.length ? enviados.map(p => <article key={p.id}><div className="split-line"><strong>Pedido {sku(p.id)}</strong><Badge tone="info">Enviado</Badge></div><p>{data.productos.find(s => s.id === p.stockId)?.nombre}</p><span className="caption">{number(p.cantidad)} unidades · {date(p.fecha)}</span><Button icon={PackageCheck} onClick={() => setReceiving(p)}>Recibir pedido</Button></article>) : <Empty title="Todo recibido" text="Los pedidos enviados por el centro de distribución aparecerán acá." />}</div></aside></div>
-    <section className="panel"><div className="panel-heading"><div><h2>Últimos ingresos</h2><p>Recepciones confirmadas en la sucursal.</p></div><Badge tone="neutral">Historial</Badge></div><div className="table-scroll" tabIndex={0} role="region" aria-label="Últimos ingresos"><table><thead><tr><th scope="col">Movimiento</th><th scope="col">Artículo</th><th scope="col">Fecha</th><th scope="col">Operador</th><th scope="col" className="numeric">Unidades</th></tr></thead><tbody>{ingresos.slice(0, 8).map(m => <tr key={m.id}><td><span className="row-icon"><ArrowRightLeft size={24} aria-hidden="true" />{sku(m.id)}</span></td><td>{data.productos.find(p => p.id === m.stockId)?.nombre}</td><td className="nowrap">{date(m.fecha)}</td><td>{m.usuario}</td><td className="numeric positive">+{number(m.cantidad)}</td></tr>)}</tbody></table></div>{!ingresos.length && <Empty title="Sin ingresos registrados" text="Completá el formulario para registrar la primera recepción." />}<footer className="table-footer"><span>Mostrando {Math.min(ingresos.length, 8)} de {ingresos.length} ingresos</span><a className="text-link" href="#/compras/actividad">Ver actividad <ArrowRight size={24} aria-hidden="true" /></a></footer></section>
+    <section className="panel"><div className="panel-heading"><div><h2>Últimos ingresos</h2><p>Recepciones confirmadas en la sucursal.</p></div><Badge tone="neutral">Historial</Badge></div><div className="table-scroll" tabIndex={0} role="region" aria-label="Últimos ingresos"><table><thead><tr><th scope="col">Movimiento</th><th scope="col">Artículo</th><th scope="col">Fecha</th><th scope="col">Operador</th><th scope="col" className="numeric">Unidades</th></tr></thead><tbody>{ingresos.map(m => <tr key={m.id}><td><span className="row-icon"><ArrowRightLeft size={24} aria-hidden="true" />{sku(m.id)}</span></td><td>{data.productos.find(p => p.id === m.stockId)?.nombre}</td><td className="nowrap">{date(m.fecha)}</td><td>{m.usuario}</td><td className="numeric positive">+{number(m.cantidad)}</td></tr>)}</tbody></table></div>{!ingresos.length && !ultimos.loading && <Empty title="Sin ingresos registrados" text="Completá el formulario para registrar la primera recepción." />}<footer className="table-footer"><span>Mostrando {ingresos.length} de {ultimos.data?.total ?? 0} ingresos</span><a className="text-link" href="#/compras/actividad">Ver actividad <ArrowRight size={24} aria-hidden="true" /></a></footer></section>
     {receiving && <ReceiveOrder order={receiving} onClose={() => setReceiving(null)} />}
   </>;
 }

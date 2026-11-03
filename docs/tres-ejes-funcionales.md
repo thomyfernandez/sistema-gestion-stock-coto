@@ -159,11 +159,13 @@ Evitar el quiebre de stock en sucursal requiere detectar proactivamente cuando u
    - Existen estrategias concretas intercambiables para cada canal: `NotificadorEmail`, `NotificadorSMS` y `NotificadorWhatsApp`, las cuales delegan en adaptadores específicos (`AdaptadorProveedor`, `AdaptadorProveedorSMS`, etc.).
 
 ### Resolución jerárquica de destinatarios
-Para no obligar al operador a configurar un teléfono o correo en cada uno de los miles de artículos del catálogo, el sistema aplica una cascada de resolución en tres niveles:
+Para no obligar al operador a configurar un teléfono o correo en cada uno de los miles de artículos del catálogo, los destinatarios se definen por categoría y para toda la sucursal, en **Configuración → Alertas y avisos → Destinatarios de avisos**. El modal de política de reposición sólo define parámetros de reposición y el umbral de alerta. La cascada es:
 
-1. **Destinatario particular del artículo:** Si la política de reposición del producto tiene asignado un `contacto_id` y `canal_alerta` específico, se utiliza este canal preferencial (ej. comprador especialista en lácteos).
-2. **Destinatario de la categoría:** Si el artículo no posee asignación particular, el sistema busca si la `Categoria` a la que pertenece tiene configurado un contacto y canal (ej. equipo de compras de Frescos).
-3. **Destinatario general de sucursal:** Si ni el artículo ni la categoría poseen asignación, se recurre a la configuración global en `configuracion_avisos` (teléfono o correo general de guardia de la sucursal).
+1. **Lista de emails de la categoría:** si la `Categoria` del artículo tiene direcciones en `destinatario_aviso`, se envía un email a cada una (ej. equipo de compras de Frescos y su jefe de sector).
+2. **Lista general de la sucursal:** si la categoría no tiene lista, o el artículo no tiene categoría, se usa la lista general (`categoria_id` nulo).
+3. **Respaldo:** si ninguna lista tiene direcciones, se mantiene el comportamiento anterior: contacto particular del artículo (`contacto_id` y `canal_alerta` de la política, ya no editable desde el modal), contacto de la categoría y, por último, `configuracion_avisos`. Este nivel conserva SMS y WhatsApp en segundo plano.
+
+Cada dirección genera su propio evento en la outbox, de modo que una casilla rechazada no bloquea ni repite el envío a las demás.
 
 ### Garantías de entrega y patrón Outbox
 - **Consistencia transaccional:** La notificación no se envía de forma sincrónica durante la transacción del inventario (lo que arriesgaría lentitud o fallas si el proveedor externo está caído).
@@ -173,6 +175,7 @@ Para no obligar al operador a configurar un teléfono o correo en cada uno de lo
 
 ### Límites del eje
 - **Canal validado:** No se permite asignar un canal a un contacto si este carece del dato correspondiente (por ejemplo, no se puede seleccionar WhatsApp para un contacto que sólo tiene cargado correo electrónico).
+- **Listas acotadas:** cada lista admite hasta 20 emails válidos, normalizados en minúsculas y sin duplicados.
 - **Control de spam/duplicados:** Las alertas se disparan en la transición de quiebre; movimientos subsiguientes mientras el producto continúe por debajo del umbral sin haber sido repuesto no generan alertas redundantes infinitas.
 
 ---
@@ -183,5 +186,5 @@ Para no obligar al operador a configurar un teléfono o correo en cada uno de lo
 | :--- | :--- | :--- | :--- | :--- |
 | **Descuentos y Valorización** | **Decorator** (`CalculadorPrecio`) | N/A | Cálculo en memoria sin alterar precio de lista en base de datos. Acumulación por orden determinista. | Descuentos aplicables únicamente por producto individual, sin reglas cruzadas multilínea. |
 | **Combos y Existencias** | **Composite** (`ComboStock` / `StockSimple`) | **Strategy** (`EstrategiaReservaCombo`) | Convivencia de stock propio armado con disponible virtual. Bloqueo transaccional ante componentes compartidos. | Sin autorreferencias cíclicas en combos; estructura recomendada hasta 2 niveles de profundidad. |
-| **Alertas de Reposición** | **Observer** (`AlertaStockBajo`) | **Strategy** (`Notificador`) | Desacople de detección y envío. Resolución jerárquica: Artículo → Categoría → Sucursal. Outbox transaccional. | Envío asincrónico desacoplado de la transacción principal; canales condicionados a los datos cargados en el contacto. |
+| **Alertas de Reposición** | **Observer** (`AlertaStockBajo`) | **Strategy** (`Notificador`) | Desacople de detección y envío. Resolución jerárquica: lista de la categoría → lista general → respaldo por contacto. Un evento de outbox por dirección. | Envío asincrónico desacoplado de la transacción principal; canales condicionados a los datos cargados en el contacto. |
 

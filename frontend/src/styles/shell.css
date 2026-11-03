@@ -85,3 +85,4 @@
 .product-category-form .field { flex: 1; min-width: 160px; }
 .product-category-form .message { flex-basis: 100%; }
 .categories-panel td { overflow-wrap: anywhere; }
+.recipients-panel td { max-width: 360px; overflow-wrap: anywhere; }

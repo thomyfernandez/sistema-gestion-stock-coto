@@ -15,6 +15,8 @@ public final class Respuestas {
                            int disponible, Integer stockFisico, Integer stockExhibicion, Integer stockReservado,
                            List<Componente> componentes, String imagenUrl, Integer categoriaId) { }
     public record ConfiguracionAvisos(String canal, String email, String telefono) { }
+    /** categoriaId nulo: lista general de la sucursal. */
+    public record Destinatarios(Integer categoriaId, List<String> emails) { }
     public record Pedido(long id, int stockId, Instant fecha, int cantidad, String estado) { }
     public record Movimiento(long id, int stockId, String tipo, int cantidad, Instant fecha, String motivo, String usuario) { }
     public record ResultadoMovimiento(long id, Map<Integer, Integer> disponibilidades, List<Pedido> pedidosGenerados) { }

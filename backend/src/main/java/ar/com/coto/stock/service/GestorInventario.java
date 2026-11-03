@@ -133,10 +133,14 @@ public final class GestorInventario implements GestionInventario {
         if (!o.avisos.isEmpty()) {
             var general = d.notificaciones.consultarConfiguracion();
             o.avisos.forEach((id, aviso) -> {
-                var configuracion = d.contactos.resolver(politicas.get(id), grafo.get(id).getProducto(), general);
-                d.eventos.encolar(new EventoIntegracion(0, clave + ":alerta:" + id,
-                        EventoIntegracion.Tipo.ALERTA, id, null, null, configuracion.canal(),
-                        configuracion.destino(), aviso.getTexto(), d.reloj.instant()));
+                var destinos = d.contactos.resolver(politicas.get(id), grafo.get(id).getProducto(), general);
+                // Un evento por dirección: cada email se entrega y reintenta por separado.
+                for (int i = 0; i < destinos.size(); i++) {
+                    var destino = destinos.get(i);
+                    d.eventos.encolar(new EventoIntegracion(0, clave + ":alerta:" + id + (destinos.size() == 1 ? "" : ":" + i),
+                            EventoIntegracion.Tipo.ALERTA, id, null, null, destino.canal(),
+                            destino.destino(), aviso.getTexto(), d.reloj.instant()));
+                }
             });
         }
         o.disponibilidades.keySet().forEach(id -> {
@@ -210,7 +214,7 @@ public final class GestorInventario implements GestionInventario {
             if (!(exigirStock(d.stocks.cargarInventario(), politica.stockId()) instanceof StockSimple)) {
                 throw new IllegalArgumentException("La política requiere un producto simple");
             }
-            d.contactos.resolver(politica, exigirStock(d.stocks.cargarInventario(), politica.stockId()).getProducto(), d.notificaciones.consultarConfiguracion());
+            d.contactos.respaldo(politica, exigirStock(d.stocks.cargarInventario(), politica.stockId()).getProducto(), d.notificaciones.consultarConfiguracion());
             d.politicas.guardar(politica);
             return null;
         });
@@ -245,6 +249,15 @@ public final class GestorInventario implements GestionInventario {
     }
     @Override public List<AuditoriaStock> listarAuditoria() {
         Dependencias d = d(); return d.unidad.consultar(d.auditoria::listar);
+    }
+    @Override public Pagina<MovimientoRegistrado> buscarMovimientos(Integer stockId, Set<TipoMovimiento> tipos, int pagina, int limite) {
+        Dependencias d = d(); return d.unidad.consultar(() -> d.movimientos.buscar(stockId, tipos, pagina, limite));
+    }
+    @Override public Pagina<AuditoriaStock> buscarAuditoria(Integer stockId, int pagina, int limite) {
+        Dependencias d = d(); return d.unidad.consultar(() -> d.auditoria.buscar(stockId, pagina, limite));
+    }
+    @Override public Map<Integer, PoliticaReposicion> listarPoliticas() {
+        Dependencias d = d(); return d.unidad.consultar(() -> Collections.unmodifiableMap(d.politicas.listar()));
     }
     @Override public List<PedidoRegistrado> listarPedidos() {
         Dependencias d = d(); return d.unidad.consultar(d.pedidos::listar);

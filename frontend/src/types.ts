@@ -28,7 +28,11 @@ export interface Integraciones {
 }
 export interface Contacto { id: number; nombre: string; email: string; telefono: string }
 export interface Categoria { id: number; nombre: string; contactoId: number | null; canalAlerta: Canal | null }
-export interface Snapshot { categorias: Categoria[]; contactos: Contacto[]; avisos: ConfiguracionAvisos; productos: Producto[]; pedidos: Pedido[]; movimientos: Movimiento[]; auditoria: Auditoria[]; integraciones: Integraciones; politicas: Record<number, Politica> }
+/** Datos compartidos por las vistas. Movimientos, auditoría e integraciones se piden en cada vista, paginados. */
+export interface Snapshot { categorias: Categoria[]; contactos: Contacto[]; avisos: ConfiguracionAvisos; destinatarios: ListaDestinatarios[]; productos: Producto[]; pedidos: Pedido[]; politicas: Record<number, Politica> }
+/** categoriaId nulo: lista general de la sucursal. */
+export interface ListaDestinatarios { categoriaId: number | null; emails: string[] }
+export interface Pagina<T> { elementos: T[]; total: number }
 
 export interface ConfiguracionAvisos { canal: Canal; email: string; telefono: string }
 export interface ImagenCarga { tipo: string; contenido: string }

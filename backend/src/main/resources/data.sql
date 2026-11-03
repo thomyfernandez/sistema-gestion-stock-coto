@@ -75,6 +75,9 @@ INSERT INTO evento_integracion (id, clave, tipo, stock_id, pedido_id, fecha) VAL
     (1, 'pedido:1', 'PEDIDO_ERP', 3, 1, TIMESTAMP WITH TIME ZONE '2026-10-15 09:01:00-03:00');
 
 INSERT INTO configuracion_avisos (id, canal, email, telefono) VALUES (1, 'EMAIL', 'compras@coto.example', '+541100000000');
+-- Lista de ejemplo: los avisos de Verdulería van a dos direcciones; el resto usa el destinatario general.
+INSERT INTO destinatario_aviso (id, categoria_id, email) VALUES
+    (1, 3, 'verduleria@coto.example'), (2, 3, 'jefe.verduleria@coto.example');
 
 
 -- Usuarios de demostración para pruebas y roles de sucursal.
