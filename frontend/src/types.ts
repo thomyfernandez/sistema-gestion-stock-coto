@@ -5,7 +5,7 @@ export interface Producto {
 }
 export type EstadoPedido = 'PENDIENTE' | 'ENVIADO' | 'RECIBIDO' | 'CANCELADO';
 export interface Pedido { id: number; stockId: number; fecha: string; cantidad: number; estado: EstadoPedido }
-export type TipoMovimiento = 'RECEPCION' | 'TRASLADO_A_GONDOLA' | 'RETORNO_A_DEPOSITO' | 'DEVOLUCION' | 'MERMA_DEPOSITO' | 'MERMA_GONDOLA' | 'RESERVA_DIGITAL' | 'CANCELACION_RESERVA' | 'DESPACHO_DIGITAL';
+export type TipoMovimiento = 'RECEPCION' | 'TRASLADO_A_GONDOLA' | 'RETORNO_A_DEPOSITO' | 'DEVOLUCION' | 'MERMA_DEPOSITO' | 'MERMA_GONDOLA' | 'RESERVA_DIGITAL' | 'CANCELACION_RESERVA' | 'DESPACHO_DIGITAL' | 'ARMADO_COMBO' | 'DESARMADO_COMBO';
 export interface Movimiento { id: number; stockId: number; tipo: TipoMovimiento; cantidad: number; fecha: string; motivo: string; usuario: string }
 export interface Operacion { stockId: number; cantidad: number; motivo: string; usuario: string }
 export interface ResultadoMovimiento { id: number; disponibilidades: Record<string, number>; pedidosGenerados: Pedido[] }
@@ -32,3 +32,6 @@ export interface Snapshot { categorias: Categoria[]; contactos: Contacto[]; avis
 
 export interface ConfiguracionAvisos { canal: Canal; email: string; telefono: string }
 export interface ImagenCarga { tipo: string; contenido: string }
+
+export type RolUsuario = 'RECEPCION' | 'REPOSITOR' | 'COMPRAS' | 'SUPERVISOR';
+export interface UsuarioSesion { token: string; username: string; nombreCompleto: string; rol: RolUsuario }

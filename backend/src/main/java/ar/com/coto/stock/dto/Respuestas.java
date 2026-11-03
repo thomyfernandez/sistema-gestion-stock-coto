@@ -8,6 +8,8 @@ import java.util.Map;
 /** DTOs planos: no exponen entidades JPA, observadores ni referencias recursivas. */
 public final class Respuestas {
     private Respuestas() { }
+    public record Sesion(String token, String username, String nombreCompleto, String rol) { }
+    public record Perfil(String username, String nombreCompleto, String rol) { }
     public record Componente(int stockId, String nombre, String tipo, int cantidadEnCombo, int disponible) { }
     public record Producto(int id, String nombre, String descripcion, BigDecimal precio, String tipo,
                            int disponible, Integer stockFisico, Integer stockExhibicion, Integer stockReservado,
