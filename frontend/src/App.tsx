@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle, ArrowDownToLine, Bell, Boxes, CheckCircle2, ChevronRight, ClipboardList, LogOut, Menu, PanelLeftClose, PanelLeftOpen, RefreshCw, Settings, ShieldCheck, Warehouse, X } from 'lucide-react';
+import { AlertCircle, ArrowDownToLine, Bell, Boxes, CheckCircle2, ChevronRight, ClipboardList, LogOut, Menu, PanelLeftClose, PanelLeftOpen, RefreshCw, Settings, ShieldCheck, Warehouse, X, Tag } from 'lucide-react';
 import { Button, Empty } from './components/ui';
 import { useStore } from './store';
 import { LoginScreen } from './components/LoginScreen';
@@ -7,10 +7,12 @@ import { RecepcionPage } from './pages/Operations';
 import { PurchasesPage } from './pages/Purchases';
 import { StockPage } from './pages/Stock';
 import { SettingsPage } from './pages/Settings';
+import { DiscountsPage } from './pages/Discounts';
 import cotoLogo from './assets/coto-superapp.png';
 
 const allViews = [
   { id: 'stock', name: 'Stock', icon: Warehouse, roles: ['REPOSITOR', 'SUPERVISOR'] },
+  { id: 'descuentos', name: 'Descuentos', icon: Tag, roles: ['COMPRAS', 'SUPERVISOR'] },
   { id: 'recepcion', name: 'Recepción', icon: ArrowDownToLine, roles: ['RECEPCION', 'SUPERVISOR'] },
   { id: 'compras', name: 'Compras', icon: ClipboardList, roles: ['COMPRAS', 'SUPERVISOR'] },
   { id: 'configuracion', name: 'Configuración', icon: Settings, roles: ['SUPERVISOR'] },
@@ -242,6 +244,7 @@ export default function App() {
           ) : (
             <>
               {route.view === 'stock' && <StockPage tab={route.tab} />}
+              {route.view === 'descuentos' && <DiscountsPage />}
               {route.view === 'recepcion' && <RecepcionPage />}
               {route.view === 'compras' && <PurchasesPage tab={route.tab} />}
               {route.view === 'configuracion' && <SettingsPage tab={route.tab} />}

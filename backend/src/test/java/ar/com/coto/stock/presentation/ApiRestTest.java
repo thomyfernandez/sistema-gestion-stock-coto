@@ -235,6 +235,15 @@ class ApiRestTest {
                 """)).andExpect(status().isOk());
         mvc.perform(get("/api/productos/2/precio")).andExpect(jsonPath("$.precioFinal").value(3290));
     }
+    @Test void promocionesSePuedenEliminar() throws Exception {
+        MvcResult promo = enviar("/api/productos/2/promociones", """
+                {"tipo":"DESCUENTO","porcentaje":12.5,"orden":1,"activa":true}
+                """).andExpect(status().isCreated()).andReturn();
+        String location = promo.getResponse().getHeader("Location");
+        mvc.perform(delete(location)).andExpect(status().isNoContent());
+        mvc.perform(get(location)).andExpect(status().isNotFound());
+        mvc.perform(delete("/api/productos/2/promociones/999")).andExpect(status().isNotFound());
+    }
     @Test void conflictoSqlNoExponeDetallesDeInfraestructura() throws Exception {
         enviar("/api/productos/1/promociones", """
                 {"tipo":"DESCUENTO","porcentaje":10,"orden":10,"activa":true}

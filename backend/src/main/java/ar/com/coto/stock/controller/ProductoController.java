@@ -66,4 +66,9 @@ public class ProductoController {
             @PathVariable @Positive long promocionId, @Valid @RequestBody Solicitudes.Promocion solicitud) {
         return MapeadorDto.promocion(inventario.guardarPromocion(MapeadorDto.promocion(id, promocionId, solicitud)));
     }
+    @DeleteMapping("/{id}/promociones/{promocionId}") public ResponseEntity<Void> eliminarPromocion(@PathVariable @Positive int id,
+            @PathVariable @Positive long promocionId) {
+        inventario.eliminarPromocion(id, promocionId);
+        return ResponseEntity.noContent().build();
+    }
 }

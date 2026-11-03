@@ -240,6 +240,16 @@ public final class GestorInventario implements GestionInventario {
             return d.promociones.guardar(promocion);
         });
     }
+    @Override public void eliminarPromocion(int productoId, long promocionId) {
+        Dependencias d = d();
+        d.unidad.ejecutar(() -> {
+            d.stocks.bloquearInventario();
+            exigirStock(d.stocks.cargarInventario(), productoId);
+            consultarPromocion(productoId, promocionId);
+            d.promociones.eliminar(promocionId);
+            return null;
+        });
+    }
     @Override public List<Promocion> listarPromociones(int id) {
         Dependencias d = d();
         return d.unidad.consultar(() -> { exigirStock(d.stocks.cargarInventario(), id); return d.promociones.listar(id); });
