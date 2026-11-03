@@ -11,6 +11,8 @@ Backoffice de inventario de sucursal de COTO: stock, recepción de pedidos, comp
 | Backend demo (puerto 8080) | `mvn -f backend/pom.xml spring-boot:run` |
 | Frontend dev (5173, proxy `/api`) | `cd frontend && npm run dev` |
 | Tipos + build de producción | `cd frontend && npm run build` |
+| Pruebas frontend (Vitest) | `cd frontend && npm test` |
+| Recorridos E2E (Playwright, 18080/5174) | `mvn -f backend/pom.xml package -DskipTests` y `cd frontend && npm run test:e2e` |
 | Catálogo del Design System | `cd frontend && npm run dev` → http://127.0.0.1:5173/design-system.html |
 | Documentación de la API | Backend iniciado → http://localhost:8080/swagger-ui.html (spec en `/v3/api-docs`) |
 
@@ -24,7 +26,7 @@ Para pruebas manuales que modifican datos, levantar instancias aisladas (backend
 - `disponible = físico − exhibición − reservado`; no existe columna de disponible. Simples y combos comparten tabla con discriminador; los combos no tienen contadores propios.
 - Cambios de esquema: actualizar `schema.sql`, `data.sql` **y** agregar un script `db/upgrade-*.sql` idempotente para bases existentes, con su prueba.
 - Errores HTTP en `application/problem+json` (RFC 9457). DTOs validados en `dto/`. Cada controller lleva `@Tag` para agruparse en Swagger; un controller nuevo también.
-- Frontend: HTTP solo en `api.ts`; estado en `store.tsx`; nunca inventar existencias ni precios en el navegador.
+- Frontend: HTTP solo en `api.ts`; estado en `store.tsx`; nunca inventar existencias ni precios en el navegador. Cada operación indica qué grupos recarga (`run(accion, mensaje, grupos)`); los historiales se piden paginados en su vista, nunca en el sondeo.
 
 ## Design System COTO
 
@@ -60,8 +62,8 @@ Los subagentes no pueden lanzar otros subagentes: la **sesión principal orquest
 
 ## Definición de terminado
 
-1. `mvn -f backend/pom.xml test` en verde si se tocó el backend.
-2. `npm run build` en verde si se tocó el frontend.
+1. `mvn -f backend/pom.xml test` en verde si se tocó el backend. Con Docker en ejecución incluye `PostgresRealTest`; sin Docker se omite.
+2. `npm run build` y `npm test` en verde si se tocó el frontend; `npm run test:e2e` si cambió un recorrido crítico.
 3. Criterios de aceptación de `plan.md` verificados por el tester, con evidencia.
 4. `revision.md` sin hallazgos bloqueantes abiertos.
 5. Documentación (`README.md`, `docs/`) actualizada cuando cambia el comportamiento visible o el esquema.

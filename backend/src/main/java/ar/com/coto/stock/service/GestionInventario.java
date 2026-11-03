@@ -5,6 +5,7 @@ import ar.com.coto.stock.domain.reposicion.PoliticaReposicion;
 import ar.com.coto.stock.domain.valorizacion.Promocion;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /** Contrato de aplicación para los futuros controladores REST. */
 public interface GestionInventario {
@@ -25,6 +26,9 @@ public interface GestionInventario {
     void eliminarPromocion(int productoId, long promocionId);
     List<MovimientoRegistrado> listarMovimientos();
     List<AuditoriaStock> listarAuditoria();
+    Pagina<MovimientoRegistrado> buscarMovimientos(Integer stockId, Set<TipoMovimiento> tipos, int pagina, int limite);
+    Pagina<AuditoriaStock> buscarAuditoria(Integer stockId, int pagina, int limite);
+    Map<Integer, PoliticaReposicion> listarPoliticas();
     List<PedidoRegistrado> listarPedidos();
     ResultadoMovimiento recibirPedido(long id, String usuario);
     void cancelarPedido(long id);

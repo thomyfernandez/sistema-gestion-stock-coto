@@ -27,8 +27,12 @@ public class ConfiguracionAplicacion {
                 ServicioNotificaciones.Canal.SMS, new SmsNotificador(new AdaptadorProveedorSMS(api)),
                 ServicioNotificaciones.Canal.WHATSAPP, new WhatsAppNotificador(new AdaptadorProveedor(api, "WHATSAPP"))), avisos, unidad);
     }
-    @Bean ServicioContactos contactos(RepositorioContactos contactos, RepositorioPoliticas politicas, RepositorioStock stocks, UnidadDeTrabajo unidad, RepositorioCategorias categorias) {
-        return new ServicioContactos(contactos, politicas, stocks, unidad, categorias);
+    @Bean ServicioContactos contactos(RepositorioContactos contactos, RepositorioPoliticas politicas, RepositorioStock stocks, UnidadDeTrabajo unidad,
+                                      RepositorioCategorias categorias, RepositorioDestinatarios destinatarios) {
+        return new ServicioContactos(contactos, politicas, stocks, unidad, categorias, destinatarios);
+    }
+    @Bean ServicioDestinatarios destinatarios(RepositorioDestinatarios destinatarios, RepositorioCategorias categorias, RepositorioStock stocks, UnidadDeTrabajo unidad) {
+        return new ServicioDestinatarios(destinatarios, categorias, stocks, unidad);
     }
     @Bean ServicioCategorias categorias(RepositorioCategorias categorias, RepositorioContactos contactos, RepositorioStock stocks, UnidadDeTrabajo unidad) {
         return new ServicioCategorias(categorias, contactos, stocks, unidad);

@@ -3,7 +3,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { api } from '../api';
 import { destinoAviso } from '../notifications';
 import { useStore } from '../store';
-import type { Canal, Politica, Producto, Promocion } from '../types';
+import type { Politica, Producto, Promocion } from '../types';
 import { ImageUpload, type ImageSelection } from './ImageUpload';
 import { Button, ErrorMessage, Field, Modal, ProductName } from './ui';
 
@@ -43,14 +43,13 @@ export function PolicyForm({ product, onClose }: { product: Producto; onClose: (
     tipo: 'PUNTO_PEDIDO', puntoPedido: 20, stockObjetivo: 100, demandaDiaria: 0, diasCobertura: 1, factorEstacional: 1, umbralAlerta: 10, destinoAlerta: 'configuracion-global', contactoId: null, canalAlerta: null,
   });
   const [error, setError] = useState<Error | null>(null);
-  const contact = data?.contactos.find(p => p.id === values.contactoId);
-  const inherited = data ? destinoAviso({ ...data, politicas: { ...data.politicas, [product.id]: { ...values, stockId: product.id, contactoId: null, canalAlerta: null } } }, product) : null;
-  const destination = contact ? values.canalAlerta === 'EMAIL' ? contact.email : contact.telefono : inherited?.destino;
+  // Los destinatarios se administran en Configuración; la asignación anterior por contacto se conserva sin cambios.
+  const aviso = data ? destinoAviso(data, product) : null;
   const setNumber = (name: keyof typeof values, value: string) => setValues(old => ({ ...old, [name]: value === '' ? '' : Number(value) }));
   const descriptions = { PUNTO_PEDIDO: 'Al alcanzar el punto de pedido, se repone hasta el stock objetivo.', DEMANDA: 'Se calcula la mercadería necesaria para cubrir la demanda diaria.', ESTACIONAL: 'El objetivo se ajusta por el factor de la temporada.' };
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); setError(null);
-    try { await run(() => api.guardarPolitica(product.id, values), 'Política de reposición guardada. Se aplicará en el próximo movimiento o evaluación.'); onClose(); }
+    try { await run(() => api.guardarPolitica(product.id, values), 'Política de reposición guardada. Se aplicará en el próximo movimiento o evaluación.', ['politicas']); onClose(); }
     catch (e) { setError(e as Error); }
   }
   return <Modal title="Política de reposición" description="Configurá cuándo y cuánto reponer." onClose={onClose}><form onSubmit={submit}><div className="modal-body form-stack"><ProductName product={product} />
@@ -58,10 +57,9 @@ export function PolicyForm({ product, onClose }: { product: Producto; onClose: (
     {values.tipo === 'PUNTO_PEDIDO' && <div className="form-grid"><Field label="Punto de pedido"><input required type="number" min="1" max="2147483646" step="1" value={values.puntoPedido} onChange={e => setNumber('puntoPedido', e.target.value)} disabled={busy} /></Field><Field label="Stock objetivo"><input required type="number" min={Number(values.puntoPedido) + 1} max="2147483647" step="1" value={values.stockObjetivo} onChange={e => setNumber('stockObjetivo', e.target.value)} disabled={busy} /></Field></div>}
     {values.tipo === 'DEMANDA' && <div className="form-grid"><Field label="Demanda diaria"><input required type="number" min="0" max="999999999.999" step="0.001" value={values.demandaDiaria} onChange={e => setNumber('demandaDiaria', e.target.value)} disabled={busy} /></Field><Field label="Días de cobertura"><input required type="number" min="1" max="2147483647" step="1" value={values.diasCobertura} onChange={e => setNumber('diasCobertura', e.target.value)} disabled={busy} /></Field></div>}
     {values.tipo === 'ESTACIONAL' && <div className="form-grid"><Field label="Objetivo base"><input required type="number" min="1" max="2147483647" step="1" value={values.stockObjetivo} onChange={e => setNumber('stockObjetivo', e.target.value)} disabled={busy} /></Field><Field label="Factor de temporada"><input required type="number" min="0.0001" max="99999999.9999" step="0.0001" value={values.factorEstacional} onChange={e => setNumber('factorEstacional', e.target.value)} disabled={busy} /></Field></div>}
-    <div className="form-divider" /><Field label="Umbral de alerta" hint="Se envía un aviso cuando el disponible cae por debajo de este valor."><input required type="number" min="1" max="2147483647" step="1" value={values.umbralAlerta} onChange={e => setNumber('umbralAlerta', e.target.value)} disabled={busy} /></Field><Field label="Destinatario del aviso"><select value={values.contactoId ?? ''} disabled={busy} onChange={e => { const selected = data?.contactos.find(p => p.id === Number(e.target.value)); setValues(v => ({ ...v, contactoId: selected?.id ?? null, canalAlerta: selected ? selected.email ? 'EMAIL' : 'WHATSAPP' : null })); }}><option value="">Usar aviso de categoría o sucursal</option>{data?.contactos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}</select></Field>
-    {contact && <Field label="Canal del aviso"><select required value={values.canalAlerta || ''} disabled={busy} onChange={e => setValues(v => ({ ...v, canalAlerta: e.target.value as Canal }))}><option value="EMAIL" disabled={!contact.email}>Email{!contact.email ? ' · sin email cargado' : ''}</option><option value="SMS" disabled={!contact.telefono}>SMS{!contact.telefono ? ' · sin teléfono cargado' : ''}</option><option value="WHATSAPP" disabled={!contact.telefono}>WhatsApp{!contact.telefono ? ' · sin teléfono cargado' : ''}</option></select></Field>}
-    <p className="form-info">{contact ? `Avisar a ${contact.nombre}` : `Avisar a ${inherited?.nombre} · ${inherited?.origen}`} · {contact ? values.canalAlerta : inherited?.canal}: {destination}</p>
-    <p className="field-hint"><a className="text-link" href="#/configuracion/avisos">Administrar contactos y avisos generales</a></p><ErrorMessage error={error} /></div>
+    <div className="form-divider" /><Field label="Umbral de alerta" hint="Se envía un aviso cuando el disponible cae por debajo de este valor."><input required type="number" min="1" max="2147483647" step="1" value={values.umbralAlerta} onChange={e => setNumber('umbralAlerta', e.target.value)} disabled={busy} /></Field>
+    {aviso && <p className="form-info">Avisar a {aviso.nombre} · {aviso.canal}: {aviso.destinos.join(', ') || 'sin destino'}</p>}
+    <p className="field-hint"><a className="text-link" href="#/configuracion/avisos">Administrar destinatarios de avisos</a></p><ErrorMessage error={error} /></div>
     <footer className="modal-footer"><Button onClick={onClose} disabled={busy}>Cancelar</Button><Button type="submit" variant="primary" loading={busy}>Guardar política</Button></footer></form></Modal>;
 }
 
@@ -72,7 +70,7 @@ export function PromotionForm({ product, existing, nextOrder, onClose }: { produ
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); setError(null);
     const body = { tipo: values.tipo, porcentaje: Number(values.porcentaje), orden: Number(values.orden), activa: values.activa, medioPago: values.tipo === 'MEDIO_PAGO' ? values.medioPago.trim() : null };
-    try { await run(() => api.guardarPromocion(product.id, body, existing?.id), 'Promoción guardada. Los precios del catálogo se actualizaron.'); onClose(); }
+    try { await run(() => api.guardarPromocion(product.id, body, existing?.id), 'Promoción guardada. Los precios del catálogo se actualizaron.', []); onClose(); }
     catch (e) { setError(e as Error); }
   }
   return <Modal title={existing ? 'Editar promoción' : 'Nueva promoción'} description="Los descuentos se acumulan según su orden de aplicación." onClose={onClose}><form onSubmit={submit}><div className="modal-body form-stack"><ProductName product={product} />
@@ -80,4 +78,86 @@ export function PromotionForm({ product, existing, nextOrder, onClose }: { produ
     {values.tipo !== 'DOS_POR_UNO' ? <Field label="Descuento (%)"><input required type="number" min="0" max="100" step="0.0001" value={values.porcentaje} onChange={e => setValues(old => ({ ...old, porcentaje: e.target.value }))} disabled={busy} /></Field> : <p className="form-info">Cada dos unidades, se paga una. Las unidades impares se cobran a su precio correspondiente.</p>}
     {values.tipo === 'MEDIO_PAGO' && <Field label="Medio de pago"><input required maxLength={60} value={values.medioPago} onChange={e => setValues(old => ({ ...old, medioPago: e.target.value }))} disabled={busy} /></Field>}
     <Field label="Orden de aplicación" hint="Debe ser distinto al de las otras promociones del artículo."><input required type="number" min="0" max="2147483647" step="1" value={values.orden} onChange={e => setValues(old => ({ ...old, orden: e.target.value }))} disabled={busy} /></Field><label className="checkbox-label"><input type="checkbox" checked={values.activa} onChange={e => setValues(old => ({ ...old, activa: e.target.checked }))} disabled={busy} />Promoción activa</label><ErrorMessage error={error} /></div><footer className="modal-footer"><Button onClick={onClose} disabled={busy}>Cancelar</Button><Button type="submit" variant="primary" loading={busy}>Guardar promoción</Button></footer></form></Modal>;
+}
+
+export function ComboArmadoForm({ combo, mode, onClose }: { combo: Producto; mode: 'armar' | 'desarmar'; onClose: () => void }) {
+  const { busy, run, usuario: sesion } = useStore();
+  const [cantidad, setCantidad] = useState('1');
+  const [motivo, setMotivo] = useState(mode === 'armar' ? 'Armado de combos para salón' : 'Desarmado por rotura o devolución');
+  const [usuario, setUsuario] = useState(sesion?.username || 'repositor.demo');
+  const [error, setError] = useState<Error | null>(null);
+
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    try {
+      await run(
+        () => mode === 'armar'
+          ? api.armarCombo(combo.id, { cantidad: Number(cantidad), motivo: motivo.trim(), usuario: usuario.trim() })
+          : api.desarmarCombo(combo.id, { cantidad: Number(cantidad), motivo: motivo.trim(), usuario: usuario.trim() }),
+        mode === 'armar' ? 'Combo armado correctamente. Stock propio actualizado.' : 'Combo desarmado correctamente. Componentes restituidos.'
+      );
+      onClose();
+    } catch (e) {
+      setError(e as Error);
+    }
+  }
+
+  const limit = mode === 'desarmar' ? (combo.stockFisico || 0) : undefined;
+
+  return (
+    <Modal
+      title={mode === 'armar' ? `Armar combo ${combo.nombre}` : `Desarmar combo ${combo.nombre}`}
+      description={mode === 'armar'
+        ? 'Pasa unidades físicas de los componentes al stock propio del combo.'
+        : 'Descuenta stock físico propio del combo y restituye unidades a los componentes.'}
+      onClose={onClose}
+    >
+      <form onSubmit={submit}>
+        <div className="modal-body form-stack">
+          <ProductName product={combo} />
+          <Field
+            label="Cantidad"
+            hint={mode === 'desarmar' ? `Stock físico propio actual: ${combo.stockFisico || 0} unidades` : 'Se descuentan de los componentes según la fórmula del combo'}
+          >
+            <input
+              required
+              type="number"
+              min="1"
+              max={limit}
+              step="1"
+              value={cantidad}
+              onChange={e => setCantidad(e.target.value)}
+              disabled={busy}
+            />
+          </Field>
+          <Field label="Motivo">
+            <input
+              required
+              maxLength={500}
+              value={motivo}
+              onChange={e => setMotivo(e.target.value)}
+              disabled={busy}
+            />
+          </Field>
+          <Field label="Operador">
+            <input
+              required
+              maxLength={100}
+              value={usuario}
+              onChange={e => setUsuario(e.target.value)}
+              disabled={busy}
+            />
+          </Field>
+          <ErrorMessage error={error} />
+        </div>
+        <footer className="modal-footer">
+          <Button onClick={onClose} disabled={busy}>Cancelar</Button>
+          <Button variant="primary" type="submit" loading={busy} disabled={mode === 'desarmar' && (combo.stockFisico || 0) <= 0}>
+            {mode === 'armar' ? 'Confirmar armado' : 'Confirmar desarmado'}
+          </Button>
+        </footer>
+      </form>
+    </Modal>
+  );
 }

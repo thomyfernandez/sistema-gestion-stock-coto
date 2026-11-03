@@ -8,11 +8,15 @@ import java.util.Map;
 /** DTOs planos: no exponen entidades JPA, observadores ni referencias recursivas. */
 public final class Respuestas {
     private Respuestas() { }
+    public record Sesion(String token, String username, String nombreCompleto, String rol) { }
+    public record Perfil(String username, String nombreCompleto, String rol) { }
     public record Componente(int stockId, String nombre, String tipo, int cantidadEnCombo, int disponible) { }
     public record Producto(int id, String nombre, String descripcion, BigDecimal precio, String tipo,
                            int disponible, Integer stockFisico, Integer stockExhibicion, Integer stockReservado,
                            List<Componente> componentes, String imagenUrl, Integer categoriaId) { }
     public record ConfiguracionAvisos(String canal, String email, String telefono) { }
+    /** categoriaId nulo: lista general de la sucursal. */
+    public record Destinatarios(Integer categoriaId, List<String> emails) { }
     public record Pedido(long id, int stockId, Instant fecha, int cantidad, String estado) { }
     public record Movimiento(long id, int stockId, String tipo, int cantidad, Instant fecha, String motivo, String usuario) { }
     public record ResultadoMovimiento(long id, Map<Integer, Integer> disponibilidades, List<Pedido> pedidosGenerados) { }

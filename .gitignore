@@ -6,6 +6,8 @@
 **/node_modules/
 frontend/dist/
 frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
 frontend/.env.local
 frontend/.env.*.local
 *.tsbuildinfo

@@ -43,8 +43,8 @@ class AplicacionIntegracionTest {
     @Autowired JdbcTemplate jdbc;
 
     @BeforeEach void reiniciar() {
-        for (String tabla : List.of("imagen_producto", "configuracion_avisos", "evento_integracion", "promocion", "politica_reposicion", "auditoria_stock", "pedido_reposicion",
-                "movimiento_stock", "linea_combo", "stock", "producto", "categoria", "proveedor", "bloqueo_operacion")) jdbc.update("DELETE FROM " + tabla);
+        for (String tabla : List.of("usuario", "imagen_producto", "configuracion_avisos", "evento_integracion", "promocion", "politica_reposicion", "auditoria_stock", "pedido_reposicion",
+                "movimiento_stock", "linea_combo", "stock", "producto", "destinatario_aviso", "categoria", "proveedor", "bloqueo_operacion")) jdbc.update("DELETE FROM " + tabla);
         new ResourceDatabasePopulator(new ClassPathResource("data.sql")).execute(dataSource);
         mensajes.setDisponible(true); erp.setDisponible(true); digital.setDisponible(true);
         mensajes.limpiar(); erp.limpiar(); digital.limpiar();
@@ -261,6 +261,32 @@ class AplicacionIntegracionTest {
         assertEquals(6, contar("stock"));
         assertEquals(1, contar("evento_integracion"));
         assertTrue(digital.getInventario().isEmpty());
+    }
+
+    @Test void armadoYDesarmadoDeComboPersisteStockFisicoYComponentes() {
+        var resArmado = gestor.registrarMovimiento(movimiento(6, TipoMovimiento.ARMADO_COMBO, 5));
+        assertEquals(35, resArmado.disponibilidades().get(6));
+        assertEquals(70, resArmado.disponibilidades().get(1));
+        assertEquals(30, resArmado.disponibilidades().get(2));
+
+        ComboStock comboBD = (ComboStock) gestor.consultarStock(6);
+        assertEquals(5, comboBD.getStockFisico());
+        assertEquals(5, comboBD.getDisponiblePropio());
+        assertEquals(30, comboBD.getDisponibleVirtual());
+        assertEquals(35, comboBD.getDisponible());
+
+        StockSimple arrozBD = (StockSimple) gestor.consultarStock(1);
+        assertEquals(110, arrozBD.getStockFisico());
+
+        var resDesarmado = gestor.registrarMovimiento(movimiento(6, TipoMovimiento.DESARMADO_COMBO, 2));
+        assertEquals(35, resDesarmado.disponibilidades().get(6));
+
+        ComboStock comboDesarmado = (ComboStock) gestor.consultarStock(6);
+        assertEquals(3, comboDesarmado.getStockFisico());
+        assertEquals(3, comboDesarmado.getDisponiblePropio());
+
+        StockSimple arrozRestituido = (StockSimple) gestor.consultarStock(1);
+        assertEquals(114, arrozRestituido.getStockFisico());
     }
 
     @Test void comboNoRecibeMercaderiaFisicaNiPoliticaDeReposicion() {

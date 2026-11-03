@@ -5,7 +5,7 @@ export interface Producto {
 }
 export type EstadoPedido = 'PENDIENTE' | 'ENVIADO' | 'RECIBIDO' | 'CANCELADO';
 export interface Pedido { id: number; stockId: number; fecha: string; cantidad: number; estado: EstadoPedido }
-export type TipoMovimiento = 'RECEPCION' | 'TRASLADO_A_GONDOLA' | 'RETORNO_A_DEPOSITO' | 'DEVOLUCION' | 'MERMA_DEPOSITO' | 'MERMA_GONDOLA' | 'RESERVA_DIGITAL' | 'CANCELACION_RESERVA' | 'DESPACHO_DIGITAL';
+export type TipoMovimiento = 'RECEPCION' | 'TRASLADO_A_GONDOLA' | 'RETORNO_A_DEPOSITO' | 'DEVOLUCION' | 'MERMA_DEPOSITO' | 'MERMA_GONDOLA' | 'RESERVA_DIGITAL' | 'CANCELACION_RESERVA' | 'DESPACHO_DIGITAL' | 'ARMADO_COMBO' | 'DESARMADO_COMBO';
 export interface Movimiento { id: number; stockId: number; tipo: TipoMovimiento; cantidad: number; fecha: string; motivo: string; usuario: string }
 export interface Operacion { stockId: number; cantidad: number; motivo: string; usuario: string }
 export interface ResultadoMovimiento { id: number; disponibilidades: Record<string, number>; pedidosGenerados: Pedido[] }
@@ -28,7 +28,14 @@ export interface Integraciones {
 }
 export interface Contacto { id: number; nombre: string; email: string; telefono: string }
 export interface Categoria { id: number; nombre: string; contactoId: number | null; canalAlerta: Canal | null }
-export interface Snapshot { categorias: Categoria[]; contactos: Contacto[]; avisos: ConfiguracionAvisos; productos: Producto[]; pedidos: Pedido[]; movimientos: Movimiento[]; auditoria: Auditoria[]; integraciones: Integraciones; politicas: Record<number, Politica> }
+/** Datos compartidos por las vistas. Movimientos, auditoría e integraciones se piden en cada vista, paginados. */
+export interface Snapshot { categorias: Categoria[]; contactos: Contacto[]; avisos: ConfiguracionAvisos; destinatarios: ListaDestinatarios[]; productos: Producto[]; pedidos: Pedido[]; politicas: Record<number, Politica> }
+/** categoriaId nulo: lista general de la sucursal. */
+export interface ListaDestinatarios { categoriaId: number | null; emails: string[] }
+export interface Pagina<T> { elementos: T[]; total: number }
 
 export interface ConfiguracionAvisos { canal: Canal; email: string; telefono: string }
 export interface ImagenCarga { tipo: string; contenido: string }
+
+export type RolUsuario = 'RECEPCION' | 'REPOSITOR' | 'COMPRAS' | 'SUPERVISOR';
+export interface UsuarioSesion { token: string; username: string; nombreCompleto: string; rol: RolUsuario }

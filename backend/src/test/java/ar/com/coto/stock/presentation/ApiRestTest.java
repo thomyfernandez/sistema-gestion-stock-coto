@@ -28,7 +28,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "coto.integraciones.automaticas=false",
         "spring.datasource.url=jdbc:h2:mem:etapa3test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=15000"
 })
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(addFilters = false)
+@org.springframework.security.test.context.support.WithMockUser(username = "supervisor.demo", roles = {"SUPERVISOR", "COMPRAS", "RECEPCION", "REPOSITOR"})
 @ActiveProfiles("demo")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class ApiRestTest {
@@ -39,17 +40,20 @@ class ApiRestTest {
     @Autowired SistemaERPExterno erp;
     @Autowired ApiCotoDigitalExterna digital;
     @Autowired GestionNotificaciones notificaciones;
+    @Autowired ar.com.coto.stock.config.JwtTokenService jwtTokenService;
+    private String tokenPruebas;
 
     @BeforeEach void reiniciar() {
-        for (String tabla : List.of("imagen_producto", "configuracion_avisos", "evento_integracion", "promocion", "politica_reposicion", "auditoria_stock", "pedido_reposicion",
-                "movimiento_stock", "linea_combo", "stock", "producto", "categoria", "proveedor", "bloqueo_operacion")) jdbc.update("DELETE FROM " + tabla);
+        for (String tabla : List.of("usuario", "imagen_producto", "configuracion_avisos", "evento_integracion", "promocion", "politica_reposicion", "auditoria_stock", "pedido_reposicion",
+                "movimiento_stock", "linea_combo", "stock", "producto", "destinatario_aviso", "categoria", "proveedor", "bloqueo_operacion")) jdbc.update("DELETE FROM " + tabla);
         new ResourceDatabasePopulator(new ClassPathResource("data.sql")).execute(dataSource);
         mensajes.setDisponible(true); erp.setDisponible(true); digital.setDisponible(true);
         mensajes.limpiar(); erp.limpiar(); digital.limpiar();
         notificaciones.setCanal(GestionNotificaciones.Canal.EMAIL);
+        tokenPruebas = jwtTokenService.generarToken("supervisor.demo", "SUPERVISOR", "Supervisor de Sucursal");
     }
     private ResultActions enviar(String ruta, String json) throws Exception {
-        return mvc.perform(post(ruta).contentType(MediaType.APPLICATION_JSON).content(json));
+        return mvc.perform(post(ruta).header("Authorization", "Bearer " + tokenPruebas).contentType(MediaType.APPLICATION_JSON).content(json));
     }
     private String operacion(int id, int cantidad) {
         return """
@@ -123,6 +127,33 @@ class ApiRestTest {
         mvc.perform(get("/api/combos/6")).andExpect(jsonPath("$.disponible").value(34));
         mvc.perform(get("/api/movimientos?stockId=6")).andExpect(jsonPath("$", hasSize(3)));
         mvc.perform(get("/api/auditoria?stockId=6")).andExpect(jsonPath("$", hasSize(4)));
+    }
+    @Test void armadoYDesarmadoDeCombosPorHttp() throws Exception {
+        enviar("/api/combos/6/armado", """
+                {"cantidad":5,"motivo":"Armado canastas para góndola","usuario":"repositor.demo"}
+                """).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.disponibilidades.6").value(35))
+                .andExpect(jsonPath("$.disponibilidades.1").value(70))
+                .andExpect(jsonPath("$.disponibilidades.2").value(30));
+
+        mvc.perform(get("/api/combos/6")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.stockFisico").value(5))
+                .andExpect(jsonPath("$.disponible").value(35));
+
+        enviar("/api/combos/6/desarmado", """
+                {"cantidad":2,"motivo":"Desarmado por devolución","usuario":"repositor.demo"}
+                """).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.disponibilidades.6").value(35));
+
+        mvc.perform(get("/api/combos/6")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.stockFisico").value(3))
+                .andExpect(jsonPath("$.disponible").value(35));
+    }
+    @Test void armadoDeComboConStockInsuficienteDevuelve409() throws Exception {
+        enviar("/api/combos/6/armado", """
+                {"cantidad":50,"motivo":"Armado excesivo","usuario":"repositor.demo"}
+                """).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo").value("STOCK_INSUFICIENTE"));
     }
     @Test void movimientoGenericoTambienPasaPorElGestor() throws Exception {
         enviar("/api/movimientos", """
@@ -581,4 +612,80 @@ class ApiRestTest {
         assertEquals("segundo@coto.example", mensajes.getMensajes().getLast().to());
     }
 
+    private ResultActions guardarLista(String ruta, String... emails) throws Exception {
+        String json = java.util.Arrays.stream(emails).map(e -> "\"" + e + "\"").collect(java.util.stream.Collectors.joining(","));
+        return mvc.perform(put("/api/configuracion/destinatarios/" + ruta).contentType(MediaType.APPLICATION_JSON).content("{\"emails\":[" + json + "]}"));
+    }
+    private List<String> destinos() { return mensajes.getMensajes().stream().map(m -> m.canal() + ":" + m.to()).toList(); }
+    @Test void listasDeDestinatariosSeConsultanConLaGeneralPrimero() throws Exception {
+        mvc.perform(get("/api/configuracion/destinatarios")).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].categoriaId").value(nullValue())).andExpect(jsonPath("$[0].emails", hasSize(0)))
+                .andExpect(jsonPath("$[1].categoriaId").value(3))
+                .andExpect(jsonPath("$[1].emails", contains("verduleria@coto.example", "jefe.verduleria@coto.example")));
+    }
+    @Test void listaDeCategoriaEnviaUnEmailPorDireccionYElRestoUsaElRespaldo() throws Exception {
+        guardarLista("categorias/1", " Almacen@COTO.example ", "almacen@coto.example", "jefe.almacen@coto.example", "")
+                .andExpect(status().isOk()).andExpect(jsonPath("$.categoriaId").value(1))
+                .andExpect(jsonPath("$.emails", contains("almacen@coto.example", "jefe.almacen@coto.example")));
+        enviar("/api/digital/reservas", operacion(1, 61)).andExpect(status().isCreated());
+        enviar("/api/digital/reservas", operacion(3, 1)).andExpect(status().isCreated());
+        assertEquals(List.of("EMAIL:almacen@coto.example", "EMAIL:jefe.almacen@coto.example", "EMAIL:compras@coto.example"), destinos());
+        assertEquals(3, jdbc.queryForObject("SELECT COUNT(*) FROM evento_integracion WHERE tipo='ALERTA'", Integer.class));
+    }
+    @Test void listaGeneralReemplazaAlRespaldoYTieneMenorPrioridadQueLaCategoria() throws Exception {
+        long contacto = crearContacto("Contacto anterior", "", "+541155553333");
+        asignarAvisos(2, contacto, "SMS").andExpect(status().isOk());
+        guardarLista("general", "sucursal@coto.example", "gerencia@coto.example").andExpect(status().isOk());
+        enviar("/api/digital/reservas", operacion(2, 26)).andExpect(status().isCreated());
+        enviar("/api/digital/reservas", operacion(4, 12)).andExpect(status().isCreated());
+        assertEquals(List.of("EMAIL:sucursal@coto.example", "EMAIL:gerencia@coto.example",
+                "EMAIL:verduleria@coto.example", "EMAIL:jefe.verduleria@coto.example"), destinos());
+        guardarLista("general").andExpect(status().isOk()).andExpect(jsonPath("$.emails", hasSize(0)));
+        enviar("/api/recepcion/ingresos", operacion(2, 26)).andExpect(status().isCreated());
+        enviar("/api/digital/reservas", operacion(2, 26)).andExpect(status().isCreated());
+        assertEquals("SMS:+541155553333", destinos().getLast());
+    }
+    @Test void listasInvalidasSeRechazanSinModificarLasGuardadas() throws Exception {
+        guardarLista("categorias/3", "sin-arroba").andExpect(status().isBadRequest());
+        guardarLista("categorias/999", "nadie@coto.example").andExpect(status().isNotFound());
+        guardarLista("general", java.util.stream.IntStream.rangeClosed(1, 21).mapToObj(i -> "u" + i + "@coto.example").toArray(String[]::new))
+                .andExpect(status().isBadRequest());
+        mvc.perform(put("/api/configuracion/destinatarios/general").contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isBadRequest());
+        mvc.perform(put("/api/configuracion/destinatarios/categorias/0").contentType(MediaType.APPLICATION_JSON).content("{\"emails\":[]}"))
+                .andExpect(status().isBadRequest());
+        assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM destinatario_aviso", Integer.class));
+        mvc.perform(get("/api/configuracion/destinatarios")).andExpect(jsonPath("$[0].emails", hasSize(0)))
+                .andExpect(jsonPath("$[1].emails", hasSize(2)));
+    }
+    @Test void avisosPendientesConservanLasDireccionesDeLaListaAnterior() throws Exception {
+        mensajes.setDisponible(false);
+        enviar("/api/digital/reservas", operacion(4, 12)).andExpect(status().isCreated());
+        guardarLista("categorias/3", "nuevo@coto.example").andExpect(status().isOk());
+        mensajes.setDisponible(true);
+        enviar("/api/integraciones/reintentos", "").andExpect(status().isOk());
+        assertEquals(List.of("EMAIL:verduleria@coto.example", "EMAIL:jefe.verduleria@coto.example"), destinos());
+    }
+    @Test void politicasSeConsultanEnUnaSolaSolicitud() throws Exception {
+        mvc.perform(get("/api/politicas")).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(5)))
+                .andExpect(jsonPath("$[*].stockId", contains(1, 2, 3, 4, 5))).andExpect(jsonPath("$[2].tipo").value("DEMANDA"))
+                .andExpect(jsonPath("$[2].umbralAlerta").value(10));
+    }
+    @Test void movimientosYAuditoriaSePaginanDelMasRecienteAlMasAntiguo() throws Exception {
+        mvc.perform(get("/api/movimientos?limite=5")).andExpect(status().isOk()).andExpect(header().string("X-Total-Count", "14"))
+                .andExpect(jsonPath("$", hasSize(5))).andExpect(jsonPath("$[0].id").value(12)).andExpect(jsonPath("$[*].id", contains(12, 9, 6, 3, 14)));
+        mvc.perform(get("/api/movimientos?limite=5&pagina=2")).andExpect(jsonPath("$", hasSize(4))).andExpect(jsonPath("$[3].id").value(1));
+        mvc.perform(get("/api/movimientos?limite=50&tipo=RECEPCION")).andExpect(header().string("X-Total-Count", "5"))
+                .andExpect(jsonPath("$[*].tipo", everyItem(is("RECEPCION"))));
+        mvc.perform(get("/api/movimientos?limite=50&tipo=RECEPCION,RESERVA_DIGITAL&stockId=1")).andExpect(header().string("X-Total-Count", "2"))
+                .andExpect(jsonPath("$[*].id", contains(3, 1)));
+        mvc.perform(get("/api/movimientos?tipo=TRASLADO_A_GONDOLA")).andExpect(jsonPath("$", hasSize(5))).andExpect(header().doesNotExist("X-Total-Count"));
+        mvc.perform(get("/api/movimientos")).andExpect(jsonPath("$", hasSize(14))).andExpect(jsonPath("$[0].id").value(1));
+        mvc.perform(get("/api/auditoria?limite=2")).andExpect(header().string("X-Total-Count", "6")).andExpect(jsonPath("$", hasSize(2)));
+        mvc.perform(get("/api/auditoria?limite=10&stockId=3")).andExpect(header().string("X-Total-Count", "1"))
+                .andExpect(jsonPath("$[0].disponibleActual").value(6));
+        for (String ruta : List.of("/api/movimientos?limite=0", "/api/movimientos?limite=501", "/api/movimientos?limite=5&pagina=-1",
+                "/api/movimientos?tipo=INVENTADO", "/api/auditoria?limite=0")) {
+            mvc.perform(get(ruta)).andExpect(status().isBadRequest());
+        }
+    }
 }

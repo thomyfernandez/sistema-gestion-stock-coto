@@ -1,4 +1,4 @@
-import type { Categoria, Contacto, ConfiguracionAvisos, ImagenCarga, Auditoria, Canal, Integraciones, ItemCatalogo, Movimiento, Operacion, Pedido, Politica, Precio, Producto, Promocion, ResultadoMovimiento, Sistema, TipoMovimiento } from './types';
+import type { Producto, Pedido, TipoMovimiento, Movimiento, Operacion, ResultadoMovimiento, Auditoria, Politica, Promocion, Precio, ItemCatalogo, Canal, Sistema, Integraciones, Contacto, Categoria, ConfiguracionAvisos, ImagenCarga, RolUsuario, UsuarioSesion, ListaDestinatarios, Pagina } from './types';
 
 export class ApiError extends Error {
   constructor(message: string, public status: number, public codigo = '', public errores: Record<string, string[]> = {}) { super(message); }
@@ -7,28 +7,70 @@ const base = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
 export const imagenSrc = (url: string) => `${base}${url}`;
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+let authToken: string | null = null;
+let onUnauthorizedCallback: (() => void) | null = null;
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+}
+
+export function setOnUnauthorized(cb: () => void) {
+  onUnauthorizedCallback = cb;
+}
+
+async function send(path: string, options: RequestInit = {}): Promise<{ response: Response; body: unknown }> {
   const mutation = options.method && options.method !== 'GET';
   const timeout = AbortSignal.timeout(20000);
   const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
   let response: Response;
   try {
-    response = await fetch(`${base}/api${path}`, { ...options, signal, headers: { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...options.headers } });
+    const headers: Record<string, string> = {
+      ...(options.headers as Record<string, string> || {}),
+    };
+    if (options.body) {
+      headers['Content-Type'] = 'application/json';
+    }
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+
+    response = await fetch(`${base}/api${path}`, {
+      ...options,
+      signal,
+      headers,
+    });
   } catch (error) {
     if (options.signal?.aborted) throw error;
     throw new ApiError(mutation
       ? 'No pudimos confirmar el resultado. Revisá los movimientos antes de repetir la operación.'
       : 'No pudimos conectarnos al backend. Comprobá que esté iniciado y volvé a intentar.', 0, mutation ? 'RESULTADO_DESCONOCIDO' : 'SIN_CONEXION');
   }
-  if (response.status === 204) return undefined as T;
+  if (response.status === 204) return { response, body: undefined };
   const body = await response.json().catch(() => null);
+  if (response.status === 401 && !path.startsWith('/auth/login')) {
+    onUnauthorizedCallback?.();
+  }
   if (!response.ok) throw new ApiError(body?.detail || `No se pudo completar la solicitud (${response.status}).`, response.status, body?.codigo, body?.errores);
   if (body === null) throw new ApiError('El servidor devolvió una respuesta inesperada.', response.status);
-  return body as T;
+  return { response, body };
+}
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  return (await send(path, options)).body as T;
+}
+/** Listados paginados del más reciente al más antiguo; el total llega en X-Total-Count. */
+async function page<T>(path: string, signal?: AbortSignal): Promise<Pagina<T>> {
+  const { response, body } = await send(path, { signal });
+  const elementos = body as T[];
+  const total = Number(response.headers.get('X-Total-Count'));
+  return { elementos, total: Number.isFinite(total) && response.headers.has('X-Total-Count') ? total : elementos.length };
 }
 const json = (method: string, body?: unknown): RequestInit => ({ method, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
-const query = (values: Record<string, string | number>) => new URLSearchParams(Object.entries(values).map(([k, v]) => [k, String(v)])).toString();
+const query = (values: Record<string, string | number | undefined>) => new URLSearchParams(Object.entries(values).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)])).toString();
+export interface FiltroActividad { stockId?: number; tipos?: TipoMovimiento[]; limite: number; pagina?: number }
+
 export const api = {
+  login: (credenciales: { username: string; password: string }) => request<UsuarioSesion>('/auth/login', json('POST', credenciales)),
+  perfil: (signal?: AbortSignal) => request<{ username: string; nombreCompleto: string; rol: RolUsuario }>('/auth/perfil', { signal }),
   categorias: (signal?: AbortSignal) => request<Categoria[]>('/categorias', { signal }),
   guardarCategoria: (body: Omit<Categoria, 'id'>, id?: number) => request<Categoria>(`/categorias${id ? `/${id}` : ''}`, json(id ? 'PUT' : 'POST', body)),
   asignarCategoria: (id: number, categoriaId: number | null) => request<Producto>(`/productos/${id}/categoria`, json('PUT', { categoriaId })),
@@ -38,10 +80,12 @@ export const api = {
   guardarAvisos: (body: ConfiguracionAvisos) => request<ConfiguracionAvisos>('/configuracion/avisos', json('PUT', body)),
   productos: (signal?: AbortSignal) => request<Producto[]>('/productos', { signal }),
   pedidos: (signal?: AbortSignal) => request<Pedido[]>('/pedidos', { signal }),
-  movimientos: (signal?: AbortSignal) => request<Movimiento[]>('/movimientos', { signal }),
-  auditoria: (signal?: AbortSignal) => request<Auditoria[]>('/auditoria', { signal }),
+  movimientos: (f: FiltroActividad, signal?: AbortSignal) => page<Movimiento>(`/movimientos?${query({ stockId: f.stockId, tipo: f.tipos?.join(','), limite: f.limite, pagina: f.pagina })}`, signal),
+  auditoria: (f: Omit<FiltroActividad, 'tipos'>, signal?: AbortSignal) => page<Auditoria>(`/auditoria?${query({ stockId: f.stockId, limite: f.limite, pagina: f.pagina })}`, signal),
   integraciones: (signal?: AbortSignal) => request<Integraciones>('/integraciones', { signal }),
-  politica: (id: number, signal?: AbortSignal) => request<Politica>(`/productos/${id}/politica-reposicion`, { signal }),
+  politicas: (signal?: AbortSignal) => request<Politica[]>('/politicas', { signal }),
+  destinatarios: (signal?: AbortSignal) => request<ListaDestinatarios[]>('/configuracion/destinatarios', { signal }),
+  guardarDestinatarios: (categoriaId: number | null, emails: string[]) => request<ListaDestinatarios>(`/configuracion/destinatarios/${categoriaId === null ? 'general' : `categorias/${categoriaId}`}`, json('PUT', { emails })),
   guardarPolitica: (id: number, body: Omit<Politica, 'stockId'>) => request<Politica>(`/productos/${id}/politica-reposicion`, json('PUT', body)),
   promociones: (id: number, signal?: AbortSignal) => request<Promocion[]>(`/productos/${id}/promociones`, { signal }),
   guardarPromocion: (id: number, body: Omit<Promocion, 'id' | 'productoId'>, promocionId?: number) => request<Promocion>(`/productos/${id}/promociones${promocionId ? `/${promocionId}` : ''}`, json(promocionId ? 'PUT' : 'POST', body)),
@@ -50,6 +94,8 @@ export const api = {
   catalogo: (medioPago: string, signal?: AbortSignal) => request<ItemCatalogo[]>(`/digital/catalogo?${query({ medioPago })}`, { signal }),
   crearProducto: (body: { nombre: string; descripcion: string; precio: number; categoriaId: number | null; imagen?: ImagenCarga }) => request<Producto>('/productos', json('POST', body)),
   crearCombo: (body: { nombre: string; descripcion: string; precio: number; componentes: { stockId: number; cantidad: number }[]; categoriaId: number | null; imagen?: ImagenCarga }) => request<Producto>('/combos', json('POST', body)),
+  armarCombo: (id: number, body: { cantidad: number; motivo: string; usuario: string }) => request<ResultadoMovimiento>(`/combos/${id}/armado`, json('POST', body)),
+  desarmarCombo: (id: number, body: { cantidad: number; motivo: string; usuario: string }) => request<ResultadoMovimiento>(`/combos/${id}/desarmado`, json('POST', body)),
   ingresar: (body: Operacion) => request<ResultadoMovimiento>('/recepcion/ingresos', json('POST', body)),
   mover: (body: Operacion & { tipo: TipoMovimiento }) => request<ResultadoMovimiento>('/sucursal/movimientos', json('POST', body)),
   digital: (accion: 'reservas' | 'cancelaciones' | 'despachos', body: Operacion) => request<ResultadoMovimiento>(`/digital/${accion}`, json('POST', body)),

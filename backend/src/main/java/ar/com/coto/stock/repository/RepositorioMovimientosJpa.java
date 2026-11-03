@@ -6,6 +6,7 @@ import ar.com.coto.stock.repository.entity.MovimientoEntity;
 import jakarta.persistence.*;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public class RepositorioMovimientosJpa implements RepositorioMovimientos {
@@ -19,7 +20,22 @@ public class RepositorioMovimientosJpa implements RepositorioMovimientos {
     }
     @Override public List<MovimientoRegistrado> listar() {
         return em.createQuery("select m from MovimientoEntity m order by m.id", MovimientoEntity.class).getResultList().stream()
-                .map(m -> new MovimientoRegistrado(m.id, new MovimientoStock(m.stockId, TipoMovimiento.valueOf(m.tipo),
-                        m.cantidad, m.fecha, m.motivo, m.usuario))).toList();
+                .map(RepositorioMovimientosJpa::modelo).toList();
+    }
+    @Override public Pagina<MovimientoRegistrado> buscar(Integer stockId, Set<TipoMovimiento> tipos, int pagina, int limite) {
+        boolean porTipo = tipos != null && !tipos.isEmpty();
+        String filtro = " where 1 = 1" + (stockId != null ? " and m.stockId = :stock" : "") + (porTipo ? " and m.tipo in :tipos" : "");
+        var filas = em.createQuery("select m from MovimientoEntity m" + filtro + " order by m.fecha desc, m.id desc", MovimientoEntity.class);
+        var total = em.createQuery("select count(m) from MovimientoEntity m" + filtro, Long.class);
+        for (var consulta : List.<TypedQuery<?>>of(filas, total)) {
+            if (stockId != null) consulta.setParameter("stock", stockId);
+            if (porTipo) consulta.setParameter("tipos", tipos.stream().map(Enum::name).toList());
+        }
+        var elementos = filas.setFirstResult(Math.multiplyExact(pagina, limite)).setMaxResults(limite).getResultList().stream()
+                .map(RepositorioMovimientosJpa::modelo).toList();
+        return new Pagina<>(elementos, total.getSingleResult());
+    }
+    private static MovimientoRegistrado modelo(MovimientoEntity m) {
+        return new MovimientoRegistrado(m.id, new MovimientoStock(m.stockId, TipoMovimiento.valueOf(m.tipo), m.cantidad, m.fecha, m.motivo, m.usuario));
     }
 }

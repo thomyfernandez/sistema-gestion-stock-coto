@@ -191,3 +191,28 @@ PUT {{baseUrl}}/api/categorias/3
 Content-Type: application/json
 
 {"nombre":"Verdulería","contactoId":1000,"canalAlerta":"EMAIL"}
+
+
+### Destinatarios de avisos: lista general y listas por categoría
+GET {{baseUrl}}/api/configuracion/destinatarios
+
+### Reemplazar la lista de emails de Almacén (un aviso por dirección)
+PUT {{baseUrl}}/api/configuracion/destinatarios/categorias/1
+Content-Type: application/json
+
+{"emails":["almacen@coto.example","jefe.almacen@coto.example"]}
+
+### Reemplazar la lista general de la sucursal
+PUT {{baseUrl}}/api/configuracion/destinatarios/general
+Content-Type: application/json
+
+{"emails":["sucursal@coto.example"]}
+
+### Todas las políticas en una sola solicitud
+GET {{baseUrl}}/api/politicas
+
+### Últimos 25 movimientos de recepción (total en X-Total-Count)
+GET {{baseUrl}}/api/movimientos?tipo=RECEPCION&limite=25&pagina=0
+
+### Auditoría paginada de un artículo
+GET {{baseUrl}}/api/auditoria?stockId=1&limite=25&pagina=0

@@ -1,5 +1,7 @@
 # Contactos internos y avisos por producto
 
+> Los avisos ahora se envían a [listas de emails por categoría y general](destinatarios-de-avisos.md), y el modal de política ya no elige contacto ni canal. Lo que sigue describe el **respaldo**: contactos y destinatario de la sucursal, que se usan sólo mientras ninguna lista tenga emails.
+
 ## Uso
 
 1. Abrir **Configuración → Alertas y avisos → Contactos**.
