@@ -7,6 +7,7 @@ export const movementLabels: Record<TipoMovimiento, string> = {
   RECEPCION: 'Recepción', TRASLADO_A_GONDOLA: 'Traslado a góndola', RETORNO_A_DEPOSITO: 'Retorno a depósito',
   DEVOLUCION: 'Devolución', MERMA_DEPOSITO: 'Merma en depósito', MERMA_GONDOLA: 'Merma en góndola',
   RESERVA_DIGITAL: 'Reserva digital', CANCELACION_RESERVA: 'Cancelación de reserva', DESPACHO_DIGITAL: 'Despacho digital',
+  ARMADO_COMBO: 'Armado de combo', DESARMADO_COMBO: 'Desarmado de combo',
 };
 export function stockStatus(p: Producto, politica?: Politica) {
   if (p.disponible === 0) return { label: 'Sin disponible', tone: 'danger' as const };

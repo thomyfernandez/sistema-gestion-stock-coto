@@ -81,3 +81,85 @@ export function PromotionForm({ product, existing, nextOrder, onClose }: { produ
     {values.tipo === 'MEDIO_PAGO' && <Field label="Medio de pago"><input required maxLength={60} value={values.medioPago} onChange={e => setValues(old => ({ ...old, medioPago: e.target.value }))} disabled={busy} /></Field>}
     <Field label="Orden de aplicación" hint="Debe ser distinto al de las otras promociones del artículo."><input required type="number" min="0" max="2147483647" step="1" value={values.orden} onChange={e => setValues(old => ({ ...old, orden: e.target.value }))} disabled={busy} /></Field><label className="checkbox-label"><input type="checkbox" checked={values.activa} onChange={e => setValues(old => ({ ...old, activa: e.target.checked }))} disabled={busy} />Promoción activa</label><ErrorMessage error={error} /></div><footer className="modal-footer"><Button onClick={onClose} disabled={busy}>Cancelar</Button><Button type="submit" variant="primary" loading={busy}>Guardar promoción</Button></footer></form></Modal>;
 }
+
+export function ComboArmadoForm({ combo, mode, onClose }: { combo: Producto; mode: 'armar' | 'desarmar'; onClose: () => void }) {
+  const { busy, run, usuario: sesion } = useStore();
+  const [cantidad, setCantidad] = useState('1');
+  const [motivo, setMotivo] = useState(mode === 'armar' ? 'Armado de combos para salón' : 'Desarmado por rotura o devolución');
+  const [usuario, setUsuario] = useState(sesion?.username || 'repositor.demo');
+  const [error, setError] = useState<Error | null>(null);
+
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    try {
+      await run(
+        () => mode === 'armar'
+          ? api.armarCombo(combo.id, { cantidad: Number(cantidad), motivo: motivo.trim(), usuario: usuario.trim() })
+          : api.desarmarCombo(combo.id, { cantidad: Number(cantidad), motivo: motivo.trim(), usuario: usuario.trim() }),
+        mode === 'armar' ? 'Combo armado correctamente. Stock propio actualizado.' : 'Combo desarmado correctamente. Componentes restituidos.'
+      );
+      onClose();
+    } catch (e) {
+      setError(e as Error);
+    }
+  }
+
+  const limit = mode === 'desarmar' ? (combo.stockFisico || 0) : undefined;
+
+  return (
+    <Modal
+      title={mode === 'armar' ? `Armar combo ${combo.nombre}` : `Desarmar combo ${combo.nombre}`}
+      description={mode === 'armar'
+        ? 'Pasa unidades físicas de los componentes al stock propio del combo.'
+        : 'Descuenta stock físico propio del combo y restituye unidades a los componentes.'}
+      onClose={onClose}
+    >
+      <form onSubmit={submit}>
+        <div className="modal-body form-stack">
+          <ProductName product={combo} />
+          <Field
+            label="Cantidad"
+            hint={mode === 'desarmar' ? `Stock físico propio actual: ${combo.stockFisico || 0} unidades` : 'Se descuentan de los componentes según la fórmula del combo'}
+          >
+            <input
+              required
+              type="number"
+              min="1"
+              max={limit}
+              step="1"
+              value={cantidad}
+              onChange={e => setCantidad(e.target.value)}
+              disabled={busy}
+            />
+          </Field>
+          <Field label="Motivo">
+            <input
+              required
+              maxLength={500}
+              value={motivo}
+              onChange={e => setMotivo(e.target.value)}
+              disabled={busy}
+            />
+          </Field>
+          <Field label="Operador">
+            <input
+              required
+              maxLength={100}
+              value={usuario}
+              onChange={e => setUsuario(e.target.value)}
+              disabled={busy}
+            />
+          </Field>
+          <ErrorMessage error={error} />
+        </div>
+        <footer className="modal-footer">
+          <Button onClick={onClose} disabled={busy}>Cancelar</Button>
+          <Button variant="primary" type="submit" loading={busy} disabled={mode === 'desarmar' && (combo.stockFisico || 0) <= 0}>
+            {mode === 'armar' ? 'Confirmar armado' : 'Confirmar desarmado'}
+          </Button>
+        </footer>
+      </form>
+    </Modal>
+  );
+}

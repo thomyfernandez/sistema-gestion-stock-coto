@@ -28,7 +28,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "coto.integraciones.automaticas=false",
         "spring.datasource.url=jdbc:h2:mem:etapa3test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=15000"
 })
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(addFilters = false)
+@org.springframework.security.test.context.support.WithMockUser(username = "supervisor.demo", roles = {"SUPERVISOR", "COMPRAS", "RECEPCION", "REPOSITOR"})
 @ActiveProfiles("demo")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class ApiRestTest {
@@ -39,17 +40,20 @@ class ApiRestTest {
     @Autowired SistemaERPExterno erp;
     @Autowired ApiCotoDigitalExterna digital;
     @Autowired GestionNotificaciones notificaciones;
+    @Autowired ar.com.coto.stock.config.JwtTokenService jwtTokenService;
+    private String tokenPruebas;
 
     @BeforeEach void reiniciar() {
-        for (String tabla : List.of("imagen_producto", "configuracion_avisos", "evento_integracion", "promocion", "politica_reposicion", "auditoria_stock", "pedido_reposicion",
+        for (String tabla : List.of("usuario", "imagen_producto", "configuracion_avisos", "evento_integracion", "promocion", "politica_reposicion", "auditoria_stock", "pedido_reposicion",
                 "movimiento_stock", "linea_combo", "stock", "producto", "categoria", "proveedor", "bloqueo_operacion")) jdbc.update("DELETE FROM " + tabla);
         new ResourceDatabasePopulator(new ClassPathResource("data.sql")).execute(dataSource);
         mensajes.setDisponible(true); erp.setDisponible(true); digital.setDisponible(true);
         mensajes.limpiar(); erp.limpiar(); digital.limpiar();
         notificaciones.setCanal(GestionNotificaciones.Canal.EMAIL);
+        tokenPruebas = jwtTokenService.generarToken("supervisor.demo", "SUPERVISOR", "Supervisor de Sucursal");
     }
     private ResultActions enviar(String ruta, String json) throws Exception {
-        return mvc.perform(post(ruta).contentType(MediaType.APPLICATION_JSON).content(json));
+        return mvc.perform(post(ruta).header("Authorization", "Bearer " + tokenPruebas).contentType(MediaType.APPLICATION_JSON).content(json));
     }
     private String operacion(int id, int cantidad) {
         return """
@@ -123,6 +127,33 @@ class ApiRestTest {
         mvc.perform(get("/api/combos/6")).andExpect(jsonPath("$.disponible").value(34));
         mvc.perform(get("/api/movimientos?stockId=6")).andExpect(jsonPath("$", hasSize(3)));
         mvc.perform(get("/api/auditoria?stockId=6")).andExpect(jsonPath("$", hasSize(4)));
+    }
+    @Test void armadoYDesarmadoDeCombosPorHttp() throws Exception {
+        enviar("/api/combos/6/armado", """
+                {"cantidad":5,"motivo":"Armado canastas para góndola","usuario":"repositor.demo"}
+                """).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.disponibilidades.6").value(35))
+                .andExpect(jsonPath("$.disponibilidades.1").value(70))
+                .andExpect(jsonPath("$.disponibilidades.2").value(30));
+
+        mvc.perform(get("/api/combos/6")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.stockFisico").value(5))
+                .andExpect(jsonPath("$.disponible").value(35));
+
+        enviar("/api/combos/6/desarmado", """
+                {"cantidad":2,"motivo":"Desarmado por devolución","usuario":"repositor.demo"}
+                """).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.disponibilidades.6").value(35));
+
+        mvc.perform(get("/api/combos/6")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.stockFisico").value(3))
+                .andExpect(jsonPath("$.disponible").value(35));
+    }
+    @Test void armadoDeComboConStockInsuficienteDevuelve409() throws Exception {
+        enviar("/api/combos/6/armado", """
+                {"cantidad":50,"motivo":"Armado excesivo","usuario":"repositor.demo"}
+                """).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.codigo").value("STOCK_INSUFICIENTE"));
     }
     @Test void movimientoGenericoTambienPasaPorElGestor() throws Exception {
         enviar("/api/movimientos", """

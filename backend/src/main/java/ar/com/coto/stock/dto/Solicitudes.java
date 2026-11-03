@@ -10,7 +10,7 @@ public final class Solicitudes {
     private Solicitudes() { }
     public enum TipoMovimiento {
         RECEPCION, TRASLADO_A_GONDOLA, RETORNO_A_DEPOSITO, DEVOLUCION, MERMA_DEPOSITO,
-        MERMA_GONDOLA, RESERVA_DIGITAL, CANCELACION_RESERVA, DESPACHO_DIGITAL
+        MERMA_GONDOLA, RESERVA_DIGITAL, CANCELACION_RESERVA, DESPACHO_DIGITAL, ARMADO_COMBO, DESARMADO_COMBO
     }
     public enum TipoSucursal { TRASLADO_A_GONDOLA, RETORNO_A_DEPOSITO, DEVOLUCION, MERMA_DEPOSITO, MERMA_GONDOLA }
     public enum Estrategia { PUNTO_PEDIDO, DEMANDA, ESTACIONAL }
@@ -50,6 +50,11 @@ public final class Solicitudes {
             @NotNull @Positive Integer cantidad,
             @NotBlank @Size(max = 500) String motivo,
             @NotBlank @Size(max = 100) String usuario) { }
+    public record OperacionCombo(
+            @NotNull @Positive Integer cantidad,
+            @NotBlank @Size(max = 500) String motivo,
+            @NotBlank @Size(max = 100) String usuario) { }
+    public record Login(@NotBlank @Size(max = 60) String username, @NotBlank @Size(max = 100) String password) { }
     public record Usuario(@NotBlank @Size(max = 100) String usuario) { }
     public record Politica(
             @NotNull Estrategia tipo,

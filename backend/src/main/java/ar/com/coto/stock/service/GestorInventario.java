@@ -55,15 +55,12 @@ public final class GestorInventario implements GestionInventario {
         Map<Integer, PoliticaReposicion> politicas = d.politicas.listar();
         Observaciones observaciones = observar(d, grafo, politicas);
         if (objetivo instanceof StockSimple simple) simple.aplicarMovimiento(m);
-        else switch (m.getTipo()) {
-            case RESERVA_DIGITAL -> objetivo.reservar(m.getCantidad());
-            case CANCELACION_RESERVA -> objetivo.liberarReserva(m.getCantidad());
-            case DESPACHO_DIGITAL -> objetivo.despacharReserva(m.getCantidad());
-            default -> throw new IllegalArgumentException("Recepción, ajustes y traslados requieren un producto simple");
-        }
+        else if (objetivo instanceof ComboStock combo) combo.aplicarMovimiento(m);
         long movimientoId = d.movimientos.guardar(m);
         observaciones.disponibilidades.keySet().forEach(id -> {
-            if (grafo.get(id) instanceof StockSimple simple) d.stocks.guardarEstado(simple);
+            Stock s = grafo.get(id);
+            if (s instanceof StockSimple simple) d.stocks.guardarEstado(simple);
+            else if (s instanceof ComboStock combo) d.stocks.guardarEstadoCombo(combo);
         });
         observaciones.auditorias.values().forEach(a -> d.auditoria.guardar(a, movimientoId));
         String clave = "mov:" + movimientoId;

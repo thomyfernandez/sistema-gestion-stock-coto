@@ -28,10 +28,22 @@ public final class MapeadorDto {
                 new Respuestas.Componente(l.getComponente().getProducto().getId(), l.getComponente().getProducto().getNombre(),
                         tipo(l.getComponente()), l.getCantidadEnCombo(), l.getComponente().getDisponible())).toList() : List.of();
         StockSimple simple = s instanceof StockSimple hoja ? hoja : null;
+        ComboStock combo = s instanceof ComboStock c ? c : null;
+        Integer fisico = null;
+        Integer exhibicion = null;
+        Integer reservado = null;
+        if (simple != null) {
+            fisico = simple.getStockFisico();
+            exhibicion = simple.getStockExhibicion();
+            reservado = simple.getStockReservado();
+        } else if (combo != null && combo.getStockFisico() > 0) {
+            fisico = combo.getStockFisico();
+            exhibicion = combo.getStockExhibicion();
+            reservado = combo.getStockReservado();
+        }
         return new Respuestas.Producto(s.getProducto().getId(), s.getProducto().getNombre(), s.getProducto().getDescripcion(),
                 BigDecimal.valueOf(s.getProducto().getPrecio()).setScale(2), tipo(s), s.getDisponible(),
-                simple == null ? null : simple.getStockFisico(), simple == null ? null : simple.getStockExhibicion(),
-                simple == null ? null : simple.getStockReservado(), componentes,
+                fisico, exhibicion, reservado, componentes,
                 s.getProducto().getImagenVersion() == null ? null : "/api/productos/" + s.getProducto().getId() + "/imagen?v=" + s.getProducto().getImagenVersion(), s.getProducto().getCategoriaId());
     }
     private static String tipo(Stock s) { return s instanceof StockSimple ? "SIMPLE" : "COMBO"; }

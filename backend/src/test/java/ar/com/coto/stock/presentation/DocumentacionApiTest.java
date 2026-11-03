@@ -16,7 +16,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "coto.integraciones.automaticas=false",
         "spring.datasource.url=jdbc:h2:mem:documentaciontest;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=15000"
 })
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(addFilters = false)
+@org.springframework.security.test.context.support.WithMockUser(username = "supervisor.demo", roles = {"SUPERVISOR"})
 @ActiveProfiles("demo")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class DocumentacionApiTest {

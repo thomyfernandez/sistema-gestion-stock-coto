@@ -82,6 +82,7 @@ public final class StockSimple extends Stock {
                 case RESERVA_DIGITAL -> { reservar(cantidad); return; }
                 case CANCELACION_RESERVA -> { liberarReserva(cantidad); return; }
                 case DESPACHO_DIGITAL -> { despacharReserva(cantidad); return; }
+                case ARMADO_COMBO, DESARMADO_COMBO -> throw new IllegalArgumentException("Armado y desarmado corresponden a combos");
             }
             notificar();
         }
@@ -109,4 +110,6 @@ public final class StockSimple extends Stock {
     void reservarSinNotificar(int cant) { stockReservado += cant; }
     void liberarSinNotificar(int cant) { stockReservado -= cant; }
     void despacharSinNotificar(int cant) { stockReservado -= cant; stockFisico -= cant; }
+    void consumirParaArmado(int cant) { stockFisico -= cant; }
+    void restituirPorDesarmado(int cant) { stockFisico = Math.addExact(stockFisico, cant); }
 }

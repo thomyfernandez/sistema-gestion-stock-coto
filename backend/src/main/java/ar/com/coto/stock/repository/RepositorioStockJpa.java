@@ -25,7 +25,10 @@ public class RepositorioStockJpa implements RepositorioStock {
             Producto producto = new Producto(fila.id, fila.producto.nombre, fila.producto.descripcion, fila.producto.precio.doubleValue(), fila.producto.imagenVersion, fila.producto.categoriaId);
             Stock stock = switch (fila.tipo) {
                 case "SIMPLE" -> new StockSimple(producto, fila.stockFisico, fila.stockExhibicion, fila.stockReservado);
-                case "COMBO" -> new ComboStock(producto);
+                case "COMBO" -> new ComboStock(producto,
+                        fila.stockFisico == null ? 0 : fila.stockFisico,
+                        fila.stockExhibicion == null ? 0 : fila.stockExhibicion,
+                        fila.stockReservado == null ? 0 : fila.stockReservado);
                 default -> throw new IllegalStateException("Discriminador inválido: " + fila.tipo);
             };
             stocks.put(fila.id, stock);
@@ -45,6 +48,14 @@ public class RepositorioStockJpa implements RepositorioStock {
         fila.stockReservado = stock.getStockReservado();
     }
 
+    @Override public void guardarEstadoCombo(ComboStock combo) {
+        StockEntity fila = em.find(StockEntity.class, combo.getProducto().getId());
+        if (fila == null) throw new EntidadNoEncontradaException("Stock", combo.getProducto().getId());
+        fila.stockFisico = combo.getStockFisico();
+        fila.stockExhibicion = combo.getStockExhibicion();
+        fila.stockReservado = combo.getStockReservado();
+    }
+
     @Override public Stock crear(AltaProducto datos, boolean combo) {
         ProductoEntity producto = new ProductoEntity();
         producto.categoriaId = datos.categoriaId();
@@ -59,7 +70,7 @@ public class RepositorioStockJpa implements RepositorioStock {
         }
         StockEntity fila = new StockEntity();
         fila.producto = producto; fila.id = producto.id; fila.tipo = combo ? "COMBO" : "SIMPLE";
-        if (!combo) { fila.stockFisico = 0; fila.stockExhibicion = 0; fila.stockReservado = 0; }
+        fila.stockFisico = 0; fila.stockExhibicion = 0; fila.stockReservado = 0;
         em.persist(fila);
         Producto dominio = new Producto(producto.id, datos.nombre(), datos.descripcion(), datos.precio(), producto.imagenVersion, producto.categoriaId);
         return combo ? new ComboStock(dominio) : new StockSimple(dominio, 0, 0, 0);
