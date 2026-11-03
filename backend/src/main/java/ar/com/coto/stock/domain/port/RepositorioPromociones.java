@@ -6,4 +6,5 @@ import java.util.List;
 public interface RepositorioPromociones {
     List<Promocion> listar(int productoId);
     Promocion guardar(Promocion promocion);
+    void eliminar(long id);
 }

@@ -28,6 +28,11 @@ public class RepositorioPromocionesJpa implements RepositorioPromociones {
         if (p.id() == 0) em.persist(fila);
         return dominio(fila);
     }
+    @Override public void eliminar(long id) {
+        PromocionEntity fila = em.find(PromocionEntity.class, id);
+        if (fila == null) throw new EntidadNoEncontradaException("Promoción", id);
+        em.remove(fila);
+    }
     private Promocion dominio(PromocionEntity p) {
         return new Promocion(p.id, p.productoId, Promocion.Tipo.valueOf(p.tipo), p.porcentaje.doubleValue(), p.orden, p.activa, p.medioPago);
     }

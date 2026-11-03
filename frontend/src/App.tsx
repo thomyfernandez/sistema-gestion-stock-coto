@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle, ArrowDownToLine, Bell, Boxes, CheckCircle2, ChevronRight, CircleHelp, ClipboardList, Menu, PanelLeftClose, PanelLeftOpen, RefreshCw, Settings, Warehouse, X } from 'lucide-react';
+import { AlertCircle, ArrowDownToLine, Bell, Boxes, CheckCircle2, ChevronRight, CircleHelp, ClipboardList, Menu, PanelLeftClose, PanelLeftOpen, RefreshCw, Settings, Warehouse, X, Tag } from 'lucide-react';
 import { Button, Empty } from './components/ui';
 import { useStore } from './store';
 import { RecepcionPage } from './pages/Operations';
 import { PurchasesPage } from './pages/Purchases';
 import { StockPage } from './pages/Stock';
 import { SettingsPage } from './pages/Settings';
+import { DiscountsPage } from './pages/Discounts';
 import cotoLogo from './assets/coto-superapp.png';
 
 const views = [
   { id: 'stock', name: 'Stock', icon: Warehouse },
+  { id: 'descuentos', name: 'Descuentos', icon: Tag },
   { id: 'recepcion', name: 'Recepción', icon: ArrowDownToLine },
   { id: 'compras', name: 'Compras', icon: ClipboardList },
   { id: 'configuracion', name: 'Configuración', icon: Settings },
@@ -59,7 +61,7 @@ export default function App() {
     <div className="workspace"><main id="contenido" tabIndex={-1} className={`main-content view-${route.view}`}>
       {store.error && <div className="message danger connection-error" role="alert"><AlertCircle size={24} aria-hidden="true" /><div><strong>{store.error.message}</strong>{store.data && <p>Los datos visibles corresponden a la última actualización confirmada.</p>}</div><Button loading={store.loading} disabled={store.busy} onClick={() => void store.refresh().catch(() => {})}>Reintentar conexión</Button></div>}
       {!store.data ? store.loading ? <div className="loading-page" aria-busy="true" aria-label="Cargando inventario"><div className="skeleton line title" /><div className="skeleton line" /><div className="metrics-grid">{Array.from({ length: 4 }, (_, i) => <div key={i} className="skeleton metric" />)}</div><div className="skeleton skeleton-table" /><p>Conectando con el inventario de la sucursal…</p></div> : <Empty title="El inventario no está disponible" text="Comprobá que esté iniciado el backend actualizado y reintentá la conexión." action={<Button variant="primary" icon={RefreshCw} onClick={() => void store.refresh().catch(() => {})}>Volver a conectar</Button>} /> : <>
-        {route.view === 'stock' && <StockPage tab={route.tab} />}{route.view === 'recepcion' && <RecepcionPage />}{route.view === 'compras' && <PurchasesPage tab={route.tab} />}{route.view === 'configuracion' && <SettingsPage tab={route.tab} />}
+        {route.view === 'stock' && <StockPage tab={route.tab} />}{route.view === 'descuentos' && <DiscountsPage />}{route.view === 'recepcion' && <RecepcionPage />}{route.view === 'compras' && <PurchasesPage tab={route.tab} />}{route.view === 'configuracion' && <SettingsPage tab={route.tab} />}
       </>}
       <footer className="app-footer"><span>COTO · Gestión de stock</span><span>{store.updated ? `Última actualización: ${new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' }).format(store.updated)}` : 'Esperando conexión'}<span className="footer-separator">·</span>Datos de una única sucursal</span></footer>
     </main></div>{store.toast && <div className={`toast ${store.toast.tone}`} role={store.toast.tone === 'danger' ? 'alert' : 'status'}><span>{store.toast.tone === 'success' ? <CheckCircle2 size={24} aria-hidden="true" /> : <AlertCircle size={24} aria-hidden="true" />}</span><p>{store.toast.message}</p><Button variant="ghost" className="icon-button" icon={X} aria-label="Cerrar aviso" onClick={store.dismissToast} /></div>}

@@ -22,6 +22,7 @@ public interface GestionInventario {
     void configurarPolitica(PoliticaReposicion politica);
     Promocion guardarPromocion(Promocion promocion);
     List<Promocion> listarPromociones(int productoId);
+    void eliminarPromocion(int productoId, long promocionId);
     List<MovimientoRegistrado> listarMovimientos();
     List<AuditoriaStock> listarAuditoria();
     List<PedidoRegistrado> listarPedidos();

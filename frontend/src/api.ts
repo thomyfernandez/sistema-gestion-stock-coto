@@ -45,6 +45,7 @@ export const api = {
   guardarPolitica: (id: number, body: Omit<Politica, 'stockId'>) => request<Politica>(`/productos/${id}/politica-reposicion`, json('PUT', body)),
   promociones: (id: number, signal?: AbortSignal) => request<Promocion[]>(`/productos/${id}/promociones`, { signal }),
   guardarPromocion: (id: number, body: Omit<Promocion, 'id' | 'productoId'>, promocionId?: number) => request<Promocion>(`/productos/${id}/promociones${promocionId ? `/${promocionId}` : ''}`, json(promocionId ? 'PUT' : 'POST', body)),
+  eliminarPromocion: (id: number, promocionId: number) => request<void>(`/productos/${id}/promociones/${promocionId}`, { method: 'DELETE' }),
   precio: (id: number, cantidad: number, medioPago: string, signal?: AbortSignal) => request<Precio>(`/productos/${id}/precio?${query({ cantidad, medioPago })}`, { signal }),
   catalogo: (medioPago: string, signal?: AbortSignal) => request<ItemCatalogo[]>(`/digital/catalogo?${query({ medioPago })}`, { signal }),
   crearProducto: (body: { nombre: string; descripcion: string; precio: number; categoriaId: number | null; imagen?: ImagenCarga }) => request<Producto>('/productos', json('POST', body)),
