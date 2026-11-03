@@ -90,6 +90,7 @@ public class ConfiguracionSeguridad {
         config.setAllowedOrigins(origenes);
         config.setAllowedMethods(List.of("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Content-Type", "Authorization", "Accept"));
+        config.setExposedHeaders(List.of("X-Total-Count", "Location"));
         config.setMaxAge(3600L);
 
         var source = new UrlBasedCorsConfigurationSource();

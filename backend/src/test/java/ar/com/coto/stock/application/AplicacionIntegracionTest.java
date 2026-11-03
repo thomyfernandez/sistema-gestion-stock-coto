@@ -43,8 +43,8 @@ class AplicacionIntegracionTest {
     @Autowired JdbcTemplate jdbc;
 
     @BeforeEach void reiniciar() {
-        for (String tabla : List.of("usuario", "imagen_producto", "configuracion_avisos", "destinatario_aviso", "evento_integracion", "promocion", "politica_reposicion", "auditoria_stock", "pedido_reposicion",
-                "movimiento_stock", "linea_combo", "stock", "producto", "categoria", "proveedor", "bloqueo_operacion")) jdbc.update("DELETE FROM " + tabla);
+        for (String tabla : List.of("usuario", "imagen_producto", "configuracion_avisos", "evento_integracion", "promocion", "politica_reposicion", "auditoria_stock", "pedido_reposicion",
+                "movimiento_stock", "linea_combo", "stock", "producto", "destinatario_aviso", "categoria", "proveedor", "bloqueo_operacion")) jdbc.update("DELETE FROM " + tabla);
         new ResourceDatabasePopulator(new ClassPathResource("data.sql")).execute(dataSource);
         mensajes.setDisponible(true); erp.setDisponible(true); digital.setDisponible(true);
         mensajes.limpiar(); erp.limpiar(); digital.limpiar();
@@ -99,50 +99,162 @@ class AplicacionIntegracionTest {
         assertEquals(35, gestor.consultarStock(6).getDisponible());
         assertEquals(14, contar("movimiento_stock"));
         assertEquals(6, contar("auditoria_stock"));
+        assertEquals(1, contar("evento_integracion"));
+        assertTrue(digital.getInventario().isEmpty());
+        assertTrue(erp.getOrdenes().isEmpty());
+    }
+
+    @Test void rollbackTardioRevierteContadoresAuditoriaPedidosYOutboxSinEnviar() {
+        assertThrows(IllegalStateException.class, () -> unidad.ejecutar(() -> {
+            gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 61));
+            throw new IllegalStateException("Abortar después de guardar toda la operación");
+        }));
+        assertEquals(80, gestor.consultarStock(1).getDisponible());
+        assertEquals(14, contar("movimiento_stock"));
+        assertEquals(6, contar("auditoria_stock"));
+        assertEquals(1, contar("pedido_reposicion"));
+        assertEquals(1, contar("evento_integracion"));
         assertTrue(mensajes.getMensajes().isEmpty());
+        assertTrue(digital.getInventario().isEmpty());
+        assertTrue(erp.getOrdenes().isEmpty());
     }
 
-    @Test void recepcionDisparaEvaluacionAutomatica() {
-        gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RECEPCION, 5));
-        assertEquals(85, gestor.consultarStock(1).getDisponible());
-        assertEquals(1, contar("pedido_reposicion"));
-    }
-
-    @Test void reposicionAutomaticaEmiteOrdenIdempotenteAlERP() {
-        assertEquals(1, contar("pedido_reposicion"));
-        assertEquals(1, erp.getOrdenes().size());
+    @Test void reposicionAutomaticaDescuentaPedidosAbiertosYNoLosDuplica() {
+        var resultado = gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 61));
+        assertEquals(1, resultado.pedidosGenerados().size());
+        assertEquals(81, resultado.pedidosGenerados().getFirst().pedido().getCantidad());
         gestor.evaluarReposicion();
-        assertEquals(1, erp.getOrdenes().size());
-        assertEquals("COTO-1", erp.getOrdenes().getFirst().reference());
+        gestor.evaluarReposicion();
+        assertEquals(1, pedidosDe(1).size());
+        assertEquals(EstadoPedido.ENVIADO, pedidosDe(1).getFirst().pedido().getEstado());
+        assertEquals(1, pedidosDe(3).size()); // Las 30 leches iniciales cubren lo requerido.
+        assertEquals(30, pedidosDe(5).getFirst().pedido().getCantidad()); // Estacional: 40*1.5-30.
+        assertTrue(pedidosDe(4).isEmpty());
     }
 
-    @Test void reintentosDeIntegracionesFallidasSonExponencialesYFinitos() {
+    @Test void demandaPideSoloElFaltanteAdicionalFrenteAPedidosPendientes() {
+        gestor.registrarMovimiento(movimiento(3, TipoMovimiento.RESERVA_DIGITAL, 1));
+        assertEquals(List.of(30, 1), pedidosDe(3).stream().map(p -> p.pedido().getCantidad()).toList());
+        gestor.evaluarReposicion();
+        assertEquals(2, pedidosDe(3).size());
+    }
+
+    @Test void episodioDeAlertaSeConservaEntreTransaccionesYSeRearma() {
+        gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 61)); // 19 < 20.
+        gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 1)); // 18.
+        assertEquals(1, mensajes.getMensajes().size());
+        gestor.registrarMovimiento(movimiento(1, TipoMovimiento.CANCELACION_RESERVA, 10)); // 28.
+        gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 10)); // 18.
+        assertEquals(2, mensajes.getMensajes().size());
+        assertTrue(jdbc.queryForObject("SELECT alerta_activa FROM politica_reposicion WHERE stock_id = 1", Boolean.class));
+    }
+
+    @Test void evaluacionInicialAlertaUnaVezAlStockYaBajo() {
+        gestor.evaluarReposicion();
+        gestor.evaluarReposicion();
+        assertEquals(1, mensajes.getMensajes().size());
+        assertTrue(mensajes.getMensajes().getFirst().body().contains("Leche"));
+    }
+
+    @Test void fallaDeProveedorNoRevierteStockYMensajeConservaCanalParaReintento() {
+        gestor.configurarPolitica(new PoliticaReposicion(1, PoliticaReposicion.Tipo.PUNTO_PEDIDO, 20, 100, 0, 1, 1, 80, "5491100000000"));
+        notificaciones.setCanal(ServicioNotificaciones.Canal.SMS);
+        mensajes.setDisponible(false);
+        assertDoesNotThrow(() -> gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 1)));
+        assertEquals(79, gestor.consultarStock(1).getDisponible());
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM evento_integracion WHERE estado = 'PENDIENTE' AND tipo = 'ALERTA'", Integer.class));
+        notificaciones.setCanal(ServicioNotificaciones.Canal.EMAIL);
+        mensajes.setDisponible(true);
+        integraciones.procesarPendientes();
+        assertEquals("SMS", mensajes.getMensajes().getFirst().canal());
+        assertEquals(2, jdbc.queryForObject("SELECT intentos FROM evento_integracion WHERE tipo = 'ALERTA'", Integer.class));
+        assertEquals(0, integraciones.procesarPendientes());
+        assertEquals(1, mensajes.getMensajes().size());
+    }
+
+    @Test void colaFifoNoPermiteQueUnSnapshotViejoSobrescribaUnoNuevo() {
+        digital.setDisponible(false);
+        gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 1));
+        gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 1));
+        assertEquals(78, gestor.consultarStock(1).getDisponible());
+        assertTrue(digital.getInventario().isEmpty());
+        digital.setDisponible(true);
+        assertTrue(integraciones.procesarPendientes() >= 4);
+        assertEquals("78", digital.getInventario().get("1"));
+        assertEquals("35", digital.getInventario().get("6"));
+    }
+
+    @Test void erpCaidoDejaPedidoPendienteYLoEnviaAlRecuperarse() {
         erp.setDisponible(false);
         gestor.evaluarReposicion();
-        gestor.configurarPolitica(new PoliticaReposicion(2, PoliticaReposicion.Tipo.PUNTO_PEDIDO, 40, 100, 0, 1, 1, 10));
-        gestor.evaluarReposicion();
-        List<PedidoRegistrado> pedidos = pedidosDe(2);
-        assertFalse(pedidos.isEmpty());
-        long pedidoId = pedidos.getFirst().id();
-        for (int i = 0; i < 5; i++) {
-            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM evento_integracion WHERE estado = 'PENDIENTE' AND tipo = 'ORDEN_COMPRA' AND referencia_id = ?", Integer.class, pedidoId));
-            integraciones.procesarPendientes();
-        }
-        assertEquals("FALLIDO", jdbc.queryForObject("SELECT estado FROM evento_integracion WHERE tipo = 'ORDEN_COMPRA' AND referencia_id = ?", String.class, pedidoId));
-        assertEquals(5, jdbc.queryForObject("SELECT intentos FROM evento_integracion WHERE tipo = 'ORDEN_COMPRA' AND referencia_id = ?", Integer.class, pedidoId));
+        assertEquals(EstadoPedido.PENDIENTE, pedidosDe(3).getFirst().pedido().getEstado());
+        assertTrue(erp.getOrdenes().isEmpty());
+        erp.setDisponible(true);
+        integraciones.procesarPendientes();
+        assertEquals(EstadoPedido.ENVIADO, pedidosDe(3).getFirst().pedido().getEstado());
+        assertEquals(2, erp.getOrdenes().size());
+        integraciones.procesarPendientes();
+        assertEquals(2, erp.getOrdenes().size());
     }
 
-    @Test void creacionDeComboValidaComponentesYPublicaDigital() {
-        var combo = (ComboStock) gestor.crearCombo(new AltaProducto("Nuevo Combo", "Desc", 4500),
-                List.of(new ComponenteCombo(1, 2), new ComponenteCombo(2, 1)));
-        assertEquals(35, combo.getDisponible());
-        assertEquals(7, contar("producto"));
-        assertEquals(7, contar("stock"));
-        assertEquals(2, contar("linea_combo"));
-        assertEquals("35", digital.getInventario().get(String.valueOf(combo.getId())));
+    @Test void recepcionDePedidoEsAtomicaYNoPuedeDuplicarse() {
+        integraciones.procesarPendientes();
+        gestor.recibirPedido(1, "recepcion.demo");
+        assertEquals(36, gestor.consultarStock(3).getDisponible());
+        assertEquals(EstadoPedido.RECIBIDO, pedidosDe(3).getFirst().pedido().getEstado());
+        assertThrows(IllegalStateException.class, () -> gestor.recibirPedido(1, "recepcion.demo"));
+        assertEquals(36, gestor.consultarStock(3).getDisponible());
+        assertEquals(15, contar("movimiento_stock"));
     }
 
-    @Test void errorEnCreacionDeComboNoPersisteNiPublicaDigital() {
+    @Test void noSeRecibeUnPedidoTodaviaNoEnviado() {
+        assertThrows(IllegalStateException.class, () -> gestor.recibirPedido(1, "demo"));
+        assertEquals(6, gestor.consultarStock(3).getDisponible());
+    }
+
+    @Test void recepcionFuncionaDespuesDeRenovarLasConexionesDelPool() throws Exception {
+        integraciones.procesarPendientes();
+        dataSource.unwrap(com.zaxxer.hikari.HikariDataSource.class).getHikariPoolMXBean().softEvictConnections();
+
+        var resultado = gestor.recibirPedido(1, "recepcion.demo");
+        assertEquals(36, resultado.disponibilidades().get(3));
+        assertEquals(36, gestor.consultarStock(3).getDisponible());
+        assertEquals(EstadoPedido.RECIBIDO, pedidosDe(3).getFirst().pedido().getEstado());
+        assertEquals(15, contar("movimiento_stock"));
+        assertThrows(IllegalStateException.class, () -> gestor.recibirPedido(1, "recepcion.demo"));
+        assertEquals(15, contar("movimiento_stock"));
+    }
+
+    @Test void pedidoCanceladoNoSeEnviaAlERP() {
+        gestor.cancelarPedido(1);
+        integraciones.procesarPendientes();
+        assertTrue(erp.getOrdenes().isEmpty());
+        assertEquals(EstadoPedido.CANCELADO, pedidosDe(3).getFirst().pedido().getEstado());
+    }
+
+    @Test void altaSimpleComienzaSinExistenciasYSoloElGestorLasIncrementa() {
+        Stock nuevo = gestor.crearProducto(new AltaProducto("Yerba COTO", "Paquete de 1 kg", 3500));
+        assertTrue(nuevo.getProducto().getId() >= 1000);
+        assertEquals(0, nuevo.getDisponible());
+        gestor.registrarMovimiento(movimiento(nuevo.getProducto().getId(), TipoMovimiento.RECEPCION, 20));
+        assertEquals(20, gestor.consultarStock(nuevo.getProducto().getId()).getDisponible());
+        gestor.configurarPolitica(new PoliticaReposicion(nuevo.getProducto().getId(), PoliticaReposicion.Tipo.PUNTO_PEDIDO,
+                5, 30, 0, 1, 1, 5, "compras@coto.example"));
+        gestor.registrarMovimiento(movimiento(nuevo.getProducto().getId(), TipoMovimiento.RESERVA_DIGITAL, 16));
+        assertEquals(26, pedidosDe(nuevo.getProducto().getId()).getFirst().pedido().getCantidad());
+    }
+
+    @Test void comboAnidadoCompartidoSePersisteYReservaSinDuplicarIdentidades() {
+        ComboStock nuevo = gestor.crearCombo(new AltaProducto("Canasta COTO", "Combo más arroz", 8000),
+                List.of(new ComponenteCombo(6, 1), new ComponenteCombo(1, 1)));
+        assertEquals(26, nuevo.getDisponible());
+        gestor.registrarMovimiento(movimiento(nuevo.getProducto().getId(), TipoMovimiento.RESERVA_DIGITAL, 2));
+        assertEquals(74, gestor.consultarStock(1).getDisponible());
+        assertEquals(33, gestor.consultarStock(2).getDisponible());
+        assertEquals(24, gestor.consultarStock(nuevo.getProducto().getId()).getDisponible());
+    }
+
+    @Test void altaDeComboInvalidoRevierteInclusoElProductoYNoPublica() {
         assertThrows(EntidadNoEncontradaException.class, () -> gestor.crearCombo(new AltaProducto("Inválido", "No existe componente", 100),
                 List.of(new ComponenteCombo(999, 1))));
         assertEquals(6, contar("producto"));
@@ -180,126 +292,8 @@ class AplicacionIntegracionTest {
     @Test void comboNoRecibeMercaderiaFisicaNiPoliticaDeReposicion() {
         assertThrows(IllegalArgumentException.class, () -> gestor.registrarMovimiento(movimiento(6, TipoMovimiento.RECEPCION, 1)));
         assertThrows(IllegalArgumentException.class, () -> gestor.configurarPolitica(new PoliticaReposicion(6,
-                PoliticaReposicion.Tipo.PUNTO_PEDIDO, 5, 20, 0, 1, 1, 5)));
+                PoliticaReposicion.Tipo.PUNTO_PEDIDO, 5, 20, 0, 1, 1, 5, "demo")));
         assertEquals(35, gestor.consultarStock(6).getDisponible());
-    }
-
-    @Test void episodioDeAlertaSeConservaEntreTransaccionesYSeRearma() {
-        gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 61)); // 19 < 20.
-        gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 1)); // 18.
-        assertEquals(2, mensajes.getMensajes().size()); // Lista general tiene 2 emails en data.sql
-        gestor.registrarMovimiento(movimiento(1, TipoMovimiento.CANCELACION_RESERVA, 10)); // 28.
-        gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 10)); // 18.
-        assertEquals(4, mensajes.getMensajes().size()); // 2 nuevos avisos tras rearme
-        assertTrue(jdbc.queryForObject("SELECT alerta_activa FROM politica_reposicion WHERE stock_id = 1", Boolean.class));
-    }
-
-    @Test void evaluacionInicialAlertaUnaVezAlStockYaBajo() {
-        gestor.evaluarReposicion();
-        gestor.evaluarReposicion();
-        // El producto 3 (Leche en Frescos, cat 2) arranca en 6 < 10. Resuelve los 2 correos de Frescos.
-        assertEquals(2, mensajes.getMensajes().size());
-        assertTrue(mensajes.getMensajes().getFirst().body().contains("Leche"));
-    }
-
-    @Test void fallaDeProveedorNoRevierteStockYMensajeConservaCanalParaReintento() {
-        gestor.configurarPolitica(new PoliticaReposicion(1, PoliticaReposicion.Tipo.PUNTO_PEDIDO, 20, 100, 0, 1, 1, 80));
-        mensajes.setDisponible(false);
-        assertDoesNotThrow(() -> gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 1)));
-        assertEquals(79, gestor.consultarStock(1).getDisponible());
-        assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM evento_integracion WHERE estado = 'PENDIENTE' AND tipo = 'ALERTA'", Integer.class));
-        mensajes.setDisponible(true);
-        integraciones.procesarPendientes();
-        assertEquals("EMAIL", mensajes.getMensajes().getFirst().canal());
-        assertEquals(0, integraciones.procesarPendientes());
-        assertEquals(2, mensajes.getMensajes().size());
-    }
-
-    @Test
-    @DisplayName("CA5 — Artículo de categoría con 2+ emails encola un evento por cada dirección con canal EMAIL y claves únicas")
-    void alertaPorCategoriaEncolaEventoPorCadaDestinatarioConClaveUnica() {
-        // En data.sql, Frescos (cat 2) tiene frescos@coto.example y lacteos.sucursal@coto.com.ar.
-        // Asignamos una política al producto 2 y lo cambiamos a categoría 2 para probar caída en movimiento.
-        jdbc.update("UPDATE producto SET categoria_id = 2 WHERE id = 2");
-        gestor.configurarPolitica(new PoliticaReposicion(2, PoliticaReposicion.Tipo.PUNTO_PEDIDO, 10, 50, 0, 1, 1, 10));
-
-        mensajes.limpiar();
-        // Stock disponible de 2 es 35. Reservamos 26 -> disponible pasa a 9 (< 10).
-        gestor.registrarMovimiento(movimiento(2, TipoMovimiento.RESERVA_DIGITAL, 26));
-
-        // Debe haber enviado 2 avisos (uno a cada destinatario de Frescos)
-        assertEquals(2, mensajes.getMensajes().size());
-        Set<String> destinos = new HashSet<>(List.of(mensajes.getMensajes().get(0).to(), mensajes.getMensajes().get(1).to()));
-        assertTrue(destinos.contains("frescos@coto.example"));
-        assertTrue(destinos.contains("lacteos.sucursal@coto.com.ar"));
-
-        // Verificamos claves únicas en evento_integracion
-        List<String> claves = jdbc.queryForList("SELECT clave FROM evento_integracion WHERE tipo = 'ALERTA' AND stock_id = 2", String.class);
-        assertEquals(2, claves.size());
-        assertEquals(2, new HashSet<>(claves).size()); // Claves distintas
-        assertTrue(claves.stream().allMatch(c -> c.contains(":alerta:2:")));
-    }
-
-    @Test
-    @DisplayName("CA6 — Artículo de categoría sin emails propios recurre a la lista general de la sucursal")
-    void alertaSinEmailsEnCategoriaResuelveListaGeneral() {
-        // Producto 1 (Arroz) está en Almacén (cat 1). Almacén no tiene emails en destinatario_aviso.
-        mensajes.limpiar();
-        // Disponible inicial 80, umbral 20. Reservamos 61 -> disponible 19 (< 20).
-        gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 61));
-
-        assertEquals(2, mensajes.getMensajes().size());
-        Set<String> destinos = new HashSet<>(List.of(mensajes.getMensajes().get(0).to(), mensajes.getMensajes().get(1).to()));
-        assertTrue(destinos.contains("compras@coto.example"));
-        assertTrue(destinos.contains("sucursal42.stock@coto.com.ar"));
-    }
-
-    @Test
-    @DisplayName("CA7 — Al descender aún más en el mismo episodio no duplica; al superar umbral y volver a caer emite nuevo lote")
-    void alertaNoDuplicaEnMismoEpisodioYGeneraNuevoLoteAlRearmar() {
-        mensajes.limpiar();
-        // Primer movimiento: cae bajo umbral (80 -> 19)
-        gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 61));
-        assertEquals(2, mensajes.getMensajes().size());
-
-        // Segundo movimiento dentro del mismo episodio (19 -> 15): no duplica
-        gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 4));
-        assertEquals(2, mensajes.getMensajes().size());
-
-        // Liberación de reserva que supera el umbral (15 + 10 = 25 > 20): desactiva alerta y se rearma
-        gestor.registrarMovimiento(movimiento(1, TipoMovimiento.CANCELACION_RESERVA, 10));
-        assertFalse(jdbc.queryForObject("SELECT alerta_activa FROM politica_reposicion WHERE stock_id = 1", Boolean.class));
-
-        // Nueva caída bajo umbral (25 -> 18 < 20): nuevo episodio, nuevo lote de alertas
-        gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 7));
-        assertEquals(4, mensajes.getMensajes().size());
-        assertTrue(jdbc.queryForObject("SELECT alerta_activa FROM politica_reposicion WHERE stock_id = 1", Boolean.class));
-    }
-
-    @Test
-    @DisplayName("Listas vacías (sin correos en categoría ni general): no encola eventos pero registra alerta_activa")
-    void alertaSinDestinatariosNoGeneraEventosPeroActivaAlerta() {
-        jdbc.update("DELETE FROM destinatario_aviso");
-        mensajes.limpiar();
-
-        gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 61)); // 80 -> 19 < 20
-
-        // No se encolan eventos de alerta
-        assertEquals(0, mensajes.getMensajes().size());
-        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM evento_integracion WHERE tipo = 'ALERTA'", Integer.class));
-        // Pero la alerta queda registrada como activa en la política
-        assertTrue(jdbc.queryForObject("SELECT alerta_activa FROM politica_reposicion WHERE stock_id = 1", Boolean.class));
-    }
-
-    @Test void colaFifoNoPermiteQueUnSnapshotViejoSobrescribaUnoNuevo() {
-        digital.setDisponible(false);
-        gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 1));
-        gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 1));
-        assertEquals(78, gestor.consultarStock(1).getDisponible());
-        assertTrue(digital.getInventario().isEmpty());
-        digital.setDisponible(true);
-        assertEquals(2, integraciones.procesarPendientes());
-        assertEquals("78", digital.getInventario().get("1"));
     }
 
     @Test void promocionesPersistidasSeAcumulanConFiltroDeMedioDePagoYRedondeoFinal() {

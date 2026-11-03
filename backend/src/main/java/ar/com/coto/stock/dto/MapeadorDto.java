@@ -71,11 +71,11 @@ public final class MapeadorDto {
     }
     public static PoliticaReposicion politica(int id, Solicitudes.Politica p) {
         return new PoliticaReposicion(id, PoliticaReposicion.Tipo.valueOf(p.tipo().name()), p.puntoPedido(), p.stockObjetivo(),
-                p.demandaDiaria().doubleValue(), p.diasCobertura(), p.factorEstacional().doubleValue(), p.umbralAlerta());
+                p.demandaDiaria().doubleValue(), p.diasCobertura(), p.factorEstacional().doubleValue(), p.umbralAlerta(), p.destinoAlerta() == null ? "configuracion-global" : p.destinoAlerta(), p.contactoId(), p.canalAlerta() == null ? null : p.canalAlerta().name());
     }
     public static Respuestas.Politica politica(PoliticaReposicion p) {
         return new Respuestas.Politica(p.stockId(), p.tipo().name(), p.puntoPedido(), p.stockObjetivo(), BigDecimal.valueOf(p.demandaDiaria()),
-                p.diasCobertura(), BigDecimal.valueOf(p.factorEstacional()), p.umbralAlerta());
+                p.diasCobertura(), BigDecimal.valueOf(p.factorEstacional()), p.umbralAlerta(), p.destinoAlerta(), p.contactoId(), p.canalAlerta());
     }
     public static Promocion promocion(int productoId, long id, Solicitudes.Promocion p) {
         return new Promocion(id, productoId, Promocion.Tipo.valueOf(p.tipo().name()), p.porcentaje().doubleValue(), p.orden(), p.activa(), p.medioPago());

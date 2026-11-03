@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
-import { AlertCircle, Mail, Plus, Trash2 } from 'lucide-react';
+import { Mail, Plus, Trash2 } from 'lucide-react';
 import { api } from '../api';
-import { resolverDestinatariosAviso } from '../notifications';
+import { destinoAviso } from '../notifications';
 import { useStore } from '../store';
 import type { Politica, Producto, Promocion } from '../types';
 import { ImageUpload, type ImageSelection } from './ImageUpload';
@@ -40,10 +40,11 @@ export function PolicyForm({ product, onClose }: { product: Producto; onClose: (
   const { data, busy, run } = useStore();
   const initial = data?.politicas[product.id];
   const [values, setValues] = useState<Omit<Politica, 'stockId'>>(initial ? (({ stockId: _, ...rest }) => rest)(initial) : {
-    tipo: 'PUNTO_PEDIDO', puntoPedido: 20, stockObjetivo: 100, demandaDiaria: 0, diasCobertura: 1, factorEstacional: 1, umbralAlerta: 10,
+    tipo: 'PUNTO_PEDIDO', puntoPedido: 20, stockObjetivo: 100, demandaDiaria: 0, diasCobertura: 1, factorEstacional: 1, umbralAlerta: 10, destinoAlerta: 'configuracion-global', contactoId: null, canalAlerta: null,
   });
   const [error, setError] = useState<Error | null>(null);
-  const notice = data ? resolverDestinatariosAviso(data, product) : null;
+  // Los destinatarios se administran en Configuración; la asignación anterior por contacto se conserva sin cambios.
+  const aviso = data ? destinoAviso(data, product) : null;
   const setNumber = (name: keyof typeof values, value: string) => setValues(old => ({ ...old, [name]: value === '' ? '' : Number(value) }));
   const descriptions = {
     PUNTO_PEDIDO: 'Al alcanzar el punto de pedido, se repone hasta el stock objetivo.',
@@ -54,7 +55,7 @@ export function PolicyForm({ product, onClose }: { product: Producto; onClose: (
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); setError(null);
     try {
-      await run(() => api.guardarPolitica(product.id, values), 'Política de reposición guardada. Se aplicará en el próximo movimiento o evaluación.');
+      await run(() => api.guardarPolitica(product.id, values), 'Política de reposición guardada. Se aplicará en el próximo movimiento o evaluación.', ['politicas']);
       onClose();
     } catch (e) { setError(e as Error); }
   }
@@ -94,28 +95,21 @@ export function PolicyForm({ product, onClose }: { product: Producto; onClose: (
           <Field label="Umbral de alerta" hint="Se envía un aviso cuando el disponible cae por debajo de este valor.">
             <input required type="number" min="1" max="2147483647" step="1" value={values.umbralAlerta} onChange={e => setNumber('umbralAlerta', e.target.value)} disabled={busy} />
           </Field>
-
-          <div className={`notice-resolution-card ${notice?.origen === 'NINGUNO' ? 'warning' : ''}`} role="region" aria-label="Destinatarios del aviso automático">
-            {notice?.origen === 'NINGUNO' ? (
-              <AlertCircle size={24} aria-hidden="true" style={{ color: 'var(--warning-800)' }} />
-            ) : (
-              <Mail size={24} aria-hidden="true" style={{ color: 'var(--neutral-700)' }} />
-            )}
-            <div className="notice-resolution-content">
-              <p>
-                <strong>Avisos por email:</strong>{' '}
-                {notice?.origen === 'CATEGORIA' && `se enviarán a los ${notice.emails.length} destinatarios de la categoría ${notice.categoriaNombre} (${notice.emails.join(', ')}).`}
-                {notice?.origen === 'GENERAL' && `la categoría ${notice.categoriaNombre || 'del artículo'} no tiene lista propia. Se enviarán a los ${notice.emails.length} destinatarios de la lista general (${notice.emails.join(', ')}).`}
-                {notice?.origen === 'NINGUNO' && 'Atención: no hay destinatarios en la categoría ni en la sucursal. Se registrará la alerta pero no se enviarán correos.'}
-              </p>
-              <span className="field-hint">
-                <a className="text-link" href="#/configuracion/destinatarios" onClick={onClose}>
-                  Administrar destinatarios en Configuración →
-                </a>
-              </span>
+          {aviso && (
+            <div className="notice-resolution-card" role="region" aria-label="Destinatarios del aviso automático">
+              <Mail size={20} aria-hidden="true" style={{ color: 'var(--coto-red)' }} />
+              <div className="notice-resolution-content">
+                <p className="form-info" style={{ margin: 0 }}>
+                  Avisar a {aviso.nombre} · {aviso.canal}: {aviso.destinos.join(', ') || 'sin destino'}
+                </p>
+                <p className="field-hint" style={{ margin: 0 }}>
+                  <a className="text-link" href="#/configuracion/avisos" onClick={onClose}>
+                    Administrar destinatarios de avisos
+                  </a>
+                </p>
+              </div>
             </div>
-          </div>
-
+          )}
           <ErrorMessage error={error} />
         </div>
         <footer className="modal-footer">
@@ -134,7 +128,7 @@ export function PromotionForm({ product, existing, nextOrder, onClose }: { produ
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); setError(null);
     const body = { tipo: values.tipo, porcentaje: Number(values.porcentaje), orden: Number(values.orden), activa: values.activa, medioPago: values.tipo === 'MEDIO_PAGO' ? values.medioPago.trim() : null };
-    try { await run(() => api.guardarPromocion(product.id, body, existing?.id), 'Promoción guardada. Los precios del catálogo se actualizaron.'); onClose(); }
+    try { await run(() => api.guardarPromocion(product.id, body, existing?.id), 'Promoción guardada. Los precios del catálogo se actualizaron.', []); onClose(); }
     catch (e) { setError(e as Error); }
   }
   return <Modal title={existing ? 'Editar promoción' : 'Nueva promoción'} description="Los descuentos se acumulan según su orden de aplicación." onClose={onClose}><form onSubmit={submit}><div className="modal-body form-stack"><ProductName product={product} />

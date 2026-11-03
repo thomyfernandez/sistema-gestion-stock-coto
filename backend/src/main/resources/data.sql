@@ -58,18 +58,12 @@ INSERT INTO auditoria_stock
 INSERT INTO bloqueo_operacion (id) VALUES (1), (2);
 INSERT INTO politica_reposicion
     (stock_id, tipo, punto_pedido, stock_objetivo, demanda_diaria, dias_cobertura,
-     factor_estacional, umbral_alerta) VALUES
-    (1, 'PUNTO_PEDIDO', 20, 100, 0, 1, 1, 20),
-    (2, 'PUNTO_PEDIDO', 10, 60, 0, 1, 1, 10),
-    (3, 'DEMANDA', 0, 36, 12, 3, 1, 10),
-    (4, 'DEMANDA', 0, 20, 8, 2, 1, 5),
-    (5, 'ESTACIONAL', 0, 40, 0, 1, 1.5, 10);
-
-INSERT INTO destinatario_aviso (id, categoria_id, email) VALUES
-    (1, NULL, 'compras@coto.example'),
-    (2, NULL, 'sucursal42.stock@coto.com.ar'),
-    (3, 2, 'frescos@coto.example'),
-    (4, 2, 'lacteos.sucursal@coto.com.ar');
+     factor_estacional, umbral_alerta, destino_alerta) VALUES
+    (1, 'PUNTO_PEDIDO', 20, 100, 0, 1, 1, 20, 'compras@coto.example'),
+    (2, 'PUNTO_PEDIDO', 10, 60, 0, 1, 1, 10, 'compras@coto.example'),
+    (3, 'DEMANDA', 0, 36, 12, 3, 1, 10, 'compras@coto.example'),
+    (4, 'DEMANDA', 0, 20, 8, 2, 1, 5, 'compras@coto.example'),
+    (5, 'ESTACIONAL', 0, 40, 0, 1, 1.5, 10, 'compras@coto.example');
 
 INSERT INTO promocion (id, producto_id, tipo, porcentaje, orden, activa, medio_pago) VALUES
     (1, 1, 'DOS_POR_UNO', 0, 10, TRUE, NULL),
@@ -81,6 +75,9 @@ INSERT INTO evento_integracion (id, clave, tipo, stock_id, pedido_id, fecha) VAL
     (1, 'pedido:1', 'PEDIDO_ERP', 3, 1, TIMESTAMP WITH TIME ZONE '2026-10-15 09:01:00-03:00');
 
 INSERT INTO configuracion_avisos (id, canal, email, telefono) VALUES (1, 'EMAIL', 'compras@coto.example', '+541100000000');
+-- Lista de ejemplo: los avisos de Verdulería van a dos direcciones; el resto usa el destinatario general.
+INSERT INTO destinatario_aviso (id, categoria_id, email) VALUES
+    (1, 3, 'verduleria@coto.example'), (2, 3, 'jefe.verduleria@coto.example');
 
 
 -- Usuarios de demostración para pruebas y roles de sucursal.

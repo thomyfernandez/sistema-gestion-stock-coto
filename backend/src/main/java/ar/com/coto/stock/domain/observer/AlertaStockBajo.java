@@ -15,10 +15,6 @@ public final class AlertaStockBajo implements ObservadorStock {
     private final Map<Integer, Boolean> alertados = new HashMap<>();
     private Aviso ultimoAviso;
 
-    public AlertaStockBajo(int umbral, EmisorAlertas emisor) {
-        this(umbral, "destinatarios-avisos", emisor);
-    }
-
     public AlertaStockBajo(int umbral, String destino, EmisorAlertas emisor) {
         this.umbral = Reglas.positivo(umbral, "umbral");
         this.destino = Reglas.texto(destino, "destino");

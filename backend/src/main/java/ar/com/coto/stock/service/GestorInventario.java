@@ -20,23 +20,12 @@ public final class GestorInventario implements GestionInventario {
                                RepositorioPedidos pedidos, RepositorioAuditoria auditoria, RepositorioPoliticas politicas,
                                RepositorioPromociones promociones, RepositorioIntegraciones eventos,
                                ServicioReposicion reposicion, ServicioNotificaciones notificaciones,
-                               ServicioIntegraciones integraciones, ServicioContactos contactos, ServicioCategorias categorias,
-                               GestionDestinatarios destinatarios, Clock reloj) {
-        public Dependencias(UnidadDeTrabajo unidad, RepositorioStock stocks, RepositorioMovimientos movimientos,
-                            RepositorioPedidos pedidos, RepositorioAuditoria auditoria, RepositorioPoliticas politicas,
-                            RepositorioPromociones promociones, RepositorioIntegraciones eventos,
-                            ServicioReposicion reposicion, ServicioNotificaciones notificaciones,
-                            ServicioIntegraciones integraciones, ServicioContactos contactos, ServicioCategorias categorias, Clock reloj) {
-            this(unidad, stocks, movimientos, pedidos, auditoria, politicas, promociones, eventos, reposicion, notificaciones,
-                    integraciones, contactos, categorias, null, reloj);
-        }
-
+                               ServicioIntegraciones integraciones, ServicioContactos contactos, ServicioCategorias categorias, Clock reloj) {
         public Dependencias {
             Objects.requireNonNull(unidad); Objects.requireNonNull(stocks); Objects.requireNonNull(movimientos);
             Objects.requireNonNull(pedidos); Objects.requireNonNull(auditoria); Objects.requireNonNull(politicas);
             Objects.requireNonNull(promociones); Objects.requireNonNull(eventos); Objects.requireNonNull(reposicion);
-            Objects.requireNonNull(notificaciones); Objects.requireNonNull(integraciones); Objects.requireNonNull(reloj);
-            Objects.requireNonNull(contactos); Objects.requireNonNull(categorias);
+            Objects.requireNonNull(notificaciones); Objects.requireNonNull(integraciones); Objects.requireNonNull(reloj); Objects.requireNonNull(contactos); Objects.requireNonNull(categorias);
         }
     }
     public synchronized void configurar(Dependencias dependencias) {
@@ -129,7 +118,7 @@ public final class GestorInventario implements GestionInventario {
             stock.agregarObservador(sincronizador);
             PoliticaReposicion politica = politicas.get(id);
             if (politica != null) {
-                AlertaStockBajo alerta = new AlertaStockBajo(politica.umbralAlerta(),
+                AlertaStockBajo alerta = new AlertaStockBajo(politica.umbralAlerta(), politica.destinoAlerta(),
                         a -> o.avisos.put(id, a.getUltimoAviso()));
                 alerta.restaurarEstado(id, d.politicas.alertaActiva(id));
                 o.alertas.put(id, alerta);
@@ -142,14 +131,15 @@ public final class GestorInventario implements GestionInventario {
     private void guardarAlertas(Dependencias d, Observaciones o, Map<Integer, PoliticaReposicion> politicas,
                                 Map<Integer, Stock> grafo, String clave) {
         if (!o.avisos.isEmpty()) {
+            var general = d.notificaciones.consultarConfiguracion();
             o.avisos.forEach((id, aviso) -> {
-                List<String> destinatarios = d.destinatarios != null
-                        ? d.destinatarios.resolverDestinatarios(id)
-                        : List.of();
-                for (String email : destinatarios) {
-                    d.eventos.encolar(new EventoIntegracion(0, clave + ":alerta:" + id + ":" + email,
-                            EventoIntegracion.Tipo.ALERTA, id, null, null, "EMAIL",
-                            email, aviso.getTexto(), d.reloj.instant()));
+                var destinos = d.contactos.resolver(politicas.get(id), grafo.get(id).getProducto(), general);
+                // Un evento por dirección: cada email se entrega y reintenta por separado.
+                for (int i = 0; i < destinos.size(); i++) {
+                    var destino = destinos.get(i);
+                    d.eventos.encolar(new EventoIntegracion(0, clave + ":alerta:" + id + (destinos.size() == 1 ? "" : ":" + i),
+                            EventoIntegracion.Tipo.ALERTA, id, null, null, destino.canal(),
+                            destino.destino(), aviso.getTexto(), d.reloj.instant()));
                 }
             });
         }
@@ -224,6 +214,7 @@ public final class GestorInventario implements GestionInventario {
             if (!(exigirStock(d.stocks.cargarInventario(), politica.stockId()) instanceof StockSimple)) {
                 throw new IllegalArgumentException("La política requiere un producto simple");
             }
+            d.contactos.respaldo(politica, exigirStock(d.stocks.cargarInventario(), politica.stockId()).getProducto(), d.notificaciones.consultarConfiguracion());
             d.politicas.guardar(politica);
             return null;
         });
@@ -258,6 +249,15 @@ public final class GestorInventario implements GestionInventario {
     }
     @Override public List<AuditoriaStock> listarAuditoria() {
         Dependencias d = d(); return d.unidad.consultar(d.auditoria::listar);
+    }
+    @Override public Pagina<MovimientoRegistrado> buscarMovimientos(Integer stockId, Set<TipoMovimiento> tipos, int pagina, int limite) {
+        Dependencias d = d(); return d.unidad.consultar(() -> d.movimientos.buscar(stockId, tipos, pagina, limite));
+    }
+    @Override public Pagina<AuditoriaStock> buscarAuditoria(Integer stockId, int pagina, int limite) {
+        Dependencias d = d(); return d.unidad.consultar(() -> d.auditoria.buscar(stockId, pagina, limite));
+    }
+    @Override public Map<Integer, PoliticaReposicion> listarPoliticas() {
+        Dependencias d = d(); return d.unidad.consultar(() -> Collections.unmodifiableMap(d.politicas.listar()));
     }
     @Override public List<PedidoRegistrado> listarPedidos() {
         Dependencias d = d(); return d.unidad.consultar(d.pedidos::listar);

@@ -78,6 +78,6 @@ public final class Solicitudes {
                             @Size(max = 200) String email, @Size(max = 30) String telefono) { }
     public record Categoria(@NotBlank @Size(max = 80) String nombre, @Positive Long contactoId, Canal canalAlerta) { }
     public record CategoriaProducto(@Positive Integer categoriaId) { }
+    public record Destinatarios(@NotNull @Size(max = 20) List<@NotNull @Size(max = 200) String> emails) { }
     public record Disponibilidad(@NotNull Boolean disponible) { }
-    public record Destinatarios(List<@NotBlank @Email @Size(max = 200) String> emails) { }
 }

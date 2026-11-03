@@ -1,85 +1,40 @@
 package ar.com.coto.stock.repository;
-
-import ar.com.coto.stock.domain.model.DestinatarioAviso;
+import ar.com.coto.stock.domain.model.ListaDestinatarios;
 import ar.com.coto.stock.domain.port.RepositorioDestinatarios;
-import ar.com.coto.stock.repository.entity.DestinatarioAvisoEntity;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import ar.com.coto.stock.repository.entity.DestinatarioEntity;
+import jakarta.persistence.*;
 import org.springframework.stereotype.Repository;
-
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-
+import java.util.*;
 @Repository
 public class RepositorioDestinatariosJpa implements RepositorioDestinatarios {
-    @PersistenceContext
-    private EntityManager em;
-
-    private DestinatarioAviso modelo(DestinatarioAvisoEntity fila) {
-        return new DestinatarioAviso(fila.id, fila.categoriaId, fila.email);
+    @PersistenceContext private EntityManager em;
+    public List<ListaDestinatarios> listar() {
+        Map<Integer, List<String>> porCategoria = new LinkedHashMap<>();
+        List<String> general = new ArrayList<>();
+        em.createQuery("select d from DestinatarioEntity d order by d.categoriaId nulls first, d.id", DestinatarioEntity.class)
+                .getResultList().forEach(d -> (d.categoriaId == null ? general : porCategoria.computeIfAbsent(d.categoriaId, k -> new ArrayList<>())).add(d.email));
+        var listas = new ArrayList<ListaDestinatarios>();
+        listas.add(ListaDestinatarios.general(general));
+        porCategoria.forEach((id, emails) -> listas.add(new ListaDestinatarios(id, emails)));
+        return listas;
     }
-
-    @Override
-    public List<DestinatarioAviso> listarGenerales() {
-        return em.createQuery("select d from DestinatarioAvisoEntity d where d.categoriaId is null order by lower(d.email)", DestinatarioAvisoEntity.class)
-                .getResultList()
-                .stream()
-                .map(this::modelo)
-                .toList();
+    public ListaDestinatarios obtener(Integer categoriaId) {
+        var consulta = em.createQuery(categoriaId == null
+                ? "select d.email from DestinatarioEntity d where d.categoriaId is null order by d.id"
+                : "select d.email from DestinatarioEntity d where d.categoriaId = :categoria order by d.id", String.class);
+        if (categoriaId != null) consulta.setParameter("categoria", categoriaId);
+        return new ListaDestinatarios(categoriaId, consulta.getResultList());
     }
-
-    @Override
-    public List<DestinatarioAviso> listarPorCategoria(int categoriaId) {
-        return em.createQuery("select d from DestinatarioAvisoEntity d where d.categoriaId = :catId order by lower(d.email)", DestinatarioAvisoEntity.class)
-                .setParameter("catId", categoriaId)
-                .getResultList()
-                .stream()
-                .map(this::modelo)
-                .toList();
-    }
-
-    @Override
-    public List<DestinatarioAviso> listarTodos() {
-        return em.createQuery("select d from DestinatarioAvisoEntity d order by d.categoriaId, lower(d.email)", DestinatarioAvisoEntity.class)
-                .getResultList()
-                .stream()
-                .map(this::modelo)
-                .toList();
-    }
-
-    @Override
-    public void guardarGenerales(List<String> emails) {
-        em.createQuery("delete from DestinatarioAvisoEntity d where d.categoriaId is null").executeUpdate();
-        if (emails != null) {
-            Set<String> normalizados = new LinkedHashSet<>();
-            for (String e : emails) {
-                if (e != null && !e.isBlank()) {
-                    normalizados.add(e.strip().toLowerCase(Locale.ROOT));
-                }
-            }
-            for (String email : normalizados) {
-                em.persist(new DestinatarioAvisoEntity(null, email));
-            }
-        }
-    }
-
-    @Override
-    public void guardarPorCategoria(int categoriaId, List<String> emails) {
-        em.createQuery("delete from DestinatarioAvisoEntity d where d.categoriaId = :catId")
-                .setParameter("catId", categoriaId)
-                .executeUpdate();
-        if (emails != null) {
-            Set<String> normalizados = new LinkedHashSet<>();
-            for (String e : emails) {
-                if (e != null && !e.isBlank()) {
-                    normalizados.add(e.strip().toLowerCase(Locale.ROOT));
-                }
-            }
-            for (String email : normalizados) {
-                em.persist(new DestinatarioAvisoEntity(categoriaId, email));
-            }
+    public void reemplazar(ListaDestinatarios lista) {
+        var borrado = em.createQuery(lista.esGeneral()
+                ? "delete from DestinatarioEntity d where d.categoriaId is null"
+                : "delete from DestinatarioEntity d where d.categoriaId = :categoria");
+        if (!lista.esGeneral()) borrado.setParameter("categoria", lista.categoriaId());
+        borrado.executeUpdate();
+        for (String email : lista.emails()) {
+            var fila = new DestinatarioEntity();
+            fila.categoriaId = lista.categoriaId(); fila.email = email;
+            em.persist(fila);
         }
     }
 }

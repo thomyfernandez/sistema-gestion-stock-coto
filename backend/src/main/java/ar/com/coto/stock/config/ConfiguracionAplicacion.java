@@ -27,14 +27,15 @@ public class ConfiguracionAplicacion {
                 ServicioNotificaciones.Canal.SMS, new SmsNotificador(new AdaptadorProveedorSMS(api)),
                 ServicioNotificaciones.Canal.WHATSAPP, new WhatsAppNotificador(new AdaptadorProveedor(api, "WHATSAPP"))), avisos, unidad);
     }
-    @Bean ServicioContactos contactos(RepositorioContactos contactos, RepositorioPoliticas politicas, RepositorioStock stocks, UnidadDeTrabajo unidad, RepositorioCategorias categorias) {
-        return new ServicioContactos(contactos, politicas, stocks, unidad, categorias);
+    @Bean ServicioContactos contactos(RepositorioContactos contactos, RepositorioPoliticas politicas, RepositorioStock stocks, UnidadDeTrabajo unidad,
+                                      RepositorioCategorias categorias, RepositorioDestinatarios destinatarios) {
+        return new ServicioContactos(contactos, politicas, stocks, unidad, categorias, destinatarios);
+    }
+    @Bean ServicioDestinatarios destinatarios(RepositorioDestinatarios destinatarios, RepositorioCategorias categorias, RepositorioStock stocks, UnidadDeTrabajo unidad) {
+        return new ServicioDestinatarios(destinatarios, categorias, stocks, unidad);
     }
     @Bean ServicioCategorias categorias(RepositorioCategorias categorias, RepositorioContactos contactos, RepositorioStock stocks, UnidadDeTrabajo unidad) {
         return new ServicioCategorias(categorias, contactos, stocks, unidad);
-    }
-    @Bean ServicioDestinatarios destinatarios(RepositorioDestinatarios destinatarios, RepositorioStock stocks, RepositorioCategorias categorias, UnidadDeTrabajo unidad) {
-        return new ServicioDestinatarios(destinatarios, stocks, categorias, unidad);
     }
     @Bean ServicioReposicion reposicion(Clock reloj) { return new ServicioReposicion(new ReposicionPuntoDePedido(20, 100), reloj); }
     @Bean ServicioValorizacion valorizacion(RepositorioStock stock, RepositorioPromociones promociones, UnidadDeTrabajo unidad) {
@@ -48,11 +49,10 @@ public class ConfiguracionAplicacion {
     @Bean(destroyMethod = "cerrar") GestorInventario gestor(UnidadDeTrabajo unidad, RepositorioStock stocks,
             RepositorioMovimientos movimientos, RepositorioPedidos pedidos, RepositorioAuditoria auditoria,
             RepositorioPoliticas politicas, RepositorioPromociones promociones, RepositorioIntegraciones eventos,
-            ServicioReposicion reposicion, ServicioNotificaciones notificaciones, ServicioIntegraciones integraciones,
-            ServicioContactos contactos, ServicioCategorias categorias, ServicioDestinatarios destinatarios, Clock reloj) {
+            ServicioReposicion reposicion, ServicioNotificaciones notificaciones, ServicioIntegraciones integraciones, ServicioContactos contactos, ServicioCategorias categorias, Clock reloj) {
         GestorInventario gestor = GestorInventario.getInstancia();
         gestor.configurar(new GestorInventario.Dependencias(unidad, stocks, movimientos, pedidos, auditoria,
-                politicas, promociones, eventos, reposicion, notificaciones, integraciones, contactos, categorias, destinatarios, reloj));
+                politicas, promociones, eventos, reposicion, notificaciones, integraciones, contactos, categorias, reloj));
         return gestor;
     }
 }
