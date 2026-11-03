@@ -7,7 +7,9 @@ import org.junit.jupiter.api.Test;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -128,6 +130,32 @@ class SchemaTest {
             insertar.setString(1, "TIPO_INEXISTENTE");
             SQLException error = assertThrows(SQLException.class, insertar::executeUpdate);
             assertEquals("23513", error.getSQLState());
+        }
+    }
+
+    @Test void destinatariosAvisosTieneIndicesUnicosParcialesYPoliticaNoTieneColumnasDeAviso() throws Exception {
+        try (Connection conexion = DriverManager.getConnection(url); Statement sentencia = conexion.createStatement()) {
+            // Verificar unicidad en lista general (categoria_id IS NULL)
+            assertThrows(SQLException.class, () ->
+                    sentencia.executeUpdate("INSERT INTO destinatario_aviso(categoria_id, email) VALUES(NULL, 'compras@coto.example')"));
+
+            // Verificar unicidad dentro de una misma categoría (categoria_id IS NOT NULL)
+            assertThrows(SQLException.class, () ->
+                    sentencia.executeUpdate("INSERT INTO destinatario_aviso(categoria_id, email) VALUES(2, 'frescos@coto.example')"));
+
+            // Pero el mismo email puede coexistir en la lista general y en una categoría específica (índices parciales)
+            int insertado = sentencia.executeUpdate("INSERT INTO destinatario_aviso(categoria_id, email) VALUES(1, 'compras@coto.example')");
+            assertEquals(1, insertado);
+
+            // Verificar que politica_reposicion no tiene columnas obsoletas de contacto particular ni destino_alerta
+            DatabaseMetaData metadata = conexion.getMetaData();
+            try (ResultSet columnas = metadata.getColumns(null, "public", "politica_reposicion", "%")) {
+                List<String> nombres = new ArrayList<>();
+                while (columnas.next()) nombres.add(columnas.getString("COLUMN_NAME").toLowerCase());
+                assertFalse(nombres.contains("proveedor_id"), "politica_reposicion no debe tener columna proveedor_id");
+                assertFalse(nombres.contains("canal_alerta"), "politica_reposicion no debe tener columna canal_alerta");
+                assertFalse(nombres.contains("destino_alerta"), "politica_reposicion no debe tener columna destino_alerta");
+            }
         }
     }
 

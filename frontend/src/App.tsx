@@ -16,7 +16,7 @@ const allViews = [
   { id: 'configuracion', name: 'Configuración', icon: Settings, roles: ['SUPERVISOR'] },
 ];
 
-const subtitles: Record<string, string> = { inventario: 'Existencias', digital: 'Reservas y despachos', avisos: 'Alertas y avisos', categorias: 'Categorías', reposicion: 'Reposición', catalogo: 'Productos y combos', promociones: 'Promociones', actividad: 'Actividad' };
+const subtitles: Record<string, string> = { inventario: 'Existencias', digital: 'Reservas y despachos', destinatarios: 'Listas de correos para alertas de stock bajo.', avisos: 'Alertas y avisos', categorias: 'Categorías', reposicion: 'Reposición', catalogo: 'Productos y combos', promociones: 'Promociones', actividad: 'Actividad' };
 
 function readRoute() {
   let [view, tab] = window.location.hash.replace(/^#\/?/, '').split('/');
@@ -24,7 +24,7 @@ function readRoute() {
   if (view === 'digital') { view = 'stock'; tab = 'digital'; }
   if (view === 'compras' && tab === 'integraciones') tab = 'reposicion';
   if (!allViews.some(v => v.id === view)) view = 'stock';
-  return { view, tab: tab || (view === 'stock' ? 'inventario' : view === 'configuracion' ? 'avisos' : view === 'compras' ? 'reposicion' : '') };
+  return { view, tab: tab || (view === 'stock' ? 'inventario' : view === 'configuracion' ? 'destinatarios' : view === 'compras' ? 'reposicion' : '') };
 }
 
 export default function App() {
@@ -176,7 +176,7 @@ export default function App() {
           {store.usuario.rol === 'SUPERVISOR' && (
             <>
               <a className="text-link" href="#/compras/reposicion">Revisar reposición</a>
-              <a className="text-link" href="#/configuracion/avisos">Configurar alertas y avisos</a>
+              <a className="text-link" href="#/configuracion/destinatarios">Configurar destinatarios de avisos</a>
             </>
           )}
         </section>

@@ -6,13 +6,22 @@ import java.util.Objects;
 /** Configuración persistible; la creación de la estrategia permanece explícita. */
 public record PoliticaReposicion(int stockId, Tipo tipo, int puntoPedido, int stockObjetivo,
                                  double demandaDiaria, int diasCobertura, double factorEstacional,
-                                 int umbralAlerta, String destinoAlerta, Long contactoId, String canalAlerta) {
+                                 int umbralAlerta) {
+
     public PoliticaReposicion(int stockId, Tipo tipo, int puntoPedido, int stockObjetivo,
                               double demandaDiaria, int diasCobertura, double factorEstacional,
                               int umbralAlerta, String destinoAlerta) {
-        this(stockId, tipo, puntoPedido, stockObjetivo, demandaDiaria, diasCobertura, factorEstacional, umbralAlerta, destinoAlerta, null, null);
+        this(stockId, tipo, puntoPedido, stockObjetivo, demandaDiaria, diasCobertura, factorEstacional, umbralAlerta);
     }
+
+    public PoliticaReposicion(int stockId, Tipo tipo, int puntoPedido, int stockObjetivo,
+                              double demandaDiaria, int diasCobertura, double factorEstacional,
+                              int umbralAlerta, String destinoAlerta, Long contactoId, String canalAlerta) {
+        this(stockId, tipo, puntoPedido, stockObjetivo, demandaDiaria, diasCobertura, factorEstacional, umbralAlerta);
+    }
+
     public enum Tipo { PUNTO_PEDIDO, DEMANDA, ESTACIONAL }
+
     public PoliticaReposicion {
         Reglas.positivo(stockId, "stockId");
         Objects.requireNonNull(tipo);
@@ -23,22 +32,30 @@ public record PoliticaReposicion(int stockId, Tipo tipo, int puntoPedido, int st
         Reglas.noNegativo(factorEstacional, "factorEstacional");
         if (factorEstacional == 0) throw new IllegalArgumentException("Factor debe ser positivo");
         Reglas.positivo(umbralAlerta, "umbralAlerta");
-        destinoAlerta = Reglas.texto(destinoAlerta, "destinoAlerta");
-        if (contactoId == null && canalAlerta != null) throw new IllegalArgumentException("Seleccioná un contacto para el aviso particular");
-        if (contactoId != null && (contactoId <= 0 || canalAlerta == null
-                || !java.util.Set.of("EMAIL", "SMS", "WHATSAPP").contains(canalAlerta)))
-            throw new IllegalArgumentException("Seleccioná un contacto y un canal válidos");
         switch (tipo) {
             case PUNTO_PEDIDO -> new ReposicionPuntoDePedido(puntoPedido, stockObjetivo);
             case DEMANDA -> new ReposicionPorDemanda(demandaDiaria, diasCobertura);
             case ESTACIONAL -> new ReposicionEstacional(stockObjetivo, factorEstacional);
         }
     }
+
     public EstrategiaReposicion crearEstrategia() {
         return switch (tipo) {
             case PUNTO_PEDIDO -> new ReposicionPuntoDePedido(puntoPedido, stockObjetivo);
             case DEMANDA -> new ReposicionPorDemanda(demandaDiaria, diasCobertura);
             case ESTACIONAL -> new ReposicionEstacional(stockObjetivo, factorEstacional);
         };
+    }
+
+    public String destinoAlerta() {
+        return null;
+    }
+
+    public Long contactoId() {
+        return null;
+    }
+
+    public String canalAlerta() {
+        return null;
     }
 }

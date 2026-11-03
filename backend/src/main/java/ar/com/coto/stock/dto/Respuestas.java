@@ -20,7 +20,13 @@ public final class Respuestas {
     public record ResultadoMovimiento(long id, Map<Integer, Integer> disponibilidades, List<Pedido> pedidosGenerados) { }
     public record Auditoria(int stockId, Instant fecha, Integer disponibleAnterior, int disponibleActual, String detalle) { }
     public record Politica(int stockId, String tipo, int puntoPedido, int stockObjetivo, BigDecimal demandaDiaria,
-                           int diasCobertura, BigDecimal factorEstacional, int umbralAlerta, String destinoAlerta, Long contactoId, String canalAlerta) { }
+                           int diasCobertura, BigDecimal factorEstacional, int umbralAlerta, String destinoAlerta, Long contactoId, String canalAlerta) {
+        public Politica(int stockId, String tipo, int puntoPedido, int stockObjetivo, BigDecimal demandaDiaria,
+                        int diasCobertura, BigDecimal factorEstacional, int umbralAlerta) {
+            this(stockId, tipo, puntoPedido, stockObjetivo, demandaDiaria, diasCobertura, factorEstacional, umbralAlerta, null, null, null);
+        }
+    }
+    public record DestinatariosAvisos(List<String> general, Map<Integer, List<String>> porCategoria) { }
     public record Promocion(long id, int productoId, String tipo, BigDecimal porcentaje, int orden, boolean activa, String medioPago) { }
     public record Precio(int productoId, int cantidad, BigDecimal precioLista, BigDecimal precioFinal,
                          BigDecimal ahorro, List<Long> promocionesAplicadas) { }

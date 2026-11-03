@@ -82,13 +82,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     current.current = controller;
     setLoading(true);
     try {
-      const [productos, pedidos, movimientos, auditoria, integraciones, avisos, contactos, categorias] = await Promise.all([
+      const [productos, pedidos, movimientos, auditoria, integraciones, avisos, destinatarios, contactos, categorias] = await Promise.all([
         api.productos(controller.signal).catch(() => []),
         api.pedidos(controller.signal).catch(() => []),
         api.movimientos(controller.signal).catch(() => []),
         api.auditoria(controller.signal).catch(() => []),
         api.integraciones(controller.signal).catch(() => ({ entregas: [], proveedoresDisponibles: { ERP: true, MENSAJERIA: true, COTO_DIGITAL: true }, mensajes: [], pedidosERP: [], catalogoDigital: {} })),
         api.avisos(controller.signal).catch(() => ({ canal: 'EMAIL' as const, email: '', telefono: '' })),
+        api.destinatarios(controller.signal).catch(() => ({ general: [], porCategoria: {} })),
         api.contactos(controller.signal).catch(() => []),
         api.categorias(controller.signal).catch(() => []),
       ]);
@@ -97,7 +98,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         catch (e) { if (e instanceof ApiError && e.status === 404) return null; throw e; }
       }));
       if (controller.signal.aborted) return;
-      setData({ categorias, contactos, avisos, productos, pedidos, movimientos, auditoria, integraciones, politicas: Object.fromEntries(entries.filter(e => e !== null)) });
+      setData({ categorias, contactos, avisos, destinatarios, productos, pedidos, movimientos, auditoria, integraciones, politicas: Object.fromEntries(entries.filter(e => e !== null)) });
       setError(null); setUpdated(new Date()); setRevision(r => r + 1);
     } catch (e) {
       if (!controller.signal.aborted) { setError(e as Error); throw e; }

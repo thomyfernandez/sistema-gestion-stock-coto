@@ -20,12 +20,23 @@ public final class GestorInventario implements GestionInventario {
                                RepositorioPedidos pedidos, RepositorioAuditoria auditoria, RepositorioPoliticas politicas,
                                RepositorioPromociones promociones, RepositorioIntegraciones eventos,
                                ServicioReposicion reposicion, ServicioNotificaciones notificaciones,
-                               ServicioIntegraciones integraciones, ServicioContactos contactos, ServicioCategorias categorias, Clock reloj) {
+                               ServicioIntegraciones integraciones, ServicioContactos contactos, ServicioCategorias categorias,
+                               GestionDestinatarios destinatarios, Clock reloj) {
+        public Dependencias(UnidadDeTrabajo unidad, RepositorioStock stocks, RepositorioMovimientos movimientos,
+                            RepositorioPedidos pedidos, RepositorioAuditoria auditoria, RepositorioPoliticas politicas,
+                            RepositorioPromociones promociones, RepositorioIntegraciones eventos,
+                            ServicioReposicion reposicion, ServicioNotificaciones notificaciones,
+                            ServicioIntegraciones integraciones, ServicioContactos contactos, ServicioCategorias categorias, Clock reloj) {
+            this(unidad, stocks, movimientos, pedidos, auditoria, politicas, promociones, eventos, reposicion, notificaciones,
+                    integraciones, contactos, categorias, null, reloj);
+        }
+
         public Dependencias {
             Objects.requireNonNull(unidad); Objects.requireNonNull(stocks); Objects.requireNonNull(movimientos);
             Objects.requireNonNull(pedidos); Objects.requireNonNull(auditoria); Objects.requireNonNull(politicas);
             Objects.requireNonNull(promociones); Objects.requireNonNull(eventos); Objects.requireNonNull(reposicion);
-            Objects.requireNonNull(notificaciones); Objects.requireNonNull(integraciones); Objects.requireNonNull(reloj); Objects.requireNonNull(contactos); Objects.requireNonNull(categorias);
+            Objects.requireNonNull(notificaciones); Objects.requireNonNull(integraciones); Objects.requireNonNull(reloj);
+            Objects.requireNonNull(contactos); Objects.requireNonNull(categorias);
         }
     }
     public synchronized void configurar(Dependencias dependencias) {
@@ -118,7 +129,7 @@ public final class GestorInventario implements GestionInventario {
             stock.agregarObservador(sincronizador);
             PoliticaReposicion politica = politicas.get(id);
             if (politica != null) {
-                AlertaStockBajo alerta = new AlertaStockBajo(politica.umbralAlerta(), politica.destinoAlerta(),
+                AlertaStockBajo alerta = new AlertaStockBajo(politica.umbralAlerta(),
                         a -> o.avisos.put(id, a.getUltimoAviso()));
                 alerta.restaurarEstado(id, d.politicas.alertaActiva(id));
                 o.alertas.put(id, alerta);
@@ -131,12 +142,15 @@ public final class GestorInventario implements GestionInventario {
     private void guardarAlertas(Dependencias d, Observaciones o, Map<Integer, PoliticaReposicion> politicas,
                                 Map<Integer, Stock> grafo, String clave) {
         if (!o.avisos.isEmpty()) {
-            var general = d.notificaciones.consultarConfiguracion();
             o.avisos.forEach((id, aviso) -> {
-                var configuracion = d.contactos.resolver(politicas.get(id), grafo.get(id).getProducto(), general);
-                d.eventos.encolar(new EventoIntegracion(0, clave + ":alerta:" + id,
-                        EventoIntegracion.Tipo.ALERTA, id, null, null, configuracion.canal(),
-                        configuracion.destino(), aviso.getTexto(), d.reloj.instant()));
+                List<String> destinatarios = d.destinatarios != null
+                        ? d.destinatarios.resolverDestinatarios(id)
+                        : List.of();
+                for (String email : destinatarios) {
+                    d.eventos.encolar(new EventoIntegracion(0, clave + ":alerta:" + id + ":" + email,
+                            EventoIntegracion.Tipo.ALERTA, id, null, null, "EMAIL",
+                            email, aviso.getTexto(), d.reloj.instant()));
+                }
             });
         }
         o.disponibilidades.keySet().forEach(id -> {
@@ -210,7 +224,6 @@ public final class GestorInventario implements GestionInventario {
             if (!(exigirStock(d.stocks.cargarInventario(), politica.stockId()) instanceof StockSimple)) {
                 throw new IllegalArgumentException("La política requiere un producto simple");
             }
-            d.contactos.resolver(politica, exigirStock(d.stocks.cargarInventario(), politica.stockId()).getProducto(), d.notificaciones.consultarConfiguracion());
             d.politicas.guardar(politica);
             return null;
         });

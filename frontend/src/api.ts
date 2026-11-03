@@ -1,4 +1,4 @@
-import type { Producto, Pedido, TipoMovimiento, Movimiento, Operacion, ResultadoMovimiento, Auditoria, Politica, Promocion, Precio, ItemCatalogo, Canal, Sistema, Integraciones, Contacto, Categoria, ConfiguracionAvisos, ImagenCarga, RolUsuario, UsuarioSesion } from './types';
+import type { Producto, Pedido, TipoMovimiento, Movimiento, Operacion, ResultadoMovimiento, Auditoria, Politica, Promocion, Precio, ItemCatalogo, Canal, Sistema, Integraciones, Contacto, Categoria, ConfiguracionAvisos, DestinatariosAvisos, ImagenCarga, RolUsuario, UsuarioSesion } from './types';
 
 export class ApiError extends Error {
   constructor(message: string, public status: number, public codigo = '', public errores: Record<string, string[]> = {}) { super(message); }
@@ -67,6 +67,9 @@ export const api = {
   guardarContacto: (body: Omit<Contacto, 'id'>, id?: number) => request<Contacto>(`/configuracion/contactos${id ? `/${id}` : ''}`, json(id ? 'PUT' : 'POST', body)),
   avisos: (signal?: AbortSignal) => request<ConfiguracionAvisos>('/configuracion/avisos', { signal }),
   guardarAvisos: (body: ConfiguracionAvisos) => request<ConfiguracionAvisos>('/configuracion/avisos', json('PUT', body)),
+  destinatarios: (signal?: AbortSignal) => request<DestinatariosAvisos>('/configuracion/destinatarios', { signal }),
+  guardarDestinatariosGeneral: (emails: string[]) => request<string[]>('/configuracion/destinatarios/general', json('PUT', { emails })),
+  guardarDestinatariosCategoria: (categoriaId: number, emails: string[]) => request<string[]>(`/configuracion/destinatarios/categorias/${categoriaId}`, json('PUT', { emails })),
   productos: (signal?: AbortSignal) => request<Producto[]>('/productos', { signal }),
   pedidos: (signal?: AbortSignal) => request<Pedido[]>('/pedidos', { signal }),
   movimientos: (signal?: AbortSignal) => request<Movimiento[]>('/movimientos', { signal }),

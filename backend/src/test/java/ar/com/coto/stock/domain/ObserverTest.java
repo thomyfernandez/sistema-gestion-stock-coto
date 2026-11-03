@@ -81,4 +81,27 @@ class ObserverTest {
         stock.reservar(1);
         assertEquals(1, avisos.get());
     }
+
+    @Test void alertaStockBajoConConstructorDesacopladoDeDestinoFisico() {
+        StockSimple stock = stock();
+        List<AlertaStockBajo.Aviso> avisos = new ArrayList<>();
+        AlertaStockBajo alerta = new AlertaStockBajo(10, a -> avisos.add(a.getUltimoAviso()));
+        stock.agregarObservador(alerta);
+
+        stock.reservar(10); // Disponible 10: igual al umbral, aún no dispara.
+        assertTrue(avisos.isEmpty());
+
+        stock.reservar(1); // 9: dispara primer aviso.
+        assertEquals(1, avisos.size());
+        assertEquals(9, avisos.getFirst().disponible());
+        assertTrue(avisos.getFirst().getTexto().contains("Leche COTO"));
+
+        stock.reservar(1); // 8: continúa el mismo episodio, no dispara de nuevo.
+        assertEquals(1, avisos.size());
+
+        stock.liberarReserva(3); // 11: supera el umbral, se rearma.
+        stock.reservar(2); // 9: nuevo episodio dispara un nuevo aviso.
+        assertEquals(2, avisos.size());
+        assertEquals(9, avisos.getLast().disponible());
+    }
 }

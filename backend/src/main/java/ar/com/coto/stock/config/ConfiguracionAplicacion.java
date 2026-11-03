@@ -33,6 +33,9 @@ public class ConfiguracionAplicacion {
     @Bean ServicioCategorias categorias(RepositorioCategorias categorias, RepositorioContactos contactos, RepositorioStock stocks, UnidadDeTrabajo unidad) {
         return new ServicioCategorias(categorias, contactos, stocks, unidad);
     }
+    @Bean ServicioDestinatarios destinatarios(RepositorioDestinatarios destinatarios, RepositorioStock stocks, RepositorioCategorias categorias, UnidadDeTrabajo unidad) {
+        return new ServicioDestinatarios(destinatarios, stocks, categorias, unidad);
+    }
     @Bean ServicioReposicion reposicion(Clock reloj) { return new ServicioReposicion(new ReposicionPuntoDePedido(20, 100), reloj); }
     @Bean ServicioValorizacion valorizacion(RepositorioStock stock, RepositorioPromociones promociones, UnidadDeTrabajo unidad) {
         return new ServicioValorizacion(stock, promociones, unidad);
@@ -45,10 +48,11 @@ public class ConfiguracionAplicacion {
     @Bean(destroyMethod = "cerrar") GestorInventario gestor(UnidadDeTrabajo unidad, RepositorioStock stocks,
             RepositorioMovimientos movimientos, RepositorioPedidos pedidos, RepositorioAuditoria auditoria,
             RepositorioPoliticas politicas, RepositorioPromociones promociones, RepositorioIntegraciones eventos,
-            ServicioReposicion reposicion, ServicioNotificaciones notificaciones, ServicioIntegraciones integraciones, ServicioContactos contactos, ServicioCategorias categorias, Clock reloj) {
+            ServicioReposicion reposicion, ServicioNotificaciones notificaciones, ServicioIntegraciones integraciones,
+            ServicioContactos contactos, ServicioCategorias categorias, ServicioDestinatarios destinatarios, Clock reloj) {
         GestorInventario gestor = GestorInventario.getInstancia();
         gestor.configurar(new GestorInventario.Dependencias(unidad, stocks, movimientos, pedidos, auditoria,
-                politicas, promociones, eventos, reposicion, notificaciones, integraciones, contactos, categorias, reloj));
+                politicas, promociones, eventos, reposicion, notificaciones, integraciones, contactos, categorias, destinatarios, reloj));
         return gestor;
     }
 }

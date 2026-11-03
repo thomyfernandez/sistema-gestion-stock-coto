@@ -12,10 +12,14 @@ import static org.junit.jupiter.api.Assertions.*;
 class UpgradeEtapaDosTest {
     @Test void actualizacionPreservaElInventarioYRecuperaLosPedidosPendientes() throws Exception {
         try (var conexion = DriverManager.getConnection("jdbc:h2:mem:" + UUID.randomUUID() + ";MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE")) {
-            for (String archivo : new String[]{"/etapa1/schema.sql", "/etapa1/data.sql", "/db/upgrade-etapa2.sql", "/db/upgrade-backoffice.sql", "/db/upgrade-proveedores.sql", "/db/upgrade-categorias.sql"}) {
+            for (String archivo : new String[]{"/etapa1/schema.sql", "/etapa1/data.sql", "/db/upgrade-etapa2.sql", "/db/upgrade-backoffice.sql", "/db/upgrade-proveedores.sql", "/db/upgrade-categorias.sql", "/db/upgrade-destinatarios-avisos.sql"}) {
                 try (var lector = new InputStreamReader(Objects.requireNonNull(getClass().getResourceAsStream(archivo)), StandardCharsets.UTF_8)) {
                     RunScript.execute(conexion, lector);
                 }
+            }
+            // Ejecución repetida para verificar idempotencia
+            try (var lector = new InputStreamReader(Objects.requireNonNull(getClass().getResourceAsStream("/db/upgrade-destinatarios-avisos.sql")), StandardCharsets.UTF_8)) {
+                RunScript.execute(conexion, lector);
             }
             try (var sentencia = conexion.createStatement()) {
                 for (String[] caso : new String[][]{
@@ -29,6 +33,7 @@ class UpgradeEtapaDosTest {
                         {"SELECT COUNT(*) FROM producto WHERE categoria_id IS NULL", "6"},
                         {"SELECT COUNT(*) FROM politica_reposicion WHERE proveedor_id IS NULL AND canal_alerta IS NULL", "5"},
                         {"SELECT COUNT(*) FROM promocion", "3"},
+                        {"SELECT COUNT(*) FROM destinatario_aviso WHERE categoria_id IS NULL", "1"},
                         {"SELECT clave FROM evento_integracion", "pedido:1"}}) {
                     try (var resultado = sentencia.executeQuery(caso[0])) {
                         assertTrue(resultado.next()); assertEquals(caso[1], resultado.getString(1));

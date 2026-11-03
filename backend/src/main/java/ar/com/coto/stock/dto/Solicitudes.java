@@ -79,4 +79,5 @@ public final class Solicitudes {
     public record Categoria(@NotBlank @Size(max = 80) String nombre, @Positive Long contactoId, Canal canalAlerta) { }
     public record CategoriaProducto(@Positive Integer categoriaId) { }
     public record Disponibilidad(@NotNull Boolean disponible) { }
+    public record Destinatarios(List<@NotBlank @Email @Size(max = 200) String> emails) { }
 }
