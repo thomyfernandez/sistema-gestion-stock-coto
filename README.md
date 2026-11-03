@@ -64,9 +64,9 @@ npm ci
 npm run dev
 ```
 
-Abrir [COTO Gestión de stock](http://127.0.0.1:5173). Configuración incluye categorías y una agenda de contactos internos. En Compras → Reposición se asigna un contacto y un canal de aviso por artículo; sin asignación se usa el de su categoría y, si tampoco tiene, el general. [Uso y migración](docs/contactos-y-avisos.md).
+Abrir [COTO Gestión de stock](http://127.0.0.1:5173). En Configuración → Alertas y avisos se cargan las **listas de emails** que reciben los avisos de stock bajo: una por categoría y una general; cada dirección recibe su propio email. Si ninguna lista tiene direcciones, se usa el respaldo anterior (contactos y destinatario de la sucursal, con SMS o WhatsApp). En Compras → Reposición, el modal de cada artículo define sólo la reposición y el umbral. [Uso, API y migración](docs/destinatarios-de-avisos.md).
 
-Las cuatro vistas —Stock, Recepción, Compras y Configuración— consumen la API real. Vite reenvía `/api` al backend; no se necesitan servicios externos ni datos simulados en el navegador. Al abrir la aplicación se pide iniciar sesión; cada rol ve solamente las vistas que le corresponden.
+Las cuatro vistas —Stock, Recepción, Compras y Configuración— consumen la API real. Vite reenvía `/api` al backend; no se necesitan servicios externos ni datos simulados en el navegador. Al abrir la aplicación se pide iniciar sesión; cada rol ve solamente las vistas que le corresponden. Cada 20 segundos se actualizan sólo productos y pedidos (en pausa con la pestaña oculta); el historial se pide paginado en la vista que lo muestra. [Rendimiento y pruebas](docs/rendimiento-y-pruebas.md).
 
 Si el backend usa otro puerto, copiar `frontend/.env.example` a `frontend/.env.local`, cambiar `API_PROXY_TARGET` y reiniciar Vite. Por ejemplo, `API_PROXY_TARGET=http://127.0.0.1:18080`.
 
@@ -79,6 +79,13 @@ npm run preview
 
 La compilación queda en `frontend/dist`; la vista previa abre en [127.0.0.1:4173](http://127.0.0.1:4173) y utiliza el mismo proxy. El backend debe seguir ejecutándose. Más configuración y recorridos de prueba en [Frontend](docs/etapa-4.md).
 
+Pruebas del frontend, desde `frontend`:
+
+```sh
+npm test            # Vitest + Testing Library
+npm run test:e2e    # Playwright: requiere el JAR y, la primera vez, npx playwright install chromium
+```
+
 ## Contenido del backend
 
 | Componente | Implementación |
@@ -90,7 +97,7 @@ La compilación queda en `frontend/dist`; la vista previa abre en [127.0.0.1:417
 | JPA | Diez repositorios concretos, modelos relacionales separados del dominio y unidad de trabajo explícita |
 | Adapter | `AdaptadorProveedor`, `AdaptadorProveedorSMS`, `AdaptadorERP`, `AdaptadorCotoDigital` y APIs simuladas de firmas incompatibles |
 | Consistencia | Bloqueo SQL del inventario, auditoría y outbox en la misma transacción; entrega después del commit y reintentos |
-| REST | 49 operaciones HTTP documentadas con OpenAPI/Swagger, DTOs validados, errores RFC 9457, CORS local y simulación de proveedores en demo |
+| REST | 55 operaciones HTTP documentadas con OpenAPI/Swagger, DTOs validados, errores RFC 9457, CORS local, historial paginado y simulación de proveedores en demo |
 | Seguridad | Spring Security sin estado con JWT y permisos por rol de sucursal. Adapter: `UsuarioSecurityAdapter` adapta `UsuarioEntity` a `UserDetails`. Strategy: `PasswordEncoder` con `BCryptPasswordEncoder` como algoritmo de hash intercambiable |
 
 Se conserva `disponible = físico − exhibición − reservado` en artículos simples, sin columna de disponible en `stock`. Simples y combos siguen en una sola tabla con discriminador. Los combos cuentan con stock propio cuando se arman físicamente mediante movimientos de sucursal, integrando stock propio y disponible virtual.
@@ -187,7 +194,7 @@ El modelo conserva el patrón **Composite** (`ComboStock` y `StockSimple`) y añ
 
 ## Base de datos
 
-`schema.sql` y `data.sql` inicializan una base vacía. Además de las seis tablas del esquema inicial, se agregan `politica_reposicion`, `promocion`, `evento_integracion` y `bloqueo_operacion`. Los ajustes de backoffice agregan `configuracion_avisos`, `imagen_producto`, `proveedor` (agenda de contactos internos) y `categoria`. La autenticación agrega `usuario`, con los cuatro operadores de prueba.
+`schema.sql` y `data.sql` inicializan una base vacía. Además de las seis tablas del esquema inicial, se agregan `politica_reposicion`, `promocion`, `evento_integracion` y `bloqueo_operacion`. Los ajustes de backoffice agregan `configuracion_avisos`, `imagen_producto`, `proveedor` (agenda de contactos internos) y `categoria`. La autenticación agrega `usuario`, con los cuatro operadores de prueba. Las listas de emails de avisos se guardan en `destinatario_aviso`.
 
 El perfil `demo` usa H2 en memoria y sus datos se recrean con cada ejecución. Para conservar información entre reinicios, está disponible el perfil PostgreSQL. Crear primero una base local y ejecutar **una sola vez**:
 
@@ -213,7 +220,8 @@ psql -v ON_ERROR_STOP=1 -1 -d coto_stock \
   -f backend/src/main/resources/db/upgrade-proveedores.sql \
   -f backend/src/main/resources/db/upgrade-categorias.sql \
   -f backend/src/main/resources/db/upgrade-auth.sql \
-  -f backend/src/main/resources/db/upgrade-combos-stock.sql
+  -f backend/src/main/resources/db/upgrade-combos-stock.sql \
+  -f backend/src/main/resources/db/upgrade-destinatarios.sql
 ```
 
 Estas actualizaciones agregan las tablas/configuraciones de reposición, avisos, imágenes, contactos y categorías, y encolan pedidos pendientes sin borrar el inventario existente. Se ejecuta una sola vez y está pensada para bases creadas con el esquema v0.1. El modo `-1` aplica todo en una transacción. Si ya se aplicaron migraciones anteriores, ejecutar solamente las que falten, en el orden indicado.
@@ -224,15 +232,19 @@ Estas actualizaciones agregan las tablas/configuraciones de reposición, avisos,
 mvn -f backend/pom.xml test
 ```
 
-La suite incluye las pruebas de dominio y pruebas de integración reales con Spring, Hibernate y H2. Verifica reservas concurrentes, rollback tardío, auditoría correlacionada, reposición sin duplicados, reintentos FIFO, episodios de alerta persistidos, recepción única, alta de combos y promociones acumulables. Los proveedores son simulados: no se envían correos, SMS, WhatsApp ni pedidos reales.
+La suite incluye las pruebas de dominio y pruebas de integración reales con Spring, Hibernate, H2 y PostgreSQL 17 (Testcontainers; requiere Docker y, sin él, esas pruebas se omiten). Verifica reservas concurrentes, rollback tardío, auditoría correlacionada, reposición sin duplicados, reintentos FIFO, episodios de alerta persistidos, recepción única, alta de combos y promociones acumulables. Los proveedores son simulados: no se envían correos, SMS, WhatsApp ni pedidos reales.
 
-Verificación actual: **160 pruebas aprobadas, sin fallos ni errores** (72 HTTP, 5 de ellas de autenticación y roles), JAR empaquetado. Incluye regresiones por renovación de conexiones de H2 y pruebas de avisos compartidos, contactos internos, destinatarios por artículo/categoría, clasificación del catálogo e imágenes de productos. La validación de la API también comprobó **37 solicitudes de Postman contra el servidor HTTP real**. La prueba del servidor usó el puerto 18080; el puerto predeterminado para uso normal es 8080.
+Verificación actual: **190 pruebas aprobadas, sin fallos ni omitidas** (8 contra PostgreSQL real), JAR empaquetado; en el frontend, 28 pruebas de Vitest y 3 recorridos de Playwright. Incluye regresiones por renovación de conexiones de H2 y pruebas de avisos compartidos, contactos internos, destinatarios por artículo/categoría, clasificación del catálogo e imágenes de productos. La validación de la API también comprobó **37 solicitudes de Postman contra el servidor HTTP real**. La prueba del servidor usó el puerto 18080; el puerto predeterminado para uso normal es 8080.
 
-Los scripts y el mapeo JPA se verifican con H2 compatible con PostgreSQL. El perfil PostgreSQL está configurado; todavía no se validó contra un servidor PostgreSQL real.
+Los scripts, la cadena de migraciones desde v0.1 y el mapeo JPA se verifican con H2 y también contra un servidor PostgreSQL 17 real (`PostgresRealTest`), incluidos los bloqueos con reservas concurrentes. [Cómo probar el perfil a mano con Docker](docs/rendimiento-y-pruebas.md#postgresql-real).
 
 ## Documentación
 
 - [Especificación funcional de los tres ejes: descuentos, combos y alertas](docs/tres-ejes-funcionales.md).
+
+- [Destinatarios de avisos: listas de emails por categoría y general](docs/destinatarios-de-avisos.md).
+
+- [Rendimiento del frontend y pruebas automatizadas](docs/rendimiento-y-pruebas.md).
 
 - [Design System COTO: color, tipografía, grillas, elevaciones, íconos y átomos](docs/design-system/README.md).
 

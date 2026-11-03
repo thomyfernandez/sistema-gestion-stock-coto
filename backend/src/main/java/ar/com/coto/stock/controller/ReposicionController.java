@@ -21,6 +21,10 @@ public class ReposicionController {
         return inventario.listarPedidos().stream().map(MapeadorDto::pedido)
                 .filter(p -> stockId == null || stockId == p.stockId()).filter(p -> estado == null || estado.name().equals(p.estado())).toList();
     }
+    /** Todas las políticas en una sola consulta, ordenadas por artículo. */
+    @GetMapping("/politicas") public List<Respuestas.Politica> politicas() {
+        return inventario.listarPoliticas().values().stream().map(MapeadorDto::politica).toList();
+    }
     @GetMapping("/pedidos/{id}") public Respuestas.Pedido pedido(@PathVariable @Positive long id) {
         return MapeadorDto.pedido(inventario.consultarPedido(id));
     }
