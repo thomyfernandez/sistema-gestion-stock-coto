@@ -76,3 +76,136 @@ input[type=checkbox]:checked:disabled { background: var(--neutral-300); }
 .keypad-key:hover:not(:disabled) { background: var(--neutral-50); box-shadow: var(--shadow-400); }
 .keypad-key.fill { background: var(--neutral-900); color: var(--neutral-00); }
 .keypad-key.fill:hover:not(:disabled) { background: var(--neutral-800); }
+/* Chips / Tags de Email & Avisos ------------------------------------------ */
+.email-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-block: var(--space-2);
+  min-height: 44px;
+  align-items: center;
+}
+
+.email-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 40px;
+  padding: var(--space-half) var(--space-1) var(--space-half) var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--neutral-50);
+  border: 1px solid var(--neutral-200);
+  font-size: var(--body-medium);
+  color: var(--neutral-900);
+  transition: background .14s, border-color .14s, box-shadow .14s;
+}
+
+.email-chip:hover {
+  background: var(--neutral-100);
+  border-color: var(--neutral-300);
+}
+
+.email-chip-remove {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--neutral-700);
+  border: 0;
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+
+/* Área táctil expandida a ≥ 40 px para móviles y terminales táctiles */
+.email-chip-remove::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: var(--radius-pill);
+}
+
+.email-chip-remove:hover:not(:disabled) {
+  background: var(--danger-100);
+  color: var(--danger-800);
+}
+
+.email-chip-remove:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.email-input-group {
+  display: flex;
+  gap: var(--space-1);
+  align-items: flex-start;
+}
+
+.email-input-group .field-input-wrapper {
+  flex: 1;
+}
+
+@media (max-width: 540px) {
+  .email-input-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-1);
+  }
+  .email-input-group .button {
+    width: 100%;
+    margin-top: 0 !important;
+    align-self: stretch !important;
+  }
+}
+
+/* Alerta warning del sistema */
+.message.warning {
+  background: var(--warning-100);
+  color: var(--warning-800);
+  border: 1px solid color-mix(in srgb, var(--warning-500) 40%, var(--neutral-00));
+}
+
+/* Acordeón interactivo */
+.accordion-trigger-heading {
+  cursor: pointer;
+  user-select: none;
+  transition: background .14s;
+}
+.accordion-trigger-heading:hover {
+  background: var(--neutral-50);
+}
+
+.notice-resolution-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-medium);
+  background: var(--neutral-50);
+  border: 1px solid var(--neutral-200);
+  margin-top: var(--space-2);
+}
+
+.notice-resolution-card.warning {
+  background: var(--warning-100);
+  border-color: var(--warning-500);
+}
+
+.notice-resolution-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-half);
+}
+
+.notice-resolution-content p {
+  margin: 0;
+  font-size: var(--body-medium);
+  color: var(--neutral-900);
+}
+
+.notice-resolution-content .field-hint {
+  margin-top: var(--space-half);
+}

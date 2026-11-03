@@ -176,6 +176,21 @@ Se estilizan los `input[type=checkbox]` y `input[type=radio]` nativos, sin compo
 
 `.keypad` + `.keypad-key`: teclas de 40 px con borde Neutral 900. La tecla de acción (borrar) usa `.keypad-key.fill`. Pensado para cargar cantidades en dispositivos táctiles de sucursal.
 
+### Chips / Tags de Email
+
+`.email-chip-list`, `.email-chip` y `.email-chip-remove` en `components.css`.
+
+- **Anatomía**: Contenedor flex con badge con forma de píldora (`--radius-pill`), altura mínima 40 px, ícono `Mail` (16 px en `Neutral 700`), etiqueta del correo y botón de remoción `X` (28 px con área táctil expandida a ≥ 40 px mediante `::after`).
+- **Colores**: Fondo `Neutral 50` con borde `Neutral 200`. Hover en `Neutral 100`. Botón de remoción con hover `Danger 100` y texto `Danger 800`.
+- **Accesibilidad**: Lista marcada con `role="list"` y cada chip con `role="listitem"`. Cada botón de eliminar cuenta con `aria-label="Eliminar correo {email}..."` y foco visible con `--color-focus` (3 px con 2 px de offset).
+
+### Tarjeta de Resolución de Avisos
+
+`.notice-resolution-card` y `.notice-resolution-card.warning` en `components.css`.
+
+- **Uso**: Informa en modales (como Política de reposición) cómo resolverá el sistema los avisos por stock bajo según la jerarquía (Categoría → Lista general → Sin destinatarios).
+- **Colores**: Fondo `Neutral 50` con borde `Neutral 200` en estado normal; fondo `Warning 100` con borde `Warning 500` cuando no hay destinatarios.
+
 ## Migración de los estilos de las vistas
 
 `app.css` y `shell.css` ya no tienen colores, tamaños tipográficos, pesos ni radios sueltos: todo sale de tokens. Los `padding`, `margin` y `gap` se ajustaron a la grilla de 8 (empates hacia arriba: 12 → 16, 20 → 24) y usan `--space-*`; los de 4 px pasaron a `--space-half`. Se mantienen como valores literales, a propósito:

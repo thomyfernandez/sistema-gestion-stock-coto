@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Mail, Plus, Trash2 } from 'lucide-react';
 import { api } from '../api';
 import { destinoAviso } from '../notifications';
 import { useStore } from '../store';
@@ -46,21 +46,79 @@ export function PolicyForm({ product, onClose }: { product: Producto; onClose: (
   // Los destinatarios se administran en Configuración; la asignación anterior por contacto se conserva sin cambios.
   const aviso = data ? destinoAviso(data, product) : null;
   const setNumber = (name: keyof typeof values, value: string) => setValues(old => ({ ...old, [name]: value === '' ? '' : Number(value) }));
-  const descriptions = { PUNTO_PEDIDO: 'Al alcanzar el punto de pedido, se repone hasta el stock objetivo.', DEMANDA: 'Se calcula la mercadería necesaria para cubrir la demanda diaria.', ESTACIONAL: 'El objetivo se ajusta por el factor de la temporada.' };
+  const descriptions = {
+    PUNTO_PEDIDO: 'Al alcanzar el punto de pedido, se repone hasta el stock objetivo.',
+    DEMANDA: 'Se calcula la mercadería necesaria para cubrir la demanda diaria.',
+    ESTACIONAL: 'El objetivo se ajusta por el factor de la temporada.'
+  };
+
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); setError(null);
-    try { await run(() => api.guardarPolitica(product.id, values), 'Política de reposición guardada. Se aplicará en el próximo movimiento o evaluación.', ['politicas']); onClose(); }
-    catch (e) { setError(e as Error); }
+    try {
+      await run(() => api.guardarPolitica(product.id, values), 'Política de reposición guardada. Se aplicará en el próximo movimiento o evaluación.', ['politicas']);
+      onClose();
+    } catch (e) { setError(e as Error); }
   }
-  return <Modal title="Política de reposición" description="Configurá cuándo y cuánto reponer." onClose={onClose}><form onSubmit={submit}><div className="modal-body form-stack"><ProductName product={product} />
-    <Field label="Política"><select value={values.tipo} disabled={busy} onChange={e => setValues(old => ({ ...old, tipo: e.target.value as Politica['tipo'], puntoPedido: e.target.value === 'PUNTO_PEDIDO' ? Math.max(1, Number(old.puntoPedido)) : 0 }))}><option value="PUNTO_PEDIDO">Punto de pedido</option><option value="DEMANDA">Por demanda</option><option value="ESTACIONAL">Estacional</option></select></Field><p className="form-info">{descriptions[values.tipo]}</p>
-    {values.tipo === 'PUNTO_PEDIDO' && <div className="form-grid"><Field label="Punto de pedido"><input required type="number" min="1" max="2147483646" step="1" value={values.puntoPedido} onChange={e => setNumber('puntoPedido', e.target.value)} disabled={busy} /></Field><Field label="Stock objetivo"><input required type="number" min={Number(values.puntoPedido) + 1} max="2147483647" step="1" value={values.stockObjetivo} onChange={e => setNumber('stockObjetivo', e.target.value)} disabled={busy} /></Field></div>}
-    {values.tipo === 'DEMANDA' && <div className="form-grid"><Field label="Demanda diaria"><input required type="number" min="0" max="999999999.999" step="0.001" value={values.demandaDiaria} onChange={e => setNumber('demandaDiaria', e.target.value)} disabled={busy} /></Field><Field label="Días de cobertura"><input required type="number" min="1" max="2147483647" step="1" value={values.diasCobertura} onChange={e => setNumber('diasCobertura', e.target.value)} disabled={busy} /></Field></div>}
-    {values.tipo === 'ESTACIONAL' && <div className="form-grid"><Field label="Objetivo base"><input required type="number" min="1" max="2147483647" step="1" value={values.stockObjetivo} onChange={e => setNumber('stockObjetivo', e.target.value)} disabled={busy} /></Field><Field label="Factor de temporada"><input required type="number" min="0.0001" max="99999999.9999" step="0.0001" value={values.factorEstacional} onChange={e => setNumber('factorEstacional', e.target.value)} disabled={busy} /></Field></div>}
-    <div className="form-divider" /><Field label="Umbral de alerta" hint="Se envía un aviso cuando el disponible cae por debajo de este valor."><input required type="number" min="1" max="2147483647" step="1" value={values.umbralAlerta} onChange={e => setNumber('umbralAlerta', e.target.value)} disabled={busy} /></Field>
-    {aviso && <p className="form-info">Avisar a {aviso.nombre} · {aviso.canal}: {aviso.destinos.join(', ') || 'sin destino'}</p>}
-    <p className="field-hint"><a className="text-link" href="#/configuracion/avisos">Administrar destinatarios de avisos</a></p><ErrorMessage error={error} /></div>
-    <footer className="modal-footer"><Button onClick={onClose} disabled={busy}>Cancelar</Button><Button type="submit" variant="primary" loading={busy}>Guardar política</Button></footer></form></Modal>;
+
+  return (
+    <Modal title="Política de reposición" description="Configurá cuándo y cuánto reponer." onClose={onClose}>
+      <form onSubmit={submit}>
+        <div className="modal-body form-stack">
+          <ProductName product={product} />
+          <Field label="Política">
+            <select value={values.tipo} disabled={busy} onChange={e => setValues(old => ({ ...old, tipo: e.target.value as Politica['tipo'], puntoPedido: e.target.value === 'PUNTO_PEDIDO' ? Math.max(1, Number(old.puntoPedido)) : 0 }))}>
+              <option value="PUNTO_PEDIDO">Punto de pedido</option>
+              <option value="DEMANDA">Por demanda</option>
+              <option value="ESTACIONAL">Estacional</option>
+            </select>
+          </Field>
+          <p className="form-info">{descriptions[values.tipo]}</p>
+          {values.tipo === 'PUNTO_PEDIDO' && (
+            <div className="form-grid">
+              <Field label="Punto de pedido"><input required type="number" min="1" max="2147483646" step="1" value={values.puntoPedido} onChange={e => setNumber('puntoPedido', e.target.value)} disabled={busy} /></Field>
+              <Field label="Stock objetivo"><input required type="number" min={Number(values.puntoPedido) + 1} max="2147483647" step="1" value={values.stockObjetivo} onChange={e => setNumber('stockObjetivo', e.target.value)} disabled={busy} /></Field>
+            </div>
+          )}
+          {values.tipo === 'DEMANDA' && (
+            <div className="form-grid">
+              <Field label="Demanda diaria"><input required type="number" min="0" max="999999999.999" step="0.001" value={values.demandaDiaria} onChange={e => setNumber('demandaDiaria', e.target.value)} disabled={busy} /></Field>
+              <Field label="Días de cobertura"><input required type="number" min="1" max="2147483647" step="1" value={values.diasCobertura} onChange={e => setNumber('diasCobertura', e.target.value)} disabled={busy} /></Field>
+            </div>
+          )}
+          {values.tipo === 'ESTACIONAL' && (
+            <div className="form-grid">
+              <Field label="Objetivo base"><input required type="number" min="1" max="2147483647" step="1" value={values.stockObjetivo} onChange={e => setNumber('stockObjetivo', e.target.value)} disabled={busy} /></Field>
+              <Field label="Factor de temporada"><input required type="number" min="0.0001" max="99999999.9999" step="0.0001" value={values.factorEstacional} onChange={e => setNumber('factorEstacional', e.target.value)} disabled={busy} /></Field>
+            </div>
+          )}
+          <div className="form-divider" />
+          <Field label="Umbral de alerta" hint="Se envía un aviso cuando el disponible cae por debajo de este valor.">
+            <input required type="number" min="1" max="2147483647" step="1" value={values.umbralAlerta} onChange={e => setNumber('umbralAlerta', e.target.value)} disabled={busy} />
+          </Field>
+          {aviso && (
+            <div className="notice-resolution-card" role="region" aria-label="Destinatarios del aviso automático">
+              <Mail size={20} aria-hidden="true" style={{ color: 'var(--coto-red)' }} />
+              <div className="notice-resolution-content">
+                <p className="form-info" style={{ margin: 0 }}>
+                  Avisar a {aviso.nombre} · {aviso.canal}: {aviso.destinos.join(', ') || 'sin destino'}
+                </p>
+                <p className="field-hint" style={{ margin: 0 }}>
+                  <a className="text-link" href="#/configuracion/avisos" onClick={onClose}>
+                    Administrar destinatarios de avisos
+                  </a>
+                </p>
+              </div>
+            </div>
+          )}
+          <ErrorMessage error={error} />
+        </div>
+        <footer className="modal-footer">
+          <Button onClick={onClose} disabled={busy}>Cancelar</Button>
+          <Button type="submit" variant="primary" loading={busy}>Guardar política</Button>
+        </footer>
+      </form>
+    </Modal>
+  );
 }
 
 export function PromotionForm({ product, existing, nextOrder, onClose }: { product: Producto; existing?: Promocion; nextOrder: number; onClose: () => void }) {
