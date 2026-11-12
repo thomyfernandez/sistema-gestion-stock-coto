@@ -11,6 +11,8 @@ public class ConfiguracionWeb implements WebMvcConfigurer {
     public ConfiguracionWeb(@Value("${coto.web.origenes}") List<String> origenes) { this.origenes = List.copyOf(origenes); }
     @Override public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**").allowedOrigins(origenes.toArray(String[]::new))
-                .allowedMethods("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS").allowedHeaders("Content-Type").maxAge(3600);
+                .allowedMethods("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+                .allowedHeaders("Content-Type", "Authorization", "Accept")
+                .exposedHeaders("X-Total-Count", "Location").maxAge(3600);
     }
 }

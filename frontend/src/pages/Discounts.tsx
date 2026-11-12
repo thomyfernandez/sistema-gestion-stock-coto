@@ -174,7 +174,8 @@ export function DiscountsPage() {
                           const { id, productoId, ...body } = p;
                           void act(
                             () => api.guardarPromocion(productoId, { ...body, activa: !body.activa }, id),
-                            'Estado de la promoción actualizado.'
+                            'Estado de la promoción actualizado.',
+                            []
                           );
                         }}
                       />
@@ -280,7 +281,8 @@ export function DiscountsPage() {
           onConfirm={async () => {
             await act(
               () => api.eliminarPromocion(selectedProduct.id, deleting.id),
-              'Promoción eliminada correctamente.'
+              'Promoción eliminada correctamente.',
+              []
             );
             setDeleting(null);
           }}

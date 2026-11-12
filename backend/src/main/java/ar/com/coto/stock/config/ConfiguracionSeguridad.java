@@ -166,6 +166,7 @@ public class ConfiguracionSeguridad {
                         .requestMatchers(HttpMethod.POST, "/api/pedidos/*/cancelacion").hasAnyRole("COMPRAS", "SUPERVISOR")
                         .requestMatchers(HttpMethod.POST, "/api/productos/*/promociones/**").hasAnyRole("COMPRAS", "SUPERVISOR")
                         .requestMatchers(HttpMethod.PUT, "/api/productos/*/promociones/**").hasAnyRole("COMPRAS", "SUPERVISOR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/productos/*/promociones/**").hasAnyRole("COMPRAS", "SUPERVISOR")
 
                         // 4. Canal Digital & Configuración exclusiva de Supervisor
                         .requestMatchers(HttpMethod.POST, "/api/digital/**").hasRole("SUPERVISOR")
