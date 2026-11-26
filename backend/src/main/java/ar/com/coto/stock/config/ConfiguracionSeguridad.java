@@ -2,14 +2,11 @@ package ar.com.coto.stock.config;
 
 import ar.com.coto.stock.adapter.UsuarioSecurityAdapter;
 import ar.com.coto.stock.repository.RepositorioUsuariosJpa;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -25,17 +22,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import static ar.com.coto.stock.config.RolSucursal.*;
 
-import java.io.IOException;
-import java.time.Instant;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Configuración de seguridad Spring Security.
@@ -50,7 +44,6 @@ public class ConfiguracionSeguridad {
     private final FiltroAutenticacionJwt filtroJwt;
     private final RepositorioUsuariosJpa repositorioUsuarios;
     private final List<String> origenes;
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public ConfiguracionSeguridad(
             FiltroAutenticacionJwt filtroJwt,
@@ -106,7 +99,8 @@ public class ConfiguracionSeguridad {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+            @Qualifier("handlerExceptionResolver") HandlerExceptionResolver errores) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
@@ -114,12 +108,9 @@ public class ConfiguracionSeguridad {
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(filtroJwt, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((request, response, authException) -> escribirError(
-                                response, request, HttpServletResponse.SC_UNAUTHORIZED,
-                                "No autenticado", "Se requiere token Bearer válido para acceder.", "NO_AUTENTICADO"))
-                        .accessDeniedHandler((request, response, accessDeniedException) -> escribirError(
-                                response, request, HttpServletResponse.SC_FORBIDDEN,
-                                "Acceso denegado", "El rol del usuario no tiene permisos para esta acción.", "ACCESO_DENEGADO"))
+                        // ManejadorErrores arma el problem+json de 401 y 403 igual que el resto de los errores.
+                        .authenticationEntryPoint((request, response, error) -> errores.resolveException(request, response, null, error))
+                        .accessDeniedHandler((request, response, error) -> errores.resolveException(request, response, null, error))
                 )
                 .authorizeHttpRequests(auth -> auth
                         // Rutas públicas de auth, documentación Swagger y estáticos
@@ -174,21 +165,6 @@ public class ConfiguracionSeguridad {
                 );
 
         return http.build();
-    }
-
-    private void escribirError(HttpServletResponse response, HttpServletRequest request,
-                               int status, String title, String detail, String codigo) throws IOException {
-        response.setStatus(status);
-        response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("type", "about:blank");
-        body.put("title", title);
-        body.put("status", status);
-        body.put("detail", detail);
-        body.put("instance", request.getRequestURI());
-        body.put("codigo", codigo);
-        body.put("timestamp", Instant.now().toString());
-        response.getWriter().write(objectMapper.writeValueAsString(body));
     }
 
     private static String[] roles(RolSucursal... roles) {

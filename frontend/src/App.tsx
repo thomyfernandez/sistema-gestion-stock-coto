@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle, ArrowDownToLine, Bell, Boxes, CheckCircle2, ChevronRight, ClipboardList, LogOut, Menu, PanelLeftClose, PanelLeftOpen, RefreshCw, Settings, ShieldCheck, Warehouse, X, Tag } from 'lucide-react';
+import { AlertCircle, ArrowDownToLine, Bell, Boxes, CheckCircle2, ChevronRight, ClipboardList, LogOut, Menu, PanelLeftClose, PanelLeftOpen, RefreshCw, Settings, ShieldCheck, Warehouse, X, Tag, type LucideIcon } from 'lucide-react';
 import { Button, Empty } from './components/ui';
-import { useStore } from './store';
+import { useStore, type Permiso } from './store';
 import { LoginScreen } from './components/LoginScreen';
 import { RecepcionPage } from './pages/Operations';
 import { PurchasesPage } from './pages/Purchases';
@@ -11,24 +11,86 @@ import { DiscountsPage } from './pages/Discounts';
 import cotoLogo from './assets/coto-superapp.png';
 
 const SIDEBAR_STORAGE_KEY = 'coto.sidebar.collapsed';
+const CONSULTA_MOVIL = '(max-width: 800px)';
 
-const allViews = [
-  { id: 'stock', name: 'Stock', icon: Warehouse, roles: ['REPOSITOR', 'SUPERVISOR'] },
-  { id: 'descuentos', name: 'Descuentos', icon: Tag, roles: ['COMPRAS', 'SUPERVISOR'] },
-  { id: 'recepcion', name: 'Recepción', icon: ArrowDownToLine, roles: ['RECEPCION', 'SUPERVISOR'] },
-  { id: 'compras', name: 'Compras', icon: ClipboardList, roles: ['COMPRAS', 'SUPERVISOR'] },
-  { id: 'configuracion', name: 'Configuración', icon: Settings, roles: ['SUPERVISOR'] },
+type VistaId = 'stock' | 'descuentos' | 'recepcion' | 'compras' | 'configuracion';
+interface Vista { id: VistaId; name: string; icon: LucideIcon; permiso: Permiso }
+
+/** Los roles de cada vista viven en PERMISOS (store.tsx), junto con el resto de la matriz de la UI. */
+const allViews: readonly Vista[] = [
+  { id: 'stock', name: 'Stock', icon: Warehouse, permiso: 'verStock' },
+  { id: 'descuentos', name: 'Descuentos', icon: Tag, permiso: 'verDescuentos' },
+  { id: 'recepcion', name: 'Recepción', icon: ArrowDownToLine, permiso: 'verRecepcion' },
+  { id: 'compras', name: 'Compras', icon: ClipboardList, permiso: 'verCompras' },
+  { id: 'configuracion', name: 'Configuración', icon: Settings, permiso: 'verConfiguracion' },
 ];
+
+/** Pestaña que se abre cuando la ruta sólo indica la vista. */
+const TAB_POR_DEFECTO: Record<VistaId, string> = { stock: 'inventario', descuentos: '', recepcion: '', compras: 'reposicion', configuracion: 'avisos' };
 
 const subtitles: Record<string, string> = { inventario: 'Existencias', digital: 'Reservas y despachos', avisos: 'Alertas y avisos', categorias: 'Categorías', reposicion: 'Reposición', catalogo: 'Productos y combos', promociones: 'Promociones', actividad: 'Actividad' };
 
-function readRoute() {
+const esVista = (id: string): id is VistaId => allViews.some(v => v.id === id);
+
+function readRoute(): { view: VistaId; tab: string } {
   let [view, tab] = window.location.hash.replace(/^#\/?/, '').split('/');
   if (view === 'sucursal') { view = 'stock'; tab = 'inventario'; }
   if (view === 'digital') { view = 'stock'; tab = 'digital'; }
   if (view === 'compras' && tab === 'integraciones') tab = 'reposicion';
-  if (!allViews.some(v => v.id === view)) view = 'stock';
-  return { view, tab: tab || (view === 'stock' ? 'inventario' : view === 'configuracion' ? 'avisos' : view === 'compras' ? 'reposicion' : '') };
+  const vista = esVista(view) ? view : 'stock';
+  return { view: vista, tab: tab || TAB_POR_DEFECTO[vista] };
+}
+
+const horaArgentina = (fecha: Date) => new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' }).format(fecha);
+
+function estadoConexion(online: boolean, loading: boolean) {
+  if (online) return { texto: 'API conectada', tono: 'success' };
+  if (loading) return { texto: 'Conectando…', tono: 'warning' };
+  return { texto: 'Sin conexión', tono: 'danger' };
+}
+
+function CargandoInventario() {
+  return (
+    <div className="loading-page" aria-busy="true" aria-label="Cargando inventario">
+      <div className="skeleton line title" />
+      <div className="skeleton line" />
+      <div className="metrics-grid">{Array.from({ length: 4 }, (_, i) => <div key={i} className="skeleton metric" />)}</div>
+      <div className="skeleton skeleton-table" />
+      <p>Conectando con el inventario de la sucursal…</p>
+    </div>
+  );
+}
+
+/** Contenido de la vista actual: acceso restringido, carga inicial, backend caído o la página pedida. */
+function ContenidoVista({ route, vista, visibles }: { route: { view: VistaId; tab: string }; vista?: Vista; visibles: readonly Vista[] }) {
+  const store = useStore();
+  if (!vista || !visibles.includes(vista)) {
+    const primera = visibles[0];
+    return (
+      <Empty
+        title="Acceso restringido"
+        text={`Tu rol actual (${store.usuario?.rol}) no tiene permisos para acceder a la sección ${vista?.name ?? 'Stock'}.`}
+        action={primera ? <Button variant="primary" onClick={() => { window.location.hash = `#/${primera.id}`; }}>Ir a {primera.name}</Button> : undefined}
+      />
+    );
+  }
+  if (!store.data && store.loading) return <CargandoInventario />;
+  if (!store.data) {
+    return (
+      <Empty
+        title="El inventario no está disponible"
+        text="Comprobá que esté iniciado el backend actualizado y reintentá la conexión."
+        action={<Button variant="primary" icon={RefreshCw} onClick={() => void store.refresh().catch(() => {})}>Volver a conectar</Button>}
+      />
+    );
+  }
+  switch (route.view) {
+    case 'stock': return <StockPage tab={route.tab} />;
+    case 'descuentos': return <DiscountsPage />;
+    case 'recepcion': return <RecepcionPage />;
+    case 'compras': return <PurchasesPage tab={route.tab} />;
+    case 'configuracion': return <SettingsPage tab={route.tab} />;
+  }
 }
 
 export default function App() {
@@ -44,8 +106,8 @@ export default function App() {
   const [alerts, setAlerts] = useState(false);
 
   useEffect(() => {
-    const update = () => { setRoute(readRoute()); setAlerts(false); setHelp(false); window.scrollTo({ top: 0 }); document.getElementById('contenido')?.focus({ preventScroll: true }); if (window.matchMedia('(max-width: 800px)').matches) setCollapsed(true); };
-    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') { setAlerts(false); setHelp(false); if (window.matchMedia('(max-width: 800px)').matches) setCollapsed(true); } };
+    const update = () => { setRoute(readRoute()); setAlerts(false); setHelp(false); window.scrollTo({ top: 0 }); document.getElementById('contenido')?.focus({ preventScroll: true }); if (window.matchMedia(CONSULTA_MOVIL).matches) setCollapsed(true); };
+    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') { setAlerts(false); setHelp(false); if (window.matchMedia(CONSULTA_MOVIL).matches) setCollapsed(true); } };
     window.addEventListener('hashchange', update); window.addEventListener('keydown', escape);
     return () => { window.removeEventListener('hashchange', update); window.removeEventListener('keydown', escape); };
   }, []);
@@ -54,6 +116,8 @@ export default function App() {
 
   const currentViewObj = allViews.find(v => v.id === route.view);
   const title = currentViewObj?.name || 'Stock';
+  // Vistas del rol conectado: alimentan el menú, la redirección y el aviso de acceso restringido.
+  const visibleViews = store.usuario ? allViews.filter(v => store.tienePermiso(v.permiso)) : [];
 
   useEffect(() => {
     document.title = store.usuario ? `${title} · COTO Gestión de stock` : 'Iniciar sesión · COTO Gestión de stock';
@@ -61,13 +125,10 @@ export default function App() {
 
   // Si el usuario cambia o inicia sesión, verificar si la ruta actual es accesible por su rol; si no, redirigir a su primera vista permitida
   useEffect(() => {
-    if (store.usuario) {
-      const allowedViews = allViews.filter(v => v.roles.includes(store.usuario?.rol || ''));
-      const hasAccess = allowedViews.some(v => v.id === route.view);
-      if (!hasAccess && allowedViews[0]) {
-        window.location.hash = `#/${allowedViews[0].id}`;
-      }
-    }
+    if (!store.usuario) return;
+    const hasAccess = visibleViews.some(v => v.id === route.view);
+    if (!hasAccess && visibleViews[0]) window.location.hash = `#/${visibleViews[0].id}`;
+    // visibleViews se deriva de store.usuario, que ya figura entre las dependencias.
   }, [store.usuario, route.view]);
 
   // Si no hay usuario autenticado, mostramos la pantalla de login con el Design System
@@ -75,12 +136,10 @@ export default function App() {
     return <LoginScreen />;
   }
 
-  // Filtrado de vistas accesibles según el rol del usuario conectado
-  const visibleViews = allViews.filter(v => v.roles.includes(store.usuario?.rol || ''));
-  const hasAccessToCurrent = currentViewObj && currentViewObj.roles.includes(store.usuario.rol);
-
+  const puedeVerSeguimiento = store.tienePermiso('verSeguimiento');
   const low = store.data?.productos.filter(p => store.data?.politicas[p.id] && p.disponible < store.data.politicas[p.id].umbralAlerta) || [];
   const online = !!store.data && !store.error;
+  const conexion = estadoConexion(online, store.loading);
 
   return (
     <div className={`app-shell ${collapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}`}>
@@ -110,13 +169,13 @@ export default function App() {
             {low.length > 0 && <span>{low.length}</span>}
           </button>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', paddingLeft: 'var(--space-2)', borderLeft: '1px solid var(--neutral-100)' }}>
+          <div className="operator-chip">
             <button className="operator-avatar" aria-label={`Usuario: ${store.usuario.nombreCompleto} (${store.usuario.rol})`} title={`${store.usuario.nombreCompleto} - ${store.usuario.rol}`} aria-expanded={help} onClick={() => { setHelp(v => !v); setAlerts(false); }}>
               {store.usuario.username.slice(0, 2).toUpperCase()}
             </button>
-            <div className="operator-info-chip" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.2 }}>
-              <span style={{ fontSize: 'var(--caption)', fontWeight: 'var(--weight-bold)', color: 'var(--neutral-900)' }}>{store.usuario.nombreCompleto}</span>
-              <span style={{ fontSize: '10px', color: 'var(--primary-700)', textTransform: 'uppercase', fontWeight: 'bold' }}>{store.usuario.rol}</span>
+            <div className="operator-info-chip">
+              <span className="operator-name">{store.usuario.nombreCompleto}</span>
+              <span className="operator-role">{store.usuario.rol}</span>
             </div>
             <Button variant="ghost" className="icon-button" icon={LogOut} aria-label="Cerrar sesión" title="Cerrar sesión" onClick={store.logout} />
           </div>
@@ -139,7 +198,7 @@ export default function App() {
           ))}
         </nav>
 
-        {store.usuario.rol === 'SUPERVISOR' && (
+        {puedeVerSeguimiento && (
           <nav className="sidebar-secondary" aria-label="Seguimiento">
             <div className="nav-section-label">SEGUIMIENTO</div>
             <a href="#/compras/actividad" aria-label="Actividad del stock" title={collapsed ? 'Actividad del stock' : undefined}>
@@ -150,9 +209,9 @@ export default function App() {
         )}
 
         <div className="sidebar-footer">
-          <div className="connection-line" title={online ? 'API conectada' : store.loading ? 'Conectando…' : 'Sin conexión'}>
-            <span className={`dot ${online ? 'success' : store.loading ? 'warning' : 'danger'}`} />
-            <span className="nav-label">{online ? 'API conectada' : store.loading ? 'Conectando…' : 'Sin conexión'}</span>
+          <div className="connection-line" title={conexion.texto}>
+            <span className={`dot ${conexion.tono}`} />
+            <span className="nav-label">{conexion.texto}</span>
           </div>
         </div>
       </aside>
@@ -177,7 +236,7 @@ export default function App() {
           ) : (
             <p>No hay artículos por debajo de su umbral de alerta.</p>
           )}
-          {store.usuario.rol === 'SUPERVISOR' && (
+          {puedeVerSeguimiento && (
             <>
               <a className="text-link" href="#/compras/reposicion">Revisar reposición</a>
               <a className="text-link" href="#/configuracion/avisos">Configurar alertas y avisos</a>
@@ -189,18 +248,18 @@ export default function App() {
       {help && (
         <section className="header-popover" aria-label="Información del operador">
           <div className="split-line">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
-              <ShieldCheck size={24} style={{ color: 'var(--primary-500)' }} aria-hidden="true" />
-              <h2 style={{ margin: 0, fontSize: 'var(--body-large)' }}>Sesión activa</h2>
+            <div className="popover-title">
+              <ShieldCheck size={24} aria-hidden="true" />
+              <h2>Sesión activa</h2>
             </div>
             <Button variant="ghost" className="icon-button" icon={X} aria-label="Cerrar información" onClick={() => setHelp(false)} />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)', marginTop: 'var(--space-2)' }}>
+          <div className="session-details">
             <div><strong>Operador:</strong> {store.usuario.nombreCompleto}</div>
             <div><strong>Usuario:</strong> {store.usuario.username}</div>
             <div><strong>Rol:</strong> {store.usuario.rol}</div>
           </div>
-          <Button variant="secondary" className="block" style={{ marginTop: 'var(--space-2)' }} onClick={store.logout}>
+          <Button variant="secondary" className="block session-logout" onClick={store.logout}>
             Cerrar sesión
           </Button>
         </section>
@@ -221,44 +280,12 @@ export default function App() {
             </div>
           )}
 
-          {!hasAccessToCurrent ? (
-            <Empty
-              title="Acceso restringido"
-              text={`Tu rol actual (${store.usuario.rol}) no tiene permisos para acceder a la sección ${title}.`}
-              action={visibleViews[0] ? <Button variant="primary" onClick={() => { window.location.hash = `#/${visibleViews[0].id}`; }}>Ir a {visibleViews[0].name}</Button> : undefined}
-            />
-          ) : !store.data ? (
-            store.loading ? (
-              <div className="loading-page" aria-busy="true" aria-label="Cargando inventario">
-                <div className="skeleton line title" />
-                <div className="skeleton line" />
-                <div className="metrics-grid">{Array.from({ length: 4 }, (_, i) => <div key={i} className="skeleton metric" />)}</div>
-                <div className="skeleton skeleton-table" />
-                <p>Conectando con el inventario de la sucursal…</p>
-              </div>
-            ) : (
-              <Empty
-                title="El inventario no está disponible"
-                text="Comprobá que esté iniciado el backend actualizado y reintentá la conexión."
-                action={<Button variant="primary" icon={RefreshCw} onClick={() => void store.refresh().catch(() => {})}>Volver a conectar</Button>}
-              />
-            )
-          ) : (
-            <>
-              {route.view === 'stock' && <StockPage tab={route.tab} />}
-              {route.view === 'descuentos' && <DiscountsPage />}
-              {route.view === 'recepcion' && <RecepcionPage />}
-              {route.view === 'compras' && <PurchasesPage tab={route.tab} />}
-              {route.view === 'configuracion' && <SettingsPage tab={route.tab} />}
-            </>
-          )}
+          <ContenidoVista route={route} vista={currentViewObj} visibles={visibleViews} />
 
           <footer className="app-footer">
             <span>COTO · Gestión de stock</span>
             <span>
-              {store.updated
-                ? `Última actualización: ${new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' }).format(store.updated)}`
-                : 'Esperando conexión'}
+              {store.updated ? `Última actualización: ${horaArgentina(store.updated)}` : 'Esperando conexión'}
               <span className="footer-separator">·</span>
               Sesión: {store.usuario.username} ({store.usuario.rol})
             </span>

@@ -17,10 +17,10 @@ public class CategoriaController {
     @GetMapping public List<Categoria> listar() { return categorias.listar(); }
     @GetMapping("/{id}") public Categoria consultar(@PathVariable @Positive int id) { return categorias.consultar(id); }
     @PostMapping public ResponseEntity<Categoria> crear(@Valid @RequestBody Solicitudes.Categoria c) {
-        var creado = categorias.guardar(new Categoria(0, c.nombre(), c.contactoId(), c.canalAlerta() == null ? null : c.canalAlerta().name()));
+        var creado = categorias.guardar(new Categoria(0, c.nombre(), c.contactoId(), c.canalAlerta()));
         return ResponseEntity.created(URI.create("/api/categorias/" + creado.id())).body(creado);
     }
     @PutMapping("/{id}") public Categoria editar(@PathVariable @Positive int id, @Valid @RequestBody Solicitudes.Categoria c) {
-        return categorias.guardar(new Categoria(id, c.nombre(), c.contactoId(), c.canalAlerta() == null ? null : c.canalAlerta().name()));
+        return categorias.guardar(new Categoria(id, c.nombre(), c.contactoId(), c.canalAlerta()));
     }
 }

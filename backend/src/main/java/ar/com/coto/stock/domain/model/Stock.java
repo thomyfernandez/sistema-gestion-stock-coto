@@ -23,8 +23,28 @@ public abstract class Stock {
     public abstract int getStockFisico();
     public abstract int getStockExhibicion();
     public abstract int getStockReservado();
+    /** Unidades reservadas sobre los componentes; sólo los combos las tienen. */
+    public int getStockReservadoVirtual() { return 0; }
     public List<LineaCombo> getComponentes() { return List.of(); }
-    public abstract void aplicarMovimiento(MovimientoStock m);
+    /** Template method: valida que el movimiento sea de este stock y lo aplica de forma atómica. */
+    public final void aplicarMovimiento(MovimientoStock m) {
+        Objects.requireNonNull(m);
+        if (m.getStockId() != producto.getId()) {
+            throw new IllegalArgumentException("El movimiento corresponde a otro stock");
+        }
+        synchronized (MONITOR) { aplicar(m); }
+    }
+    protected abstract void aplicar(MovimientoStock m);
+
+    /** Físico incluye exhibición y reservado: ninguno puede ser negativo ni superar al físico. */
+    protected static void validarContadores(int fisico, int exhibicion, int reservado) {
+        Reglas.noNegativo(fisico, "stockFisico");
+        Reglas.noNegativo(exhibicion, "stockExhibicion");
+        Reglas.noNegativo(reservado, "stockReservado");
+        if ((long) exhibicion + reservado > fisico) {
+            throw new IllegalArgumentException("Exhibición + reservado no puede superar el físico");
+        }
+    }
     public abstract void reservar(int cant);
     public abstract void liberarReserva(int cant);
     public abstract void despacharReserva(int cant);

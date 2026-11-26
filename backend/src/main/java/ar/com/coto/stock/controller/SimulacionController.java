@@ -1,5 +1,6 @@
 package ar.com.coto.stock.controller;
 
+import ar.com.coto.stock.domain.port.MonitorSistemasExternos;
 import ar.com.coto.stock.dto.*;
 import ar.com.coto.stock.service.GestionIntegraciones;
 import jakarta.validation.Valid;
@@ -15,9 +16,9 @@ import org.springframework.web.bind.annotation.*;
 public class SimulacionController {
     private final GestionIntegraciones integraciones;
     public SimulacionController(GestionIntegraciones integraciones) { this.integraciones = integraciones; }
-    @PatchMapping("/{sistema}") public Respuestas.EstadoProveedor configurar(@PathVariable Solicitudes.Sistema sistema,
+    @PatchMapping("/{sistema}") public Respuestas.EstadoProveedor configurar(@PathVariable MonitorSistemasExternos.Sistema sistema,
             @Valid @RequestBody Solicitudes.Disponibilidad s) {
-        integraciones.simularDisponibilidad(GestionIntegraciones.Sistema.valueOf(sistema.name()), s.disponible());
+        integraciones.simularDisponibilidad(sistema, s.disponible());
         return new Respuestas.EstadoProveedor(sistema.name(), s.disponible());
     }
 }

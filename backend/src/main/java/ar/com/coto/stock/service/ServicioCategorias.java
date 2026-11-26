@@ -19,8 +19,14 @@ public final class ServicioCategorias implements GestionCategorias {
             if (categoria.id() != 0) consultar(categoria.id());
             if (categorias.listar().stream().anyMatch(c -> c.id() != categoria.id() && c.nombre().equalsIgnoreCase(categoria.nombre())))
                 throw new IllegalArgumentException("Ya existe una categoría con ese nombre");
-            if (categoria.contactoId() != null) contactos.obtener(categoria.contactoId())
-                    .orElseThrow(() -> new EntidadNoEncontradaException("Contacto", categoria.contactoId())).destino(categoria.canalAlerta());
+            if (categoria.contactoId() != null) {
+                var contacto = contactos.obtener(categoria.contactoId())
+                        .orElseThrow(() -> new EntidadNoEncontradaException("Contacto", categoria.contactoId()));
+                if (!contacto.admite(categoria.canalAlerta())) {
+                    throw new IllegalArgumentException(categoria.canalAlerta().usaEmail()
+                            ? "El contacto no tiene email de contacto" : "El contacto no tiene teléfono de contacto");
+                }
+            }
             return categorias.guardar(categoria);
         });
     }

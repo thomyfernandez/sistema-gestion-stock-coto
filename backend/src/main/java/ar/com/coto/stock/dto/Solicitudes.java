@@ -1,5 +1,8 @@
 package ar.com.coto.stock.dto;
 
+import ar.com.coto.stock.domain.model.Canal;
+import ar.com.coto.stock.domain.model.TipoMovimiento;
+import ar.com.coto.stock.domain.reposicion.PoliticaReposicion;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
@@ -8,17 +11,8 @@ import java.util.List;
 /** Contratos JSON de entrada. Los tipos numéricos requeridos son boxed para detectar campos ausentes. */
 public final class Solicitudes {
     private Solicitudes() { }
-    public enum TipoMovimiento {
-        RECEPCION, TRASLADO_A_GONDOLA, RETORNO_A_DEPOSITO, DEVOLUCION, MERMA_DEPOSITO,
-        MERMA_GONDOLA, RESERVA_DIGITAL, CANCELACION_RESERVA, DESPACHO_DIGITAL, ARMADO_COMBO, DESARMADO_COMBO
-    }
+    /** Subconjunto de movimientos que acepta la app de sucursal; el resto de los contratos usa los enums del dominio. */
     public enum TipoSucursal { TRASLADO_A_GONDOLA, RETORNO_A_DEPOSITO, DEVOLUCION, MERMA_DEPOSITO, MERMA_GONDOLA }
-    public enum Estrategia { PUNTO_PEDIDO, DEMANDA, ESTACIONAL }
-    public enum TipoPromocion { DESCUENTO, DOS_POR_UNO, MEDIO_PAGO }
-    public enum Canal { EMAIL, SMS, WHATSAPP }
-    public enum Sistema { ERP, MENSAJERIA, COTO_DIGITAL }
-    public enum TipoProducto { SIMPLE, COMBO }
-    public enum EstadoPedido { PENDIENTE, ENVIADO, RECIBIDO, CANCELADO }
 
     public record Producto(
             @NotBlank @Size(max = 160) String nombre,
@@ -52,7 +46,7 @@ public final class Solicitudes {
             @NotBlank @Size(max = 500) String motivo) { }
     public record Login(@NotBlank @Size(max = 60) String username, @NotBlank @Size(max = 100) String password) { }
     public record Politica(
-            @NotNull Estrategia tipo,
+            @NotNull PoliticaReposicion.Tipo tipo,
             @NotNull @PositiveOrZero Integer puntoPedido,
             @NotNull @Positive Integer stockObjetivo,
             @NotNull @DecimalMin("0") @Digits(integer = 9, fraction = 3) BigDecimal demandaDiaria,
@@ -61,7 +55,7 @@ public final class Solicitudes {
             @NotNull @Positive Integer umbralAlerta,
             @Size(max = 200) String destinoAlerta, @com.fasterxml.jackson.annotation.JsonAlias("proveedorId") @Positive Long contactoId, Canal canalAlerta) { }
     public record Promocion(
-            @NotNull TipoPromocion tipo,
+            @NotNull ar.com.coto.stock.domain.valorizacion.Promocion.Tipo tipo,
             @NotNull @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 4) BigDecimal porcentaje,
             @NotNull @PositiveOrZero Integer orden,
             @NotNull Boolean activa,

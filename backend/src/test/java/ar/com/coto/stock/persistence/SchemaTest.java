@@ -137,7 +137,7 @@ class SchemaTest {
                 "SELECT p.*, s.tipo, s.stock_fisico, s.stock_exhibicion, s.stock_reservado FROM producto p JOIN stock s ON p.id = s.id")) {
             while (filas.next()) {
                 Producto producto = new Producto(filas.getInt("id"), filas.getString("nombre"),
-                        filas.getString("descripcion"), filas.getDouble("precio"));
+                        filas.getString("descripcion"), filas.getBigDecimal("precio"));
                 stocks.put(producto.getId(), "SIMPLE".equals(filas.getString("tipo"))
                         ? new StockSimple(producto, filas.getInt("stock_fisico"), filas.getInt("stock_exhibicion"), filas.getInt("stock_reservado"))
                         : new ComboStock(producto));

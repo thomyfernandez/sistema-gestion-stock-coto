@@ -1,4 +1,5 @@
 package ar.com.coto.stock.repository;
+import ar.com.coto.stock.domain.model.EntidadNoEncontradaException;
 import ar.com.coto.stock.domain.model.Contacto;
 import ar.com.coto.stock.domain.port.RepositorioContactos;
 import ar.com.coto.stock.repository.entity.ContactoEntity;
@@ -17,7 +18,7 @@ public class RepositorioContactosJpa implements RepositorioContactos {
     public Optional<Contacto> obtener(long id) { return Optional.ofNullable(em.find(ContactoEntity.class, id)).map(this::modelo); }
     public Contacto guardar(Contacto p) {
         var f = p.id() == 0 ? new ContactoEntity() : em.find(ContactoEntity.class, p.id());
-        if (f == null) throw new IllegalStateException("El contacto ya no existe");
+        if (f == null) throw new EntidadNoEncontradaException("Contacto", p.id());
         f.nombre = p.nombre(); f.email = p.email(); f.telefono = p.telefono();
         if (p.id() == 0) em.persist(f);
         return modelo(f);

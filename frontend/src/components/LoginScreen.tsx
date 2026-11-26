@@ -51,63 +51,21 @@ export function LoginScreen() {
   };
 
   return (
-    <div style={{
-      minHeight: '100dvh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: 'var(--neutral-50)',
-      padding: 'var(--space-3)',
-      boxSizing: 'border-box',
-    }}>
-      <div style={{ width: '100%', maxWidth: '440px' }}>
-        <div style={{
-          backgroundColor: 'var(--neutral-00)',
-          borderRadius: 'var(--radius-medium)',
-          border: '1px solid var(--neutral-100)',
-          padding: 'var(--space-4)',
-          textAlign: 'center',
-          boxShadow: 'var(--shadow-300)',
-          boxSizing: 'border-box',
-        }}>
-          <img
-            src={logo}
-            alt="COTO"
-            style={{
-              width: '160px',
-              height: 'auto',
-              maxHeight: '64px',
-              objectFit: 'contain',
-              display: 'block',
-              margin: '0 auto var(--space-2)',
-            }}
-          />
-          <h1 style={{
-            fontSize: 'var(--heading-h2)',
-            fontWeight: 'var(--weight-bold)',
-            margin: '0 0 var(--space-1) 0',
-            color: 'var(--neutral-900)',
-            lineHeight: 1.25,
-          }}>
-            Gestión de Stock
-          </h1>
-          <p style={{
-            margin: '0 0 var(--space-3) 0',
-            color: 'var(--neutral-700)',
-            fontSize: 'var(--body-medium)',
-            lineHeight: 1.4,
-          }}>
-            Ingresá tus credenciales para acceder al inventario de sucursal.
-          </p>
+    <div className="login-page">
+      <div className="login-container">
+        <div className="login-card">
+          <img className="login-logo" src={logo} alt="COTO" />
+          <h1 className="login-title">Gestión de Stock</h1>
+          <p className="login-text">Ingresá tus credenciales para acceder al inventario de sucursal.</p>
 
           {errorMsg && (
-            <div className="message danger" style={{ marginBottom: 'var(--space-3)', textAlign: 'left' }}>
-              <AlertCircle size={20} aria-hidden="true" />
+            <div className="message danger login-error">
+              <AlertCircle size={24} aria-hidden="true" />
               <div><strong>Error al iniciar sesión</strong><p>{errorMsg}</p></div>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="form-stack" style={{ textAlign: 'left' }}>
+          <form onSubmit={handleSubmit} className="form-stack login-form">
             <Field label="Usuario">
               <input
                 type="text"
@@ -132,83 +90,32 @@ export function LoginScreen() {
               />
             </Field>
 
-            <Button
-              type="submit"
-              variant="primary"
-              className="block"
-              disabled={cargando}
-              loading={cargando}
-              icon={LogIn}
-              style={{ marginTop: 'var(--space-1)' }}
-            >
+            <Button type="submit" variant="primary" className="block login-submit" disabled={cargando} loading={cargando} icon={LogIn}>
               Iniciar sesión
             </Button>
           </form>
 
-          <div style={{
-            marginTop: 'var(--space-4)',
-            borderTop: '1px solid var(--neutral-100)',
-            paddingTop: 'var(--space-3)',
-          }}>
-            <span className="eyebrow" style={{ display: 'block', marginBottom: 'var(--space-2)', textAlign: 'center' }}>
-              Acceso rápido para demostración
-            </span>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-              gap: 'var(--space-1)',
-            }}>
-              {USUARIOS_DEMO.map(u => {
-                const Icono = u.icono;
-                const seleccionado = username === u.username;
-                return (
-                  <button
-                    key={u.username}
-                    type="button"
-                    onClick={() => seleccionarDemo(u)}
-                    style={{
-                      background: seleccionado ? 'color-mix(in srgb, var(--primary-100) 45%, var(--neutral-00))' : 'var(--neutral-00)',
-                      border: `1.5px solid ${seleccionado ? 'var(--primary-500)' : 'var(--neutral-200)'}`,
-                      borderRadius: 'var(--radius-small)',
-                      padding: 'var(--space-1) var(--space-2)',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '2px',
-                      transition: 'all 0.15s ease',
-                      boxSizing: 'border-box',
-                      boxShadow: seleccionado ? 'var(--shadow-100)' : 'none',
-                    }}
-                  >
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 'var(--space-1)',
-                      fontWeight: 'var(--weight-bold)',
-                      fontSize: 'var(--caption)',
-                      color: seleccionado ? 'var(--primary-700)' : 'var(--neutral-900)',
-                    }}>
-                      <Icono size={14} aria-hidden="true" />
-                      <span>{u.rol}</span>
-                    </div>
-                    <span style={{
-                      fontSize: '11px',
-                      color: 'var(--neutral-700)',
-                      fontFamily: 'monospace',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}>
-                      {u.username}
-                    </span>
-                  </button>
-                );
-              })}
+          <div className="login-demo">
+            <span className="eyebrow login-demo-label">Acceso rápido para demostración</span>
+            <div className="login-demo-grid">
+              {USUARIOS_DEMO.map(u => <UsuarioDemoBoton key={u.username} usuario={u} seleccionado={username === u.username} onSelect={() => seleccionarDemo(u)} />)}
             </div>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function UsuarioDemoBoton({ usuario, seleccionado, onSelect }: { usuario: DemoUser; seleccionado: boolean; onSelect: () => void }) {
+  const Icono = usuario.icono;
+  return (
+    <button type="button" className={`login-demo-user ${seleccionado ? 'selected' : ''}`} aria-pressed={seleccionado} onClick={onSelect}>
+      <span className="login-demo-role">
+        <Icono size={24} aria-hidden="true" />
+        <span>{usuario.rol}</span>
+      </span>
+      <span className="login-demo-username">{usuario.username}</span>
+    </button>
   );
 }

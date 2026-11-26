@@ -20,6 +20,8 @@ public final class ComboStock extends Stock implements ObservadorStock {
     private int stockFisicoPropio;
     private int stockExhibicionPropio;
     private int stockReservadoPropio;
+    /** Combos reservados sobre los componentes; sólo esas unidades se pueden liberar o despachar por la vía virtual. */
+    private int stockReservadoVirtual;
     private EstrategiaReservaCombo estrategiaReserva;
 
     public ComboStock(Producto producto) {
@@ -32,13 +34,14 @@ public final class ComboStock extends Stock implements ObservadorStock {
 
     public ComboStock(Producto producto, int stockFisicoPropio, int stockExhibicionPropio, int stockReservadoPropio,
                       EstrategiaReservaCombo estrategiaReserva) {
+        this(producto, stockFisicoPropio, stockExhibicionPropio, stockReservadoPropio, 0, estrategiaReserva);
+    }
+
+    public ComboStock(Producto producto, int stockFisicoPropio, int stockExhibicionPropio, int stockReservadoPropio,
+                      int stockReservadoVirtual, EstrategiaReservaCombo estrategiaReserva) {
         super(producto);
-        Reglas.noNegativo(stockFisicoPropio, "stockFisico");
-        Reglas.noNegativo(stockExhibicionPropio, "stockExhibicion");
-        Reglas.noNegativo(stockReservadoPropio, "stockReservado");
-        if ((long) stockExhibicionPropio + stockReservadoPropio > stockFisicoPropio) {
-            throw new IllegalArgumentException("Exhibición + reservado no puede superar el físico");
-        }
+        this.stockReservadoVirtual = Reglas.noNegativo(stockReservadoVirtual, "stockReservadoVirtual");
+        validarContadores(stockFisicoPropio, stockExhibicionPropio, stockReservadoPropio);
         this.stockFisicoPropio = stockFisicoPropio;
         this.stockExhibicionPropio = stockExhibicionPropio;
         this.stockReservadoPropio = stockReservadoPropio;
@@ -76,6 +79,7 @@ public final class ComboStock extends Stock implements ObservadorStock {
     @Override public int getStockFisico() { synchronized (MONITOR) { return stockFisicoPropio; } }
     @Override public int getStockExhibicion() { synchronized (MONITOR) { return stockExhibicionPropio; } }
     @Override public int getStockReservado() { synchronized (MONITOR) { return stockReservadoPropio; } }
+    @Override public int getStockReservadoVirtual() { synchronized (MONITOR) { return stockReservadoVirtual; } }
 
     public int getDisponiblePropio() {
         synchronized (MONITOR) { return stockFisicoPropio - stockExhibicionPropio - stockReservadoPropio; }
@@ -91,6 +95,11 @@ public final class ComboStock extends Stock implements ObservadorStock {
     }
 
     @Override public Tipo getTipo() { return Tipo.COMBO; }
+
+    /** Tiene componentes y ninguno de sus combos internos está vacío. */
+    public boolean estaCompleto() {
+        synchronized (MONITOR) { return !tieneComboVacio(this); }
+    }
 
     @Override public int getDisponible() {
         synchronized (MONITOR) {
@@ -111,9 +120,7 @@ public final class ComboStock extends Stock implements ObservadorStock {
     public void armar(int cant) {
         Reglas.positivo(cant, "cantidad");
         synchronized (MONITOR) {
-            if (tieneComboVacio(this)) throw new IllegalStateException("El combo está incompleto");
-            Map<StockSimple, Integer> necesidades = requerimientos();
-            if (necesidades.isEmpty()) throw new IllegalStateException("El combo no tiene componentes");
+            Map<StockSimple, Integer> necesidades = requerimientosOperables();
 
             // Valida disponibilidad en cada componente simple
             necesidades.forEach((simple, factor) -> {
@@ -137,9 +144,7 @@ public final class ComboStock extends Stock implements ObservadorStock {
     public void desarmar(int cant) {
         Reglas.positivo(cant, "cantidad");
         synchronized (MONITOR) {
-            if (tieneComboVacio(this)) throw new IllegalStateException("El combo está incompleto");
-            Map<StockSimple, Integer> necesidades = requerimientos();
-            if (necesidades.isEmpty()) throw new IllegalStateException("El combo no tiene componentes");
+            Map<StockSimple, Integer> necesidades = requerimientosOperables();
 
             if (cant > getDisponiblePropio()) {
                 throw new StockInsuficienteException("Stock propio disponible insuficiente para desarmar el combo");
@@ -158,28 +163,22 @@ public final class ComboStock extends Stock implements ObservadorStock {
         }
     }
 
-    @Override public void aplicarMovimiento(MovimientoStock m) {
-        Objects.requireNonNull(m);
-        if (m.getStockId() != producto.getId()) {
-            throw new IllegalArgumentException("El movimiento corresponde a otro stock");
-        }
-        synchronized (MONITOR) {
-            int cantidad = m.getCantidad();
-            switch (m.getTipo()) {
-                case ARMADO_COMBO -> armar(cantidad);
-                case DESARMADO_COMBO -> desarmar(cantidad);
-                case RESERVA_DIGITAL -> reservar(cantidad);
-                case CANCELACION_RESERVA -> liberarReserva(cantidad);
-                case DESPACHO_DIGITAL -> despacharReserva(cantidad);
-                default -> throw new IllegalArgumentException("Los combos solo admiten armado, desarmado, reservas y despachos");
-            }
+    @Override protected void aplicar(MovimientoStock m) {
+        int cantidad = m.getCantidad();
+        switch (m.getTipo()) {
+            case ARMADO_COMBO -> armar(cantidad);
+            case DESARMADO_COMBO -> desarmar(cantidad);
+            case RESERVA_DIGITAL -> reservar(cantidad);
+            case CANCELACION_RESERVA -> liberarReserva(cantidad);
+            case DESPACHO_DIGITAL -> despacharReserva(cantidad);
+            default -> throw new IllegalArgumentException("Los combos solo admiten armado, desarmado, reservas y despachos");
         }
     }
 
     @Override public void reservar(int cant) {
         Reglas.positivo(cant, "cantidad");
         synchronized (MONITOR) {
-            if (tieneComboVacio(this)) throw new IllegalStateException("El combo está incompleto");
+            if (tieneComboVacio(this)) throw new EstadoInvalidoException("El combo está incompleto");
             int dispPropio = getDisponiblePropio();
             int dispVirtual = getDisponibleVirtual();
 
@@ -191,6 +190,7 @@ public final class ComboStock extends Stock implements ObservadorStock {
 
             if (distribucion.cantidadVirtual() > 0) {
                 operarVirtual(distribucion.cantidadVirtual(), Operacion.RESERVAR);
+                stockReservadoVirtual = Math.addExact(stockReservadoVirtual, distribucion.cantidadVirtual());
             }
             if (distribucion.cantidadPropio() > 0) {
                 stockReservadoPropio = Math.addExact(stockReservadoPropio, distribucion.cantidadPropio());
@@ -199,36 +199,26 @@ public final class ComboStock extends Stock implements ObservadorStock {
         }
     }
 
-    @Override public void liberarReserva(int cant) {
-        Reglas.positivo(cant, "cantidad");
-        synchronized (MONITOR) {
-            int delPropio = Math.min(cant, stockReservadoPropio);
-            int delVirtual = cant - delPropio;
-            if (delPropio > 0) {
-                stockReservadoPropio -= delPropio;
-            }
-            if (delVirtual > 0) {
-                operarVirtual(delVirtual, Operacion.LIBERAR);
-            }
-            if (delPropio > 0) {
-                notificar();
-            }
-        }
-    }
+    @Override public void liberarReserva(int cant) { cerrarReserva(cant, Operacion.LIBERAR); }
 
-    @Override public void despacharReserva(int cant) {
+    @Override public void despacharReserva(int cant) { cerrarReserva(cant, Operacion.DESPACHAR); }
+
+    /** Consume primero la reserva propia y el resto de la reserva virtual que hizo ESTE combo. */
+    private void cerrarReserva(int cant, Operacion operacion) {
         Reglas.positivo(cant, "cantidad");
         synchronized (MONITOR) {
             int delPropio = Math.min(cant, stockReservadoPropio);
             int delVirtual = cant - delPropio;
-            if (delPropio > 0) {
-                stockReservadoPropio -= delPropio;
-                stockFisicoPropio -= delPropio;
+            if (delVirtual > stockReservadoVirtual) {
+                throw new StockInsuficienteException("Reserva insuficiente para " + producto.getNombre());
             }
             if (delVirtual > 0) {
-                operarVirtual(delVirtual, Operacion.DESPACHAR);
+                operarVirtual(delVirtual, operacion);
+                stockReservadoVirtual -= delVirtual;
             }
             if (delPropio > 0) {
+                stockReservadoPropio -= delPropio;
+                if (operacion == Operacion.DESPACHAR) stockFisicoPropio -= delPropio;
                 notificar();
             }
         }
@@ -254,6 +244,14 @@ public final class ComboStock extends Stock implements ObservadorStock {
         // Los observadores siempre ven el plan completo aplicado. La propagación
         // a combos padres se realiza mediante actualizar, sin notificar estados parciales.
         plan.keySet().forEach(StockSimple::notificar);
+    }
+
+    /** Requerimientos de un combo que se puede armar o desarmar: completo y con componentes. */
+    private Map<StockSimple, Integer> requerimientosOperables() {
+        if (tieneComboVacio(this)) throw new EstadoInvalidoException("El combo está incompleto");
+        Map<StockSimple, Integer> necesidades = requerimientos();
+        if (necesidades.isEmpty()) throw new EstadoInvalidoException("El combo no tiene componentes");
+        return necesidades;
     }
 
     private Map<StockSimple, Integer> requerimientos() {

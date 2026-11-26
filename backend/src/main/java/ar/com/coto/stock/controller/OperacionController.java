@@ -1,5 +1,6 @@
 package ar.com.coto.stock.controller;
 
+import ar.com.coto.stock.domain.model.TipoMovimiento;
 import ar.com.coto.stock.dto.*;
 import ar.com.coto.stock.service.*;
 import jakarta.validation.Valid;
@@ -23,7 +24,7 @@ public class OperacionController {
         this.inventario = inventario; this.precios = precios; this.reloj = reloj;
     }
     @PostMapping("/recepcion/ingresos") public ResponseEntity<Respuestas.ResultadoMovimiento> recibir(@Valid @RequestBody Solicitudes.Operacion s, @OperadorAutenticado String operador) {
-        return operar(s, Solicitudes.TipoMovimiento.RECEPCION, operador);
+        return operar(s, TipoMovimiento.RECEPCION, operador);
     }
     @PostMapping("/sucursal/movimientos") public ResponseEntity<Respuestas.ResultadoMovimiento> mover(@Valid @RequestBody Solicitudes.MovimientoSucursal s, @OperadorAutenticado String operador) {
         var resultado = MapeadorDto.resultado(inventario.registrarMovimiento(MapeadorDto.movimiento(s, operador, reloj)));
@@ -34,15 +35,15 @@ public class OperacionController {
         return precios.catalogo(cantidad, medioPago).stream().map(MapeadorDto::catalogo).toList();
     }
     @PostMapping("/digital/reservas") public ResponseEntity<Respuestas.ResultadoMovimiento> reservar(@Valid @RequestBody Solicitudes.Operacion s, @OperadorAutenticado String operador) {
-        return operar(s, Solicitudes.TipoMovimiento.RESERVA_DIGITAL, operador);
+        return operar(s, TipoMovimiento.RESERVA_DIGITAL, operador);
     }
     @PostMapping("/digital/cancelaciones") public ResponseEntity<Respuestas.ResultadoMovimiento> cancelar(@Valid @RequestBody Solicitudes.Operacion s, @OperadorAutenticado String operador) {
-        return operar(s, Solicitudes.TipoMovimiento.CANCELACION_RESERVA, operador);
+        return operar(s, TipoMovimiento.CANCELACION_RESERVA, operador);
     }
     @PostMapping("/digital/despachos") public ResponseEntity<Respuestas.ResultadoMovimiento> despachar(@Valid @RequestBody Solicitudes.Operacion s, @OperadorAutenticado String operador) {
-        return operar(s, Solicitudes.TipoMovimiento.DESPACHO_DIGITAL, operador);
+        return operar(s, TipoMovimiento.DESPACHO_DIGITAL, operador);
     }
-    private ResponseEntity<Respuestas.ResultadoMovimiento> operar(Solicitudes.Operacion s, Solicitudes.TipoMovimiento tipo, String operador) {
+    private ResponseEntity<Respuestas.ResultadoMovimiento> operar(Solicitudes.Operacion s, TipoMovimiento tipo, String operador) {
         var resultado = MapeadorDto.resultado(inventario.registrarMovimiento(MapeadorDto.movimiento(s, tipo, operador, reloj)));
         return ResponseEntity.created(URI.create("/api/movimientos/" + resultado.id())).body(resultado);
     }

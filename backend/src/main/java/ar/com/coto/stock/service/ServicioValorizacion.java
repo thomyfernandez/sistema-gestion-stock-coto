@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public final class ServicioValorizacion implements ConsultaPrecios {
     private final RepositorioStock stocks;
@@ -17,44 +18,35 @@ public final class ServicioValorizacion implements ConsultaPrecios {
     }
     public PrecioCalculado valorizar(int productoId, int cantidad, String medioPago) {
         return unidad.consultar(() -> {
-            Stock stock = stocks.cargarInventario().get(productoId);
-            if (stock == null) throw new EntidadNoEncontradaException("Producto", productoId);
-            return calcular(stock, cantidad, medioPago);
+            Producto producto = stocks.producto(productoId).orElseThrow(() -> new EntidadNoEncontradaException("Producto", productoId));
+            return calcular(producto, promociones.listar(productoId), cantidad, medioPago);
         });
     }
     @Override public List<ItemCatalogo> catalogo(int cantidad, String medioPago) {
         Reglas.positivo(cantidad, "cantidad");
-        return unidad.consultar(() -> stocks.cargarInventario().values().stream().map(s ->
-                new ItemCatalogo(s.getProducto().getId(), s.getProducto().getNombre(), s.getProducto().getDescripcion(),
-                        s.getTipo().name(), s.getDisponible(), calcular(s, cantidad, medioPago))).toList());
+        return unidad.consultar(() -> {
+            Map<Integer, List<Promocion>> porProducto = promociones.listarPorProducto();
+            return stocks.cargarInventario().values().stream().map(s -> new ItemCatalogo(s.getProducto().getId(),
+                    s.getProducto().getNombre(), s.getProducto().getDescripcion(), s.getTipo().name(), s.getDisponible(),
+                    calcular(s.getProducto(), porProducto.getOrDefault(s.getProducto().getId(), List.of()), cantidad, medioPago))).toList();
+        });
     }
-    private PrecioCalculado calcular(Stock stock, int cantidad, String medioPago) {
-        int productoId = stock.getProducto().getId();
-        ItemValorizable precio = new PrecioLista(stock.getProducto(), cantidad);
+    private static PrecioCalculado calcular(Producto producto, List<Promocion> promociones, int cantidad, String medioPago) {
+        Promocion.exigirUnSoloDosPorUnoActivo(promociones);
+        ItemValorizable precio = new PrecioLista(producto, cantidad);
         BigDecimal lista = moneda(precio.getImporte());
         List<Long> aplicadas = new ArrayList<>();
-        boolean dosPorUnoAplicado = false;
-        for (Promocion p : promociones.listar(productoId)) {
-            if (!aplicaPromocion(p, medioPago)) continue;
+        for (Promocion p : promociones) {
+            if (!p.aplicaA(medioPago)) continue;
             precio = switch (p.tipo()) {
                 case DESCUENTO -> new DescuentoDecorator(precio, p.porcentaje());
-                case DOS_POR_UNO -> {
-                    if (dosPorUnoAplicado) throw new IllegalStateException("No se puede aplicar dos veces el 2x1");
-                    dosPorUnoAplicado = true;
-                    yield new DosPorUnoDecorator(precio);
-                }
+                case DOS_POR_UNO -> new DosPorUnoDecorator(precio);
                 case MEDIO_PAGO -> new MedioPagoDecorator(precio, p.porcentaje());
             };
             aplicadas.add(p.id());
         }
         BigDecimal total = moneda(precio.getImporte());
-        return new PrecioCalculado(productoId, cantidad, lista, total, lista.subtract(total), aplicadas);
-    }
-
-    private static boolean aplicaPromocion(Promocion p, String medioPago) {
-        if (!p.activa()) return false;
-        if (p.tipo() != Promocion.Tipo.MEDIO_PAGO) return true;
-        return p.medioPago() != null && medioPago != null && p.medioPago().equalsIgnoreCase(medioPago);
+        return new PrecioCalculado(producto.getId(), cantidad, lista, total, lista.subtract(total), aplicadas);
     }
 
     private static BigDecimal moneda(BigDecimal importe) {

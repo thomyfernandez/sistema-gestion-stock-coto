@@ -188,6 +188,10 @@ input[type=checkbox]:checked:disabled { background: var(--neutral-300); }
   margin-top: var(--space-2);
 }
 
+.notice-resolution-icon {
+  color: var(--color-action);
+}
+
 .notice-resolution-card.warning {
   background: var(--warning-100);
   border-color: var(--warning-500);

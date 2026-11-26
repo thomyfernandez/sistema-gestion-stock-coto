@@ -25,8 +25,8 @@ public final class ServicioIntegraciones implements GestionIntegraciones {
     @Override public Estado consultarEstado() {
         return unidad.consultar(() -> new Estado(eventos.listar(), monitor.consultar()));
     }
-    @Override public void simularDisponibilidad(GestionIntegraciones.Sistema sistema, boolean disponible) {
-        monitor.establecerDisponibilidad(MonitorSistemasExternos.Sistema.valueOf(java.util.Objects.requireNonNull(sistema).name()), disponible);
+    @Override public void simularDisponibilidad(MonitorSistemasExternos.Sistema sistema, boolean disponible) {
+        monitor.establecerDisponibilidad(java.util.Objects.requireNonNull(sistema), disponible);
     }
     public int procesarPendientes() {
         return unidad.ejecutarNueva(() -> {
@@ -40,7 +40,7 @@ public final class ServicioIntegraciones implements GestionIntegraciones {
                 try {
                     switch (e.tipo()) {
                         case STOCK_DIGITAL -> digital.sincronizar(e.stockId(), e.disponible());
-                        case ALERTA -> notificaciones.enviar(ServicioNotificaciones.Canal.valueOf(e.canal()), e.destino(), e.texto());
+                        case ALERTA -> notificaciones.enviar(e.canal(), e.destino(), e.texto());
                         case PEDIDO_ERP -> {
                             // Mismo orden de bloqueo que otros despachadores. Los gestores sólo
                             // toman inventario; no esperan por envíos hasta después del commit.

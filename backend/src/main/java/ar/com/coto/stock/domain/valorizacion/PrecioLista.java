@@ -14,7 +14,7 @@ public final class PrecioLista implements ItemValorizable {
 
     public PrecioLista(Producto producto, int cantidad) {
         this.cantidad = Reglas.positivo(cantidad, "cantidad");
-        this.importe = BigDecimal.valueOf(Objects.requireNonNull(producto).getPrecio()).multiply(BigDecimal.valueOf(cantidad));
+        this.importe = Objects.requireNonNull(producto).getPrecio().multiply(BigDecimal.valueOf(cantidad));
     }
 
     @Override public BigDecimal getImporte() { return importe; }

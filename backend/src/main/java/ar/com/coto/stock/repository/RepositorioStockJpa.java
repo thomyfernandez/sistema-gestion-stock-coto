@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Repository
 public class RepositorioStockJpa implements RepositorioStock {
@@ -20,16 +21,35 @@ public class RepositorioStockJpa implements RepositorioStock {
         }
     }
 
+    @Override public Optional<Stock.Tipo> tipo(int id) {
+        // Proyección para no dejar un proxy diferido del producto en el contexto (los campos públicos no lo inicializan).
+        return em.createQuery("select s.tipo from StockEntity s where s.id = :id", String.class)
+                .setParameter("id", id).getResultStream().findFirst().map(RepositorioStockJpa::tipo);
+    }
+
+    @Override public Optional<Producto> producto(int id) {
+        // Proyección: las entidades exponen campos públicos y un proxy diferido ya cargado en el contexto no se inicializa al leerlos.
+        return em.createQuery("select p.nombre, p.descripcion, p.precio, p.imagenVersion, p.categoriaId from ProductoEntity p where p.id = :id", Tuple.class)
+                .setParameter("id", id).getResultStream().findFirst()
+                .map(t -> new Producto(id, t.get(0, String.class), t.get(1, String.class), t.get(2, BigDecimal.class),
+                        t.get(3, String.class), t.get(4, Integer.class)));
+    }
+
+    private static Producto producto(StockEntity fila) {
+        return new Producto(fila.id, fila.producto.nombre, fila.producto.descripcion, fila.producto.precio, fila.producto.imagenVersion, fila.producto.categoriaId);
+    }
+
     @Override public Map<Integer, Stock> cargarInventario() {
         Map<Integer, Stock> stocks = new LinkedHashMap<>();
         for (StockEntity fila : em.createQuery("select s from StockEntity s join fetch s.producto order by s.id", StockEntity.class).getResultList()) {
-            Producto producto = new Producto(fila.id, fila.producto.nombre, fila.producto.descripcion, fila.producto.precio.doubleValue(), fila.producto.imagenVersion, fila.producto.categoriaId);
+            Producto producto = producto(fila);
             Stock stock = switch (tipo(fila.tipo)) {
                 case SIMPLE -> new StockSimple(producto, fila.stockFisico, fila.stockExhibicion, fila.stockReservado);
                 case COMBO -> new ComboStock(producto,
                         fila.stockFisico == null ? 0 : fila.stockFisico,
                         fila.stockExhibicion == null ? 0 : fila.stockExhibicion,
-                        fila.stockReservado == null ? 0 : fila.stockReservado);
+                        fila.stockReservado == null ? 0 : fila.stockReservado,
+                        fila.stockReservadoVirtual, new ReservaFisicoPrimero());
             };
             stocks.put(fila.id, stock);
         }
@@ -51,13 +71,14 @@ public class RepositorioStockJpa implements RepositorioStock {
         fila.stockFisico = stock.getStockFisico();
         fila.stockExhibicion = stock.getStockExhibicion();
         fila.stockReservado = stock.getStockReservado();
+        fila.stockReservadoVirtual = stock.getStockReservadoVirtual();
     }
 
     @Override public Stock crear(AltaProducto datos, boolean combo) {
         ProductoEntity producto = new ProductoEntity();
         producto.categoriaId = datos.categoriaId();
         producto.nombre = datos.nombre(); producto.descripcion = datos.descripcion();
-        producto.precio = BigDecimal.valueOf(datos.precio());
+        producto.precio = datos.precio();
         producto.imagenVersion = datos.imagen() == null ? null : datos.imagen().version();
         em.persist(producto);
         if (datos.imagen() != null) {

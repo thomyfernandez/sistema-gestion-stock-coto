@@ -18,6 +18,6 @@ public class ConfiguracionOpenApi {
 
                         Los errores se devuelven como `application/problem+json` (RFC 9457) con `codigo`, `detail` y, \
                         en validaciones, `errores` por campo. El disponible se calcula como físico − exhibición − reservado; \
-                        los combos no tienen contadores propios."""));
+                        en un combo suma su stock armado propio y lo que permiten armar sus componentes."""));
     }
 }

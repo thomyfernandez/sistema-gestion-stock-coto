@@ -1,5 +1,6 @@
 package ar.com.coto.stock.repository;
 
+import ar.com.coto.stock.domain.model.Canal;
 import ar.com.coto.stock.domain.port.RepositorioPoliticas;
 import ar.com.coto.stock.domain.reposicion.PoliticaReposicion;
 import ar.com.coto.stock.repository.entity.PoliticaEntity;
@@ -17,7 +18,7 @@ public class RepositorioPoliticasJpa implements RepositorioPoliticas {
         em.createQuery("select p from PoliticaEntity p order by p.stockId", PoliticaEntity.class).getResultList().forEach(p ->
                 politicas.put(p.stockId, new PoliticaReposicion(p.stockId, PoliticaReposicion.Tipo.valueOf(p.tipo),
                         p.puntoPedido, p.stockObjetivo, p.demandaDiaria.doubleValue(), p.diasCobertura,
-                        p.factorEstacional.doubleValue(), p.umbralAlerta, p.destinoAlerta, p.contactoId, p.canalAlerta)));
+                        p.factorEstacional.doubleValue(), p.umbralAlerta, p.destinoAlerta, p.contactoId, p.canalAlerta == null ? null : Canal.valueOf(p.canalAlerta))));
         return politicas;
     }
     @Override public void guardar(PoliticaReposicion p) {
@@ -27,7 +28,7 @@ public class RepositorioPoliticasJpa implements RepositorioPoliticas {
         fila.tipo = p.tipo().name(); fila.puntoPedido = p.puntoPedido(); fila.stockObjetivo = p.stockObjetivo();
         fila.demandaDiaria = BigDecimal.valueOf(p.demandaDiaria()); fila.diasCobertura = p.diasCobertura();
         fila.factorEstacional = BigDecimal.valueOf(p.factorEstacional()); fila.umbralAlerta = p.umbralAlerta();
-        fila.destinoAlerta = p.destinoAlerta(); fila.contactoId = p.contactoId(); fila.canalAlerta = p.canalAlerta();
+        fila.destinoAlerta = p.destinoAlerta(); fila.contactoId = p.contactoId(); fila.canalAlerta = p.canalAlerta() == null ? null : p.canalAlerta().name();
         if (nueva) em.persist(fila);
     }
     @Override public boolean alertaActiva(int id) {

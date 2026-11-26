@@ -49,7 +49,7 @@ class ApiRestTest {
         new ResourceDatabasePopulator(new ClassPathResource("data.sql")).execute(dataSource);
         mensajes.setDisponible(true); erp.setDisponible(true); digital.setDisponible(true);
         mensajes.limpiar(); erp.limpiar(); digital.limpiar();
-        notificaciones.setCanal(GestionNotificaciones.Canal.EMAIL);
+        notificaciones.setCanal(ar.com.coto.stock.domain.model.Canal.EMAIL);
         tokenPruebas = jwtTokenService.generarToken("supervisor.demo", "SUPERVISOR", "Supervisor de Sucursal");
     }
     private ResultActions enviar(String ruta, String json) throws Exception {
@@ -249,6 +249,12 @@ class ApiRestTest {
                 {"tipo":"DESCUENTO","porcentaje":10,"orden":10,"activa":true}
                 """).andExpect(status().isConflict()).andExpect(jsonPath("$.codigo").value("CONFLICTO_DATOS"))
                 .andExpect(content().string(not(containsString("insert into")))).andExpect(jsonPath("$.trace").doesNotExist());
+    }
+    @Test void errorInternoNoSeInformaComoReglaDeNegocio() throws Exception {
+        jdbc.update("DELETE FROM bloqueo_operacion");
+        enviar("/api/digital/reservas", operacion(1, 1)).andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.codigo").value("ERROR_INTERNO"))
+                .andExpect(content().string(not(containsString("bloqueo"))));
     }
     @Test void reglaDePromocionDesconocidaOIncompatibleSeRechaza() throws Exception {
         enviar("/api/productos/2/promociones", """
