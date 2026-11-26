@@ -1,5 +1,6 @@
 package ar.com.coto.stock.domain;
 
+import java.math.BigDecimal;
 import ar.com.coto.stock.domain.model.*;
 import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
@@ -11,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CompositeTest {
-    private Producto producto(int id) { return new Producto(id, "Producto " + id, "Prueba", 100); }
+    private Producto producto(int id) { return new Producto(id, "Producto " + id, "Prueba", new BigDecimal("100")); }
     private StockSimple simple(int id, int cantidad) { return new StockSimple(producto(id), cantidad, 0, 0); }
 
     @Test void disponibleSeCalculaSinCampoPropio() {
@@ -98,12 +99,12 @@ class CompositeTest {
     @Test void comboVacioONodoVacioNoSonVendibles() {
         ComboStock vacio = new ComboStock(producto(6));
         assertEquals(0, vacio.getDisponible());
-        assertThrows(IllegalStateException.class, () -> vacio.reservar(1));
+        assertThrows(EstadoInvalidoException.class, () -> vacio.reservar(1));
         ComboStock padre = new ComboStock(producto(7));
         padre.agregar(simple(1, 10), 1);
         padre.agregar(vacio, 1);
         assertEquals(0, padre.getDisponible());
-        assertThrows(IllegalStateException.class, () -> padre.reservar(1));
+        assertThrows(EstadoInvalidoException.class, () -> padre.reservar(1));
     }
 
     @Test void rechazaDuplicadosYRepresentacionesDistintasDelMismoStock() {
@@ -188,5 +189,27 @@ class CompositeTest {
         assertEquals(40, a.getStockReservado());
         assertEquals(20, b.getStockReservado());
         assertEquals(0, combo.getDisponible());
+    }
+
+    @Test void comboSoloCancelaYDespachaLasReservasVirtualesQueHizo() {
+        StockSimple arroz = new StockSimple(producto(1), 100, 0, 10); // 10 reservadas en el artículo suelto.
+        ComboStock combo = new ComboStock(producto(6));
+        combo.agregar(arroz, 1);
+
+        combo.reservar(3);
+        assertEquals(3, combo.getStockReservadoVirtual());
+        assertEquals(13, arroz.getStockReservado());
+
+        // Las 10 reservas del artículo suelto no le pertenecen al combo.
+        assertThrows(StockInsuficienteException.class, () -> combo.liberarReserva(4));
+        assertThrows(StockInsuficienteException.class, () -> combo.despacharReserva(4));
+        assertEquals(13, arroz.getStockReservado());
+        assertEquals(3, combo.getStockReservadoVirtual());
+
+        combo.liberarReserva(1);
+        combo.despacharReserva(2);
+        assertEquals(0, combo.getStockReservadoVirtual());
+        assertEquals(10, arroz.getStockReservado());
+        assertEquals(98, arroz.getStockFisico());
     }
 }

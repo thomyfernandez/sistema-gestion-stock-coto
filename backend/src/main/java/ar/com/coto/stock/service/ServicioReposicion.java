@@ -26,7 +26,7 @@ public final class ServicioReposicion {
     }
     public void setEstrategia(EstrategiaReposicion e) { estrategia.set(Objects.requireNonNull(e)); }
     public PedidoReposicion generarPedido(Stock s) {
-        return planificar(s, estrategia.get(), 0).orElseThrow(() -> new IllegalStateException("No se necesita reposición"));
+        return planificar(s, estrategia.get(), 0).orElseThrow(() -> new EstadoInvalidoException("No se necesita reposición"));
     }
     /** Estrategia concreta de la política del artículo. La estacional recibe las temporadas del artículo y
      * de su categoría, y el reloj del servicio para saber cuál rige. */

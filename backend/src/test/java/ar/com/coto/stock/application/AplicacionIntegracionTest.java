@@ -48,7 +48,7 @@ class AplicacionIntegracionTest {
         new ResourceDatabasePopulator(new ClassPathResource("data.sql")).execute(dataSource);
         mensajes.setDisponible(true); erp.setDisponible(true); digital.setDisponible(true);
         mensajes.limpiar(); erp.limpiar(); digital.limpiar();
-        notificaciones.setCanal(ServicioNotificaciones.Canal.EMAIL);
+        notificaciones.setCanal(Canal.EMAIL);
     }
     private MovimientoStock movimiento(int id, TipoMovimiento tipo, int cantidad) {
         return new MovimientoStock(id, tipo, cantidad, Instant.parse("2026-10-15T17:00:00Z"), "Prueba de integración", "demo");
@@ -165,12 +165,12 @@ class AplicacionIntegracionTest {
 
     @Test void fallaDeProveedorNoRevierteStockYMensajeConservaCanalParaReintento() {
         gestor.configurarPolitica(new PoliticaReposicion(1, PoliticaReposicion.Tipo.PUNTO_PEDIDO, 20, 100, 0, 1, 80, "5491100000000"));
-        notificaciones.setCanal(ServicioNotificaciones.Canal.SMS);
+        notificaciones.setCanal(Canal.SMS);
         mensajes.setDisponible(false);
         assertDoesNotThrow(() -> gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 1)));
         assertEquals(79, gestor.consultarStock(1).getDisponible());
         assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM evento_integracion WHERE estado = 'PENDIENTE' AND tipo = 'ALERTA'", Integer.class));
-        notificaciones.setCanal(ServicioNotificaciones.Canal.EMAIL);
+        notificaciones.setCanal(Canal.EMAIL);
         mensajes.setDisponible(true);
         integraciones.procesarPendientes();
         assertEquals("SMS", mensajes.getMensajes().getFirst().canal());
@@ -209,13 +209,13 @@ class AplicacionIntegracionTest {
         gestor.recibirPedido(1, "recepcion.demo");
         assertEquals(36, gestor.consultarStock(3).getDisponible());
         assertEquals(EstadoPedido.RECIBIDO, pedidosDe(3).getFirst().pedido().getEstado());
-        assertThrows(IllegalStateException.class, () -> gestor.recibirPedido(1, "recepcion.demo"));
+        assertThrows(EstadoInvalidoException.class, () -> gestor.recibirPedido(1, "recepcion.demo"));
         assertEquals(36, gestor.consultarStock(3).getDisponible());
         assertEquals(15, contar("movimiento_stock"));
     }
 
     @Test void noSeRecibeUnPedidoTodaviaNoEnviado() {
-        assertThrows(IllegalStateException.class, () -> gestor.recibirPedido(1, "demo"));
+        assertThrows(EstadoInvalidoException.class, () -> gestor.recibirPedido(1, "demo"));
         assertEquals(6, gestor.consultarStock(3).getDisponible());
     }
 
@@ -228,7 +228,7 @@ class AplicacionIntegracionTest {
         assertEquals(36, gestor.consultarStock(3).getDisponible());
         assertEquals(EstadoPedido.RECIBIDO, pedidosDe(3).getFirst().pedido().getEstado());
         assertEquals(15, contar("movimiento_stock"));
-        assertThrows(IllegalStateException.class, () -> gestor.recibirPedido(1, "recepcion.demo"));
+        assertThrows(EstadoInvalidoException.class, () -> gestor.recibirPedido(1, "recepcion.demo"));
         assertEquals(15, contar("movimiento_stock"));
     }
 
@@ -240,7 +240,7 @@ class AplicacionIntegracionTest {
     }
 
     @Test void altaSimpleComienzaSinExistenciasYSoloElGestorLasIncrementa() {
-        Stock nuevo = gestor.crearProducto(new AltaProducto("Yerba COTO", "Paquete de 1 kg", 3500));
+        Stock nuevo = gestor.crearProducto(new AltaProducto("Yerba COTO", "Paquete de 1 kg", new BigDecimal("3500")));
         assertTrue(nuevo.getProducto().getId() >= 1000);
         assertEquals(0, nuevo.getDisponible());
         gestor.registrarMovimiento(movimiento(nuevo.getProducto().getId(), TipoMovimiento.RECEPCION, 20));
@@ -252,7 +252,7 @@ class AplicacionIntegracionTest {
     }
 
     @Test void comboAnidadoCompartidoSePersisteYReservaSinDuplicarIdentidades() {
-        ComboStock nuevo = gestor.crearCombo(new AltaProducto("Canasta COTO", "Combo más arroz", 8000),
+        ComboStock nuevo = gestor.crearCombo(new AltaProducto("Canasta COTO", "Combo más arroz", new BigDecimal("8000")),
                 List.of(new ComponenteCombo(6, 1), new ComponenteCombo(1, 1)));
         assertEquals(26, nuevo.getDisponible());
         gestor.registrarMovimiento(movimiento(nuevo.getProducto().getId(), TipoMovimiento.RESERVA_DIGITAL, 2));
@@ -262,7 +262,7 @@ class AplicacionIntegracionTest {
     }
 
     @Test void altaDeComboInvalidoRevierteInclusoElProductoYNoPublica() {
-        assertThrows(EntidadNoEncontradaException.class, () -> gestor.crearCombo(new AltaProducto("Inválido", "No existe componente", 100),
+        assertThrows(EntidadNoEncontradaException.class, () -> gestor.crearCombo(new AltaProducto("Inválido", "No existe componente", new BigDecimal("100")),
                 List.of(new ComponenteCombo(999, 1))));
         assertEquals(6, contar("producto"));
         assertEquals(6, contar("stock"));
@@ -311,19 +311,19 @@ class AplicacionIntegracionTest {
         assertEquals(List.of(1L, 2L, 3L), debito.promocionesAplicadas());
         assertEquals(new BigDecimal("3402.00"), precios.valorizar(1, 3, "EFECTIVO").precioFinal());
         assertEquals(new BigDecimal("1701.00"), precios.valorizar(1, 1, null).precioFinal());
-        assertEquals(1890, gestor.consultarStock(1).getProducto().getPrecio());
+        assertEquals(0, new BigDecimal("1890").compareTo(gestor.consultarStock(1).getProducto().getPrecio()));
     }
 
     @Test void promocionesSeCreanYDesactivanYNoSeDuplicaElDosPorUno() {
-        Promocion p = gestor.guardarPromocion(new Promocion(0, 2, Promocion.Tipo.DESCUENTO, 12.5, 1, true, null));
+        Promocion p = gestor.guardarPromocion(new Promocion(0, 2, Promocion.Tipo.DESCUENTO, new BigDecimal("12.5"), 1, true, null));
         assertEquals(new BigDecimal("2878.75"), precios.valorizar(2, 1, null).precioFinal());
         gestor.guardarPromocion(new Promocion(p.id(), 2, p.tipo(), p.porcentaje(), 1, false, null));
         assertEquals(new BigDecimal("3290.00"), precios.valorizar(2, 1, null).precioFinal());
-        assertThrows(IllegalArgumentException.class, () -> gestor.guardarPromocion(new Promocion(0, 1, Promocion.Tipo.DOS_POR_UNO, 0, 40, true, null)));
+        assertThrows(IllegalArgumentException.class, () -> gestor.guardarPromocion(new Promocion(0, 1, Promocion.Tipo.DOS_POR_UNO, new BigDecimal("0"), 40, true, null)));
     }
 
     @Test void unDescuentoFraccionarioSeRedondeaAlFinal() {
-        gestor.guardarPromocion(new Promocion(0, 2, Promocion.Tipo.DESCUENTO, 33.3333, 1, true, null));
+        gestor.guardarPromocion(new Promocion(0, 2, Promocion.Tipo.DESCUENTO, new BigDecimal("33.3333"), 1, true, null));
         assertEquals(new BigDecimal("2193.33"), precios.valorizar(2, 1, null).precioFinal());
     }
 

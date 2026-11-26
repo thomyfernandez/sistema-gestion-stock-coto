@@ -176,6 +176,7 @@ class PostgresRealTest {
                 ScriptUtils.executeSqlScript(conexion, new EncodedResource(new ClassPathResource(archivo.substring(1)), StandardCharsets.UTF_8));
             }
             ScriptUtils.executeSqlScript(conexion, new EncodedResource(new ClassPathResource("db/upgrade-destinatarios.sql"), StandardCharsets.UTF_8));
+            ScriptUtils.executeSqlScript(conexion, new EncodedResource(new ClassPathResource("db/upgrade-reservas-combo.sql"), StandardCharsets.UTF_8));
             ScriptUtils.executeSqlScript(conexion, new EncodedResource(new ClassPathResource("db/upgrade-temporadas.sql"), StandardCharsets.UTF_8));
             try (var sentencia = conexion.createStatement()) {
                 for (String[] caso : new String[][]{

@@ -6,6 +6,7 @@ import ar.com.coto.stock.repository.entity.MovimientoEntity;
 import jakarta.persistence.*;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Repository
@@ -21,6 +22,9 @@ public class RepositorioMovimientosJpa implements RepositorioMovimientos {
     @Override public List<MovimientoRegistrado> listar() {
         return em.createQuery("select m from MovimientoEntity m order by m.id", MovimientoEntity.class).getResultList().stream()
                 .map(RepositorioMovimientosJpa::modelo).toList();
+    }
+    @Override public Optional<MovimientoRegistrado> obtener(long id) {
+        return Optional.ofNullable(em.find(MovimientoEntity.class, id)).map(RepositorioMovimientosJpa::modelo);
     }
     @Override public Pagina<MovimientoRegistrado> buscar(Integer stockId, Set<TipoMovimiento> tipos, int pagina, int limite) {
         boolean porTipo = tipos != null && !tipos.isEmpty();

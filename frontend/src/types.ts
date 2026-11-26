@@ -17,7 +17,6 @@ export interface Politica {
 }
 export interface Promocion { id: number; productoId: number; tipo: 'DESCUENTO' | 'DOS_POR_UNO' | 'MEDIO_PAGO'; porcentaje: number; orden: number; activa: boolean; medioPago: string | null }
 export interface Precio { productoId: number; cantidad: number; precioLista: number; precioFinal: number; ahorro: number; promocionesAplicadas: number[] }
-export interface ItemCatalogo { id: number; nombre: string; descripcion: string; tipo: 'SIMPLE' | 'COMBO'; disponible: number; precio: Precio }
 export type Canal = 'EMAIL' | 'SMS' | 'WHATSAPP';
 export type Sistema = 'ERP' | 'MENSAJERIA' | 'COTO_DIGITAL';
 export interface Evento { id: number; tipo: 'STOCK_DIGITAL' | 'ALERTA' | 'PEDIDO_ERP'; stockId: number; pedidoId: number | null; estado: 'PENDIENTE' | 'ENVIADO'; intentos: number; ultimoError: string | null; fecha: string }

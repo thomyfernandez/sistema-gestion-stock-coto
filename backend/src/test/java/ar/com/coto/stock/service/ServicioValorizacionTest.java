@@ -17,23 +17,25 @@ class ServicioValorizacionTest {
 
     @Test
     void ignoraPromocionMedioPagoCuandoElParametroEsNulo() {
-        var producto = new Producto(1, "Arroz COTO", "1 kg", 1000);
+        var producto = new Producto(1, "Arroz COTO", "1 kg", new BigDecimal("1000"));
         var stock = new StockSimple(producto, 10, 0, 0);
         RepositorioStock stocks = new RepositorioStock() {
             @Override public void bloquearInventario() { }
             @Override public Map<Integer, Stock> cargarInventario() { return Map.of(1, stock); }
+            @Override public Optional<Stock.Tipo> tipo(int id) { return id == 1 ? Optional.of(Stock.Tipo.SIMPLE) : Optional.empty(); }
+            @Override public Optional<Producto> producto(int id) { return id == 1 ? Optional.of(producto) : Optional.empty(); }
             @Override public void guardarEstado(Stock s) { }
             @Override public Stock crear(AltaProducto p, boolean combo) { throw new UnsupportedOperationException(); }
             @Override public void guardarCategoria(int productoId, Integer categoriaId) { }
             @Override public void guardarComposicion(ComboStock combo) { }
             @Override public Optional<ImagenProducto> consultarImagen(int productoId) { return Optional.empty(); }
         };
+        var promocionesDelProducto = List.of(
+                new Promocion(1L, 1, Promocion.Tipo.MEDIO_PAGO, new BigDecimal("15"), 1, true, "VISA"),
+                new Promocion(2L, 1, Promocion.Tipo.DESCUENTO, new BigDecimal("10"), 2, true, null));
         RepositorioPromociones promos = new RepositorioPromociones() {
-            @Override public List<Promocion> listar(int productoId) {
-                return List.of(
-                        new Promocion(1L, 1, Promocion.Tipo.MEDIO_PAGO, 15, 1, true, "VISA"),
-                        new Promocion(2L, 1, Promocion.Tipo.DESCUENTO, 10, 2, true, null));
-            }
+            @Override public List<Promocion> listar(int productoId) { return promocionesDelProducto; }
+            @Override public Map<Integer, List<Promocion>> listarPorProducto() { return Map.of(1, promocionesDelProducto); }
             @Override public Promocion guardar(Promocion promocion) { return promocion; }
             @Override public void eliminar(long promocionId) { }
         };

@@ -23,7 +23,7 @@ Para pruebas manuales que modifican datos, levantar instancias aisladas (backend
 - Capas: `controller` → `service` → `domain` ← `repository`/`adapter`. `config` es la raíz de composición.
 - El **dominio no importa Spring, JPA ni SQL**. Servicios y dominio colaboran con la infraestructura mediante puertos (`domain/port`).
 - Patrones GoF de la arquitectura: Singleton (`GestorInventario`), Strategy, Decorator, Observer, Composite, Adapter. No romper sus contratos ni sus pruebas.
-- `disponible = físico − exhibición − reservado`; no existe columna de disponible. Simples y combos comparten tabla con discriminador; los combos no tienen contadores propios.
+- `disponible = físico − exhibición − reservado`; no existe columna de disponible. Simples y combos comparten tabla con discriminador. Un combo suma su stock armado propio (contadores físico/exhibición/reservado propios y `stock_reservado_virtual`) y el disponible virtual de sus componentes.
 - Cambios de esquema: actualizar `schema.sql`, `data.sql` **y** agregar un script `db/upgrade-*.sql` idempotente para bases existentes, con su prueba.
 - Errores HTTP en `application/problem+json` (RFC 9457). DTOs validados en `dto/`. Cada controller lleva `@Tag` para agruparse en Swagger; un controller nuevo también.
 - Frontend: HTTP solo en `api.ts`; estado en `store.tsx`; nunca inventar existencias ni precios en el navegador. Cada operación indica qué grupos recarga (`run(accion, mensaje, grupos)`); los historiales se piden paginados en su vista, nunca en el sondeo.

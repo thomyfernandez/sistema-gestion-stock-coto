@@ -1,4 +1,5 @@
 package ar.com.coto.stock.repository;
+import ar.com.coto.stock.domain.model.Canal;
 import ar.com.coto.stock.domain.model.ConfiguracionAvisos;
 import ar.com.coto.stock.domain.port.RepositorioAvisos;
 import ar.com.coto.stock.repository.entity.ConfiguracionAvisosEntity;
@@ -12,6 +13,6 @@ public class RepositorioAvisosJpa implements RepositorioAvisos {
         if (fila == null) throw new IllegalStateException("Falta inicializar la configuración de avisos");
         return fila;
     }
-    public ConfiguracionAvisos obtener() { var f = fila(); return new ConfiguracionAvisos(f.canal, f.email, f.telefono); }
-    public void guardar(ConfiguracionAvisos c) { var f = fila(); f.canal = c.canal(); f.email = c.email(); f.telefono = c.telefono(); }
+    public ConfiguracionAvisos obtener() { var f = fila(); return new ConfiguracionAvisos(Canal.valueOf(f.canal), f.email, f.telefono); }
+    public void guardar(ConfiguracionAvisos c) { var f = fila(); f.canal = c.canal().name(); f.email = c.email(); f.telefono = c.telefono(); }
 }

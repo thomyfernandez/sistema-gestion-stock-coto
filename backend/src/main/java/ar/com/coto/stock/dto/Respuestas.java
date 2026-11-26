@@ -1,5 +1,6 @@
 package ar.com.coto.stock.dto;
 
+import ar.com.coto.stock.domain.model.Canal;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -14,7 +15,7 @@ public final class Respuestas {
     public record Producto(int id, String nombre, String descripcion, BigDecimal precio, String tipo,
                            int disponible, Integer stockFisico, Integer stockExhibicion, Integer stockReservado,
                            List<Componente> componentes, String imagenUrl, Integer categoriaId) { }
-    public record ConfiguracionAvisos(String canal, String email, String telefono) { }
+    public record ConfiguracionAvisos(Canal canal, String email, String telefono) { }
     /** categoriaId nulo: lista general de la sucursal. */
     public record Destinatarios(Integer categoriaId, List<String> emails) { }
     public record Pedido(long id, int stockId, Instant fecha, int cantidad, String estado) { }
@@ -22,12 +23,12 @@ public final class Respuestas {
     public record ResultadoMovimiento(long id, Map<Integer, Integer> disponibilidades, List<Pedido> pedidosGenerados) { }
     public record Auditoria(int stockId, Instant fecha, Integer disponibleAnterior, int disponibleActual, String detalle) { }
     public record Politica(int stockId, String tipo, int puntoPedido, int stockObjetivo, BigDecimal demandaDiaria,
-                           int diasCobertura, int umbralAlerta, String destinoAlerta, Long contactoId, String canalAlerta) { }
+                           int diasCobertura, int umbralAlerta, String destinoAlerta, Long contactoId, Canal canalAlerta) { }
     public record Promocion(long id, int productoId, String tipo, BigDecimal porcentaje, int orden, boolean activa, String medioPago) { }
     public record Precio(int productoId, int cantidad, BigDecimal precioLista, BigDecimal precioFinal,
                          BigDecimal ahorro, List<Long> promocionesAplicadas) { }
     public record ItemCatalogo(int id, String nombre, String descripcion, String tipo, int disponible, Precio precio) { }
-    public record Canal(String canal) { }
+    public record ConfiguracionCanal(Canal canal) { }
     public record Evento(long id, String tipo, int stockId, Long pedidoId, String estado, int intentos, String ultimoError, Instant fecha) { }
     public record Mensaje(String canal, String destino, String texto) { }
     public record OrdenERP(String referencia, int productoId, int cantidad, String fecha) { }

@@ -27,11 +27,11 @@ public class MovimientoController {
     private final Clock reloj;
     public MovimientoController(GestionInventario inventario, Clock reloj) { this.inventario = inventario; this.reloj = reloj; }
     @GetMapping("/movimientos") public ResponseEntity<List<Respuestas.Movimiento>> listar(@RequestParam(required = false) @Positive Integer stockId,
-            @Parameter(description = "Uno o más tipos, separados por coma o repetidos.") @RequestParam(required = false) List<Solicitudes.TipoMovimiento> tipo,
+            @Parameter(description = "Uno o más tipos, separados por coma o repetidos.") @RequestParam(required = false) List<TipoMovimiento> tipo,
             @Parameter(description = "Con límite, se pagina del más reciente al más antiguo e informa el total en X-Total-Count.") @RequestParam(required = false) @Min(1) @Max(500) Integer limite,
             @RequestParam(defaultValue = "0") @PositiveOrZero @Max(1_000_000) int pagina) {
         Set<TipoMovimiento> tipos = tipo == null || tipo.isEmpty() ? Set.of()
-                : EnumSet.copyOf(tipo.stream().map(t -> TipoMovimiento.valueOf(t.name())).toList());
+                : EnumSet.copyOf(tipo);
         if (limite == null) {
             return ResponseEntity.ok(inventario.listarMovimientos().stream().map(MapeadorDto::movimiento)
                     .filter(m -> stockId == null || stockId == m.stockId()).filter(m -> tipos.isEmpty() || tipos.contains(TipoMovimiento.valueOf(m.tipo()))).toList());

@@ -1,5 +1,6 @@
 package ar.com.coto.stock.controller;
 
+import ar.com.coto.stock.domain.model.Stock;
 import ar.com.coto.stock.dto.*;
 import ar.com.coto.stock.service.*;
 import jakarta.validation.Valid;
@@ -18,8 +19,11 @@ public class ProductoController {
     private final ConsultaPrecios precios;
     public ProductoController(GestionInventario inventario, ConsultaPrecios precios) { this.inventario = inventario; this.precios = precios; }
 
-    @GetMapping public List<Respuestas.Producto> listar(@RequestParam(required = false) Solicitudes.TipoProducto tipo, @RequestParam(required = false) @Positive Integer categoriaId) {
-        return inventario.listarStock().stream().map(MapeadorDto::producto).filter(p -> tipo == null || tipo.name().equals(p.tipo())).filter(p -> categoriaId == null || categoriaId.equals(p.categoriaId())).toList();
+    @GetMapping public List<Respuestas.Producto> listar(@RequestParam(required = false) Stock.Tipo tipo, @RequestParam(required = false) @Positive Integer categoriaId) {
+        return inventario.listarStock().stream()
+                .filter(s -> tipo == null || s.getTipo() == tipo)
+                .filter(s -> categoriaId == null || categoriaId.equals(s.getProducto().getCategoriaId()))
+                .map(MapeadorDto::producto).toList();
     }
     @GetMapping("/{id}") public Respuestas.Producto obtener(@PathVariable @Positive int id) {
         return MapeadorDto.producto(inventario.consultarStock(id));

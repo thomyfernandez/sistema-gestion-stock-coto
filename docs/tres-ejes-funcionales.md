@@ -82,6 +82,9 @@ Un `ComboStock` mantiene sus propios contadores físicos (`stockFisico`, `stockE
 - **`disponibleTotal`:** La disponibilidad visible y comercializable del combo es la suma directa de ambas dimensiones:
   $$\text{disponibleTotal} = \text{disponiblePropio} + \text{disponibleVirtual}$$
 
+#### Cancelación y despacho de reservas
+El combo guarda en `stockReservadoVirtual` cuántas unidades reservó sobre sus componentes. Una cancelación o un despacho consume primero la reserva propia y después sólo esa reserva virtual: si se pide más, responde 409 y no toca las reservas que se hicieron sobre el artículo suelto o por otro combo. Las bases existentes se actualizan con `db/upgrade-reservas-combo.sql` y arrancan en 0.
+
 #### Movimientos de Armado y Desarmado
 - **`ARMADO_COMBO`:** Se ejecuta una transacción atómica que descuenta $N \times \text{cantidadEnCombo}$ de cada componente (disminuyendo el físico de los artículos simples) e incrementa en $N$ el `stockFisico` propio del combo.
 - **`DESARMADO_COMBO`:** Descuenta $N$ unidades del `stockFisico` propio del combo y restituye proporcionalmente las unidades físicas a cada componente.

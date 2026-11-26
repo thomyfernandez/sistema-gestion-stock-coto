@@ -10,12 +10,7 @@ public final class StockSimple extends Stock {
 
     public StockSimple(Producto producto, int stockFisico, int stockExhibicion, int stockReservado) {
         super(producto);
-        Reglas.noNegativo(stockFisico, "stockFisico");
-        Reglas.noNegativo(stockExhibicion, "stockExhibicion");
-        Reglas.noNegativo(stockReservado, "stockReservado");
-        if ((long) stockExhibicion + stockReservado > stockFisico) {
-            throw new IllegalArgumentException("Exhibición + reservado no puede superar el físico");
-        }
+        validarContadores(stockFisico, stockExhibicion, stockReservado);
         this.stockFisico = stockFisico;
         this.stockExhibicion = stockExhibicion;
         this.stockReservado = stockReservado;
@@ -55,39 +50,33 @@ public final class StockSimple extends Stock {
         }
     }
 
-    @Override public void aplicarMovimiento(MovimientoStock m) {
-        Objects.requireNonNull(m);
-        if (m.getStockId() != producto.getId()) {
-            throw new IllegalArgumentException("El movimiento corresponde a otro stock");
-        }
-        synchronized (MONITOR) {
-            int cantidad = m.getCantidad();
-            switch (m.getTipo()) {
-                case RECEPCION, DEVOLUCION -> stockFisico = Math.addExact(stockFisico, cantidad);
-                case TRASLADO_A_GONDOLA -> {
-                    validarDisponible(cantidad);
-                    stockExhibicion += cantidad;
-                }
-                case RETORNO_A_DEPOSITO -> {
-                    validarExhibicion(cantidad);
-                    stockExhibicion -= cantidad;
-                }
-                case MERMA_DEPOSITO -> {
-                    validarDisponible(cantidad);
-                    stockFisico -= cantidad;
-                }
-                case MERMA_GONDOLA -> {
-                    validarExhibicion(cantidad);
-                    stockExhibicion -= cantidad;
-                    stockFisico -= cantidad;
-                }
-                case RESERVA_DIGITAL -> { reservar(cantidad); return; }
-                case CANCELACION_RESERVA -> { liberarReserva(cantidad); return; }
-                case DESPACHO_DIGITAL -> { despacharReserva(cantidad); return; }
-                case ARMADO_COMBO, DESARMADO_COMBO -> throw new IllegalArgumentException("Armado y desarmado corresponden a combos");
+    @Override protected void aplicar(MovimientoStock m) {
+        int cantidad = m.getCantidad();
+        switch (m.getTipo()) {
+            case RECEPCION, DEVOLUCION -> stockFisico = Math.addExact(stockFisico, cantidad);
+            case TRASLADO_A_GONDOLA -> {
+                validarDisponible(cantidad);
+                stockExhibicion += cantidad;
             }
-            notificar();
+            case RETORNO_A_DEPOSITO -> {
+                validarExhibicion(cantidad);
+                stockExhibicion -= cantidad;
+            }
+            case MERMA_DEPOSITO -> {
+                validarDisponible(cantidad);
+                stockFisico -= cantidad;
+            }
+            case MERMA_GONDOLA -> {
+                validarExhibicion(cantidad);
+                stockExhibicion -= cantidad;
+                stockFisico -= cantidad;
+            }
+            case RESERVA_DIGITAL -> { reservar(cantidad); return; }
+            case CANCELACION_RESERVA -> { liberarReserva(cantidad); return; }
+            case DESPACHO_DIGITAL -> { despacharReserva(cantidad); return; }
+            case ARMADO_COMBO, DESARMADO_COMBO -> throw new IllegalArgumentException("Armado y desarmado corresponden a combos");
         }
+        notificar();
     }
 
     void validarDisponible(int cant) {

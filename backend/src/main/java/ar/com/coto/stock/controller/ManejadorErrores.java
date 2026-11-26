@@ -1,6 +1,7 @@
 package ar.com.coto.stock.controller;
 
 import ar.com.coto.stock.domain.model.EntidadNoEncontradaException;
+import ar.com.coto.stock.domain.model.EstadoInvalidoException;
 import ar.com.coto.stock.domain.model.StockInsuficienteException;
 import ar.com.coto.stock.domain.reposicion.TemporadaSuperpuestaException;
 import org.springframework.beans.TypeMismatchException;
@@ -8,6 +9,8 @@ import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.*;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.*;
@@ -23,6 +26,14 @@ public class ManejadorErrores extends ResponseEntityExceptionHandler {
     private final Clock reloj;
     public ManejadorErrores(Clock reloj) { this.reloj = reloj; }
 
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<Object> noAutenticado(AuthenticationException ex, WebRequest request) {
+        return responder(ex, HttpStatus.UNAUTHORIZED, "No autenticado", "NO_AUTENTICADO", "Se requiere token Bearer válido para acceder.", request);
+    }
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Object> accesoDenegado(AccessDeniedException ex, WebRequest request) {
+        return responder(ex, HttpStatus.FORBIDDEN, "Acceso denegado", "ACCESO_DENEGADO", "El rol del usuario no tiene permisos para esta acción.", request);
+    }
     @ExceptionHandler(EntidadNoEncontradaException.class)
     public ResponseEntity<Object> noEncontrado(EntidadNoEncontradaException ex, WebRequest request) {
         return responder(ex, HttpStatus.NOT_FOUND, "RECURSO_NO_ENCONTRADO", ex.getMessage(), request);
@@ -39,8 +50,8 @@ public class ManejadorErrores extends ResponseEntityExceptionHandler {
     public ResponseEntity<Object> argumento(IllegalArgumentException ex, WebRequest request) {
         return responder(ex, HttpStatus.BAD_REQUEST, "REGLA_INVALIDA", ex.getMessage(), request);
     }
-    @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<Object> estado(IllegalStateException ex, WebRequest request) {
+    @ExceptionHandler(EstadoInvalidoException.class)
+    public ResponseEntity<Object> estado(EstadoInvalidoException ex, WebRequest request) {
         return responder(ex, HttpStatus.CONFLICT, "ESTADO_INCOMPATIBLE", ex.getMessage(), request);
     }
     @ExceptionHandler(ArithmeticException.class)
@@ -106,6 +117,11 @@ public class ManejadorErrores extends ResponseEntityExceptionHandler {
     }
     private ResponseEntity<Object> responder(Exception ex, HttpStatus status, String codigo, String detalle, WebRequest request) {
         return handleExceptionInternal(ex, problema(status, codigo, detalle), new HttpHeaders(), status, request);
+    }
+    private ResponseEntity<Object> responder(Exception ex, HttpStatus status, String titulo, String codigo, String detalle, WebRequest request) {
+        ProblemDetail problema = problema(status, codigo, detalle);
+        problema.setTitle(titulo);
+        return handleExceptionInternal(ex, problema, new HttpHeaders(), status, request);
     }
     private ProblemDetail problema(HttpStatusCode status, String codigo, String detalle) {
         ProblemDetail p = ProblemDetail.forStatusAndDetail(status, detalle);

@@ -25,9 +25,14 @@ final class CoordinadorEventosStock {
         registrarObservadores();
     }
 
-    static void encolarStock(GestorInventario.Dependencias d, String clave, int id, int disponible) {
-        d.eventos().encolar(new EventoIntegracion(0, clave, EventoIntegracion.Tipo.STOCK_DIGITAL, id,
-                null, disponible, null, null, null, d.reloj().instant()));
+    /** Publica el disponible inicial de un producto recién creado. */
+    static void encolarAlta(GestorInventario.Dependencias d, Stock stock) {
+        int id = stock.getProducto().getId();
+        encolarStock(d, "alta:" + id, id, stock.getDisponible());
+    }
+
+    private static void encolarStock(GestorInventario.Dependencias d, String clave, int id, int disponible) {
+        d.eventos().encolar(EventoIntegracion.stockDigital(clave, id, disponible, d.reloj().instant()));
     }
 
     /** Disponibles finales de los stocks afectados, en el orden en que se observaron. */
@@ -50,17 +55,20 @@ final class CoordinadorEventosStock {
         guardarAlertas(clave);
     }
 
-    void guardarAlertas(String clave) {
+    /** Una evaluación manual no tiene movimiento: cada una usa su propia clave. */
+    void guardarAlertasDeEvaluacion() { guardarAlertas("eval:" + UUID.randomUUID()); }
+
+    private void guardarAlertas(String clave) {
         if (!avisos.isEmpty()) {
             var general = d.notificaciones().consultarConfiguracion();
             avisos.forEach((id, aviso) -> {
-                var destinos = d.contactos().resolver(politicas.get(id), grafo.get(id).getProducto(), general);
+                var destinos = d.destinos().resolver(politicas.get(id), grafo.get(id).getProducto(), general);
                 // Un evento por dirección: cada email se entrega y reintenta por separado.
                 for (int i = 0; i < destinos.size(); i++) {
                     var destino = destinos.get(i);
-                    d.eventos().encolar(new EventoIntegracion(0, clave + ":alerta:" + id + (destinos.size() == 1 ? "" : ":" + i),
-                            EventoIntegracion.Tipo.ALERTA, id, null, null, destino.canal(),
-                            destino.destino(), aviso.getTexto(), d.reloj().instant()));
+                    String claveAlerta = clave + ":alerta:" + id + (destinos.size() == 1 ? "" : ":" + i);
+                    d.eventos().encolar(EventoIntegracion.alerta(claveAlerta, id, destino.canal(), destino.destino(),
+                            aviso.getTexto(), d.reloj().instant()));
                 }
             });
         }
@@ -84,7 +92,7 @@ final class CoordinadorEventosStock {
             stock.agregarObservador(sincronizador);
             PoliticaReposicion politica = politicas.get(id);
             if (politica != null) {
-                AlertaStockBajo alerta = new AlertaStockBajo(politica.umbralAlerta(), politica.destinoAlerta(),
+                AlertaStockBajo alerta = new AlertaStockBajo(politica.umbralAlerta(),
                         a -> avisos.put(id, a.getUltimoAviso()));
                 alerta.restaurarEstado(id, d.politicas().alertaActiva(id));
                 alertas.put(id, alerta);
@@ -107,8 +115,7 @@ final class CoordinadorEventosStock {
                     .ifPresent(pedido -> {
                         PedidoRegistrado registrado = d.pedidos().guardar(pedido);
                         generados.add(registrado);
-                        d.eventos().encolar(new EventoIntegracion(0, "pedido:" + registrado.id(), EventoIntegracion.Tipo.PEDIDO_ERP,
-                                id, registrado.id(), null, null, null, null, d.reloj().instant()));
+                        d.eventos().encolar(EventoIntegracion.pedidoErp(registrado.id(), id, d.reloj().instant()));
                     });
         }
         return List.copyOf(generados);

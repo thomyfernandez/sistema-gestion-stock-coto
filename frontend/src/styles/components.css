@@ -188,6 +188,10 @@ input[type=checkbox]:checked:disabled { background: var(--neutral-300); }
   margin-top: var(--space-2);
 }
 
+.notice-resolution-icon {
+  color: var(--color-action);
+}
+
 .notice-resolution-card.warning {
   background: var(--warning-100);
   border-color: var(--warning-500);
@@ -212,7 +216,8 @@ input[type=checkbox]:checked:disabled { background: var(--neutral-300); }
 
 /* Ícono y desglose de la tarjeta de resolución (avisos y factor de temporada).
    El ícono va a 24 px; el color sale de acá, no de estilos en línea. */
-.notice-resolution-card > svg { flex: none; color: var(--neutral-700); }
+.notice-resolution-card > svg { flex: none; }
+.notice-resolution-card > svg:not(.notice-resolution-icon) { color: var(--neutral-700); }
 .notice-resolution-card.warning > svg { color: var(--warning-800); }
 .notice-resolution-breakdown {
   display: flex;

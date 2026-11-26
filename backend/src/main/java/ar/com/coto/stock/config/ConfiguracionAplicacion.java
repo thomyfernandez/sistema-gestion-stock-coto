@@ -1,6 +1,7 @@
 package ar.com.coto.stock.config;
 
 import ar.com.coto.stock.adapter.*;
+import ar.com.coto.stock.domain.model.Canal;
 import ar.com.coto.stock.domain.notificacion.*;
 import ar.com.coto.stock.domain.port.*;
 import ar.com.coto.stock.domain.reposicion.ReposicionPuntoDePedido;
@@ -29,13 +30,16 @@ public class ConfiguracionAplicacion {
     }
     @Bean ServicioNotificaciones notificaciones(ApiProveedorExterno api, RepositorioAvisos avisos, UnidadDeTrabajo unidad) {
         return new ServicioNotificaciones(Map.of(
-                ServicioNotificaciones.Canal.EMAIL, new EmailNotificador(new AdaptadorProveedor(api, ServicioNotificaciones.Canal.EMAIL.name())),
-                ServicioNotificaciones.Canal.SMS, new SmsNotificador(new AdaptadorProveedorSMS(api)),
-                ServicioNotificaciones.Canal.WHATSAPP, new WhatsAppNotificador(new AdaptadorProveedor(api, ServicioNotificaciones.Canal.WHATSAPP.name()))), avisos, unidad);
+                Canal.EMAIL, new EmailNotificador(new AdaptadorProveedor(api, Canal.EMAIL)),
+                Canal.SMS, new SmsNotificador(new AdaptadorProveedorSMS(api)),
+                Canal.WHATSAPP, new WhatsAppNotificador(new AdaptadorProveedor(api, Canal.WHATSAPP))), avisos, unidad);
     }
     @Bean ServicioContactos contactos(RepositorioContactos contactos, RepositorioPoliticas politicas, RepositorioStock stocks, UnidadDeTrabajo unidad,
-                                      RepositorioCategorias categorias, RepositorioDestinatarios destinatarios) {
-        return new ServicioContactos(contactos, politicas, stocks, unidad, categorias, destinatarios);
+                                      RepositorioCategorias categorias) {
+        return new ServicioContactos(contactos, politicas, stocks, unidad, categorias);
+    }
+    @Bean ResolutorDestinosAviso destinosAviso(RepositorioContactos contactos, RepositorioCategorias categorias, RepositorioDestinatarios destinatarios) {
+        return new ResolutorDestinosAviso(contactos, categorias, destinatarios);
     }
     @Bean ServicioDestinatarios destinatarios(RepositorioDestinatarios destinatarios, RepositorioCategorias categorias, RepositorioStock stocks, UnidadDeTrabajo unidad) {
         return new ServicioDestinatarios(destinatarios, categorias, stocks, unidad);
@@ -61,10 +65,10 @@ public class ConfiguracionAplicacion {
     @Bean(destroyMethod = "cerrar") GestorInventario gestor(UnidadDeTrabajo unidad, RepositorioStock stocks,
             RepositorioMovimientos movimientos, RepositorioPedidos pedidos, RepositorioAuditoria auditoria,
             RepositorioPoliticas politicas, RepositorioPromociones promociones, RepositorioIntegraciones eventos,
-            ServicioReposicion reposicion, ServicioNotificaciones notificaciones, ServicioIntegraciones integraciones, ServicioContactos contactos, ServicioCategorias categorias, Clock reloj) {
+            ServicioReposicion reposicion, ServicioNotificaciones notificaciones, ServicioIntegraciones integraciones, ResolutorDestinosAviso destinos, ServicioCategorias categorias, Clock reloj) {
         GestorInventario gestor = GestorInventario.getInstancia();
         gestor.configurar(new GestorInventario.Dependencias(unidad, stocks, movimientos, pedidos, auditoria,
-                politicas, promociones, eventos, reposicion, notificaciones, integraciones, contactos, categorias, reloj));
+                politicas, promociones, eventos, reposicion, notificaciones, integraciones, destinos, categorias, reloj));
         return gestor;
     }
 }

@@ -25,7 +25,7 @@ class TemporadasTest {
         return Clock.fixed(LocalDate.of(anio, mes, dia).atTime(12, 0).atZone(SUCURSAL).toInstant(), SUCURSAL);
     }
     private static StockSimple panDulce(int disponible) {
-        return new StockSimple(new Producto(PAN_DULCE, "Pan dulce", "COTO 500 g", 5490, null, ALMACEN), disponible, 0, 0);
+        return new StockSimple(new Producto(PAN_DULCE, "Pan dulce", "COTO 500 g", new BigDecimal("5490"), null, ALMACEN), disponible, 0, 0);
     }
 
     @Test void temporadaDentroDelAnioIncluyeSusLimites() {

@@ -16,7 +16,7 @@ public record ListaDestinatarios(Integer categoriaId, List<String> emails) {
         for (String email : emails) {
             String valor = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
             if (valor.isEmpty()) continue;
-            if (valor.length() > 200 || !valor.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+"))
+            if (!Reglas.esEmail(valor))
                 throw new IllegalArgumentException("Indicá un email válido: " + email.trim());
             normalizados.add(valor);
         }

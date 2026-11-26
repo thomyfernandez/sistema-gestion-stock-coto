@@ -37,6 +37,6 @@ public final class PedidoReposicion {
     }
 
     private void exigirEstado(EstadoPedido esperado) {
-        if (estado != esperado) throw new IllegalStateException("El pedido debe estar " + esperado);
+        if (estado != esperado) throw new EstadoInvalidoException("El pedido debe estar " + esperado);
     }
 }

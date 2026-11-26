@@ -2,9 +2,16 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "backend-aislado",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "COTO_JWT_SECRET=$(openssl rand -base64 48) java -jar backend/target/gestion-stock-0.3.0-SNAPSHOT.jar --server.port=18080 --coto.web.origenes=http://127.0.0.1:5174,http://localhost:5174"],
+      "port": 18080
+    },
+    {
       "name": "frontend-aislado",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["--prefix", "frontend", "vite", "frontend", "--host", "127.0.0.1", "--port", "5174", "--strictPort"],
+      "env": { "API_PROXY_TARGET": "http://127.0.0.1:18080" },
       "port": 5174
     }
   ]

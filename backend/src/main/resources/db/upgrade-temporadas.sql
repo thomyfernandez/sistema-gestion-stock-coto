@@ -1,5 +1,5 @@
 -- Actualización de esquema: temporadas de reposición estacional.
--- Aplicar después de upgrade-destinatarios.sql. Es idempotente: puede ejecutarse más de una vez.
+-- Aplicar después de upgrade-reservas-combo.sql. Es idempotente: puede ejecutarse más de una vez.
 --
 -- Antes, la política ESTACIONAL guardaba un único factor que quedaba activo hasta que alguien lo cambiara.
 -- Ahora el factor sale de temporadas con día y mes, para varios artículos o para una categoría. Para no cambiar

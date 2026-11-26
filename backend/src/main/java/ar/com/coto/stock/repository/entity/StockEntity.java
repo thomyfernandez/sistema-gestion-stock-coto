@@ -14,6 +14,7 @@ public class StockEntity {
     public Integer stockFisico;
     public Integer stockExhibicion;
     public Integer stockReservado;
+    @Column(nullable = false) public int stockReservadoVirtual;
     @Version @Column(nullable = false) public long version;
     public StockEntity() { }
 }

@@ -1,5 +1,6 @@
 package ar.com.coto.stock.domain.reposicion;
 
+import ar.com.coto.stock.domain.model.Canal;
 import ar.com.coto.stock.domain.model.Reglas;
 import java.time.Clock;
 import java.util.Objects;
@@ -8,7 +9,7 @@ import java.util.Objects;
  * El factor de la política estacional no se guarda acá: sale de las temporadas del artículo o de su categoría. */
 public record PoliticaReposicion(int stockId, Tipo tipo, int puntoPedido, int stockObjetivo,
                                  double demandaDiaria, int diasCobertura,
-                                 int umbralAlerta, String destinoAlerta, Long contactoId, String canalAlerta) {
+                                 int umbralAlerta, String destinoAlerta, Long contactoId, Canal canalAlerta) {
     public PoliticaReposicion(int stockId, Tipo tipo, int puntoPedido, int stockObjetivo,
                               double demandaDiaria, int diasCobertura,
                               int umbralAlerta, String destinoAlerta) {
@@ -25,8 +26,7 @@ public record PoliticaReposicion(int stockId, Tipo tipo, int puntoPedido, int st
         Reglas.positivo(umbralAlerta, "umbralAlerta");
         destinoAlerta = Reglas.texto(destinoAlerta, "destinoAlerta");
         if (contactoId == null && canalAlerta != null) throw new IllegalArgumentException("Seleccioná un contacto para el aviso particular");
-        if (contactoId != null && (contactoId <= 0 || canalAlerta == null
-                || !java.util.Set.of("EMAIL", "SMS", "WHATSAPP").contains(canalAlerta)))
+        if (contactoId != null && (contactoId <= 0 || canalAlerta == null))
             throw new IllegalArgumentException("Seleccioná un contacto y un canal válidos");
         switch (tipo) {
             case PUNTO_PEDIDO -> new ReposicionPuntoDePedido(puntoPedido, stockObjetivo);

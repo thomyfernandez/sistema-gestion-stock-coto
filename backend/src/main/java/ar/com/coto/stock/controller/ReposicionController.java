@@ -1,5 +1,6 @@
 package ar.com.coto.stock.controller;
 
+import ar.com.coto.stock.domain.model.EstadoPedido;
 import ar.com.coto.stock.dto.*;
 import ar.com.coto.stock.service.GestionInventario;
 import jakarta.validation.constraints.Positive;
@@ -16,9 +17,11 @@ public class ReposicionController {
     private final GestionInventario inventario;
     public ReposicionController(GestionInventario inventario) { this.inventario = inventario; }
     @GetMapping("/pedidos") public List<Respuestas.Pedido> pedidos(@RequestParam(required = false) @Positive Integer stockId,
-            @RequestParam(required = false) Solicitudes.EstadoPedido estado) {
-        return inventario.listarPedidos().stream().map(MapeadorDto::pedido)
-                .filter(p -> stockId == null || stockId == p.stockId()).filter(p -> estado == null || estado.name().equals(p.estado())).toList();
+            @RequestParam(required = false) EstadoPedido estado) {
+        return inventario.listarPedidos().stream()
+                .filter(p -> stockId == null || stockId == p.pedido().getStockId())
+                .filter(p -> estado == null || p.pedido().getEstado() == estado)
+                .map(MapeadorDto::pedido).toList();
     }
     /** Todas las políticas en una sola consulta, ordenadas por artículo. */
     @GetMapping("/politicas") public List<Respuestas.Politica> politicas() {

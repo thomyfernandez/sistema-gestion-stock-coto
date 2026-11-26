@@ -1,5 +1,5 @@
 import { cloneElement, useState, useEffect, useId, useRef, type ButtonHTMLAttributes, type ReactElement, type ReactNode, type FormEvent } from 'react';
-import { AlertCircle, ArrowRight, ArrowRightLeft, Box, Boxes, CheckCircle2, Layers3, LoaderCircle, Package, X, type LucideIcon } from 'lucide-react';
+import { AlertCircle, ArrowRight, ArrowRightLeft, Box, Boxes, Layers3, LoaderCircle, Package, X, type LucideIcon } from 'lucide-react';
 import { api, imagenSrc, ApiError } from '../api';
 import { money, number, sku, stockStatus } from '../format';
 import { useStore } from '../store';
@@ -73,17 +73,52 @@ function ProductCategory({ product }: { product: Producto }) {
   }
   return <form className="product-category-form" onSubmit={submit}><Field label="Categoría del artículo"><select value={categoryId ?? ''} disabled={busy || !puedeEditar} onChange={e => setCategoryId(e.target.value ? Number(e.target.value) : null)}><option value="">Sin categoría</option>{data?.categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></Field>{puedeEditar && <Button type="submit" loading={busy} disabled={categoryId === product.categoriaId}>Guardar categoría</Button>}<ErrorMessage error={error} /></form>;
 }
+function StockSimple({ product }: { product: Producto }) {
+  return <>
+    <div className="three-stats">
+      <div><span>Físico</span><strong>{number(product.stockFisico!)}</strong></div>
+      <div><span>En góndola</span><strong>{number(product.stockExhibicion!)}</strong></div>
+      <div><span>Reservado</span><strong>{number(product.stockReservado!)}</strong></div>
+    </div>
+    <p className="field-hint">El disponible descuenta las unidades en góndola y las reservas digitales del stock físico.</p>
+  </>;
+}
+function StockCombo({ product }: { product: Producto }) {
+  const armados = product.stockFisico !== null && product.stockFisico > 0;
+  return <>
+    {armados && (
+      <div className="three-stats">
+        <div><span>Armados propios</span><strong>{number(product.stockFisico!)}</strong></div>
+        <div><span>En góndola</span><strong>{number(product.stockExhibicion || 0)}</strong></div>
+        <div><span>Reservado</span><strong>{number(product.stockReservado || 0)}</strong></div>
+      </div>
+    )}
+    <h3>Composición del combo</h3>
+    <div className="component-list">
+      {product.componentes.map(c => <div key={c.stockId}><span><Box size={24} aria-hidden="true" />{c.nombre}</span><strong>× {c.cantidadEnCombo}</strong></div>)}
+    </div>
+    <p className="field-hint">
+      {armados
+        ? 'La disponibilidad combina los combos armados físicamente con el disponible virtual de sus componentes.'
+        : 'La disponibilidad depende de sus componentes. Podés armar unidades físicas para tener stock propio.'}
+    </p>
+  </>;
+}
 export function ProductDetail({ product, onClose, onMove, onArmar, onDesarmar }: { product: Producto; onClose: () => void; onMove?: () => void; onArmar?: () => void; onDesarmar?: () => void }) {
   const { data } = useStore();
   const status = stockStatus(product, data?.politicas[product.id]);
   return <Modal title="Detalle del artículo" description="Existencias confirmadas en el inventario." onClose={onClose}>
-    <div className="modal-body"><ProductName product={product} />{product.imagenUrl && <img className="product-detail-image" src={imagenSrc(product.imagenUrl)} alt={product.nombre} />}<p className="muted">{product.descripcion}</p><ProductCategory key={`${product.id}:${product.categoriaId}`} product={product} /><div className="split-line"><span>Precio de lista</span><strong>{money(product.precio)}</strong></div>
+    <div className="modal-body">
+      <ProductName product={product} />
+      {product.imagenUrl && <img className="product-detail-image" src={imagenSrc(product.imagenUrl)} alt={product.nombre} />}
+      <p className="muted">{product.descripcion}</p>
+      <ProductCategory key={`${product.id}:${product.categoriaId}`} product={product} />
+      <div className="split-line"><span>Precio de lista</span><strong>{money(product.precio)}</strong></div>
       <div className="stock-highlight"><span>Disponible para reservar</span><strong>{number(product.disponible)}</strong><Badge tone={status.tone}>{status.label}</Badge></div>
-      {product.tipo === 'SIMPLE' ? <><div className="three-stats"><div><span>Físico</span><strong>{number(product.stockFisico!)}</strong></div><div><span>En góndola</span><strong>{number(product.stockExhibicion!)}</strong></div><div><span>Reservado</span><strong>{number(product.stockReservado!)}</strong></div></div>
-        <p className="field-hint">El disponible descuenta las unidades en góndola y las reservas digitales del stock físico.</p></> : <>{product.stockFisico !== null && product.stockFisico > 0 ? (
-          <div className="three-stats"><div><span>Armados propios</span><strong>{number(product.stockFisico)}</strong></div><div><span>En góndola</span><strong>{number(product.stockExhibicion || 0)}</strong></div><div><span>Reservado</span><strong>{number(product.stockReservado || 0)}</strong></div></div>
-        ) : null}<h3>Composición del combo</h3><div className="component-list">{product.componentes.map(c => <div key={c.stockId}><span><Box size={24} aria-hidden="true" />{c.nombre}</span><strong>× {c.cantidadEnCombo}</strong></div>)}</div><p className="field-hint">{product.stockFisico !== null && product.stockFisico > 0 ? 'La disponibilidad combina los combos armados físicamente con el disponible virtual de sus componentes.' : 'La disponibilidad depende de sus componentes. Podés armar unidades físicas para tener stock propio.'}</p></>}
-    </div><footer className="modal-footer"><Button onClick={onClose}>Cerrar</Button>
+      {product.tipo === 'SIMPLE' ? <StockSimple product={product} /> : <StockCombo product={product} />}
+    </div>
+    <footer className="modal-footer">
+      <Button onClick={onClose}>Cerrar</Button>
       {onMove && <Button variant="primary" icon={ArrowRight} onClick={onMove}>Registrar movimiento</Button>}
       {onArmar && <Button variant="primary" icon={Boxes} onClick={onArmar}>Armar combo</Button>}
       {onDesarmar && <Button variant="secondary" icon={ArrowRightLeft} onClick={onDesarmar}>Desarmar</Button>}
@@ -104,4 +139,3 @@ export function OperadorSesion({ hint }: { hint?: string }) {
   const { usuario } = useStore();
   return <Field label="Operador" hint={hint}><input value={usuario ? `${usuario.nombreCompleto} (${usuario.username})` : ''} disabled /></Field>;
 }
-export function SuccessIcon() { return <CheckCircle2 size={24} aria-hidden="true" />; }

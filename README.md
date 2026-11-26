@@ -226,6 +226,7 @@ psql -v ON_ERROR_STOP=1 -1 -d coto_stock \
   -f backend/src/main/resources/db/upgrade-auth.sql \
   -f backend/src/main/resources/db/upgrade-combos-stock.sql \
   -f backend/src/main/resources/db/upgrade-destinatarios.sql \
+  -f backend/src/main/resources/db/upgrade-reservas-combo.sql \
   -f backend/src/main/resources/db/upgrade-temporadas.sql
 ```
 
@@ -239,7 +240,7 @@ mvn -f backend/pom.xml test
 
 La suite incluye las pruebas de dominio y pruebas de integración reales con Spring, Hibernate, H2 y PostgreSQL 17 (Testcontainers; requiere Docker y, sin él, esas pruebas se omiten). Verifica reservas concurrentes, rollback tardío, auditoría correlacionada, reposición sin duplicados, reintentos FIFO, episodios de alerta persistidos, recepción única, alta de combos y promociones acumulables. Los proveedores son simulados: no se envían correos, SMS, WhatsApp ni pedidos reales.
 
-Verificación actual: **225 pruebas de backend** (8 contra PostgreSQL real, que se omiten si no hay Docker), JAR empaquetado; en el frontend, 37 pruebas de Vitest y 4 recorridos de Playwright. Incluye regresiones por renovación de conexiones de H2 y pruebas de avisos compartidos, contactos internos, destinatarios por artículo/categoría, clasificación del catálogo e imágenes de productos. La validación de la API también comprobó **37 solicitudes de Postman contra el servidor HTTP real**. La prueba del servidor usó el puerto 18080; el puerto predeterminado para uso normal es 8080.
+Verificación actual: **228 pruebas de backend** (8 contra PostgreSQL real, que se omiten si no hay Docker), JAR empaquetado; en el frontend, 37 pruebas de Vitest y 4 recorridos de Playwright. Incluye regresiones por renovación de conexiones de H2 y pruebas de avisos compartidos, contactos internos, destinatarios por artículo/categoría, clasificación del catálogo e imágenes de productos. La validación de la API también comprobó **37 solicitudes de Postman contra el servidor HTTP real**. La prueba del servidor usó el puerto 18080; el puerto predeterminado para uso normal es 8080.
 
 Los scripts, la cadena de migraciones desde v0.1 y el mapeo JPA se verifican con H2 y también contra un servidor PostgreSQL 17 real (`PostgresRealTest`), incluidos los bloqueos con reservas concurrentes. [Cómo probar el perfil a mano con Docker](docs/rendimiento-y-pruebas.md#postgresql-real).
 

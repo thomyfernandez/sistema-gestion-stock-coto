@@ -1,5 +1,6 @@
 package ar.com.coto.stock.domain;
 
+import java.math.BigDecimal;
 import ar.com.coto.stock.domain.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -19,9 +20,9 @@ class ComboStockPropioTest {
 
     @BeforeEach
     void setup() {
-        prodArroz = new Producto(1, "Arroz 1kg", "Almacén", 1500.0);
-        prodAceite = new Producto(2, "Aceite 900ml", "Almacén", 2500.0);
-        prodCombo = new Producto(6, "Canasta Ahorro", "Combo", 5000.0);
+        prodArroz = new Producto(1, "Arroz 1kg", "Almacén", new BigDecimal("1500"));
+        prodAceite = new Producto(2, "Aceite 900ml", "Almacén", new BigDecimal("2500"));
+        prodCombo = new Producto(6, "Canasta Ahorro", "Combo", new BigDecimal("5000"));
 
         // 20 arroces, 10 aceites
         arroz = new StockSimple(prodArroz, 20, 0, 0);

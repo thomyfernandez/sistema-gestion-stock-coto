@@ -11,8 +11,8 @@ import java.util.stream.Collectors;
 
 public final class MapeadorDto {
     private MapeadorDto() { }
-    public static AltaProducto alta(Solicitudes.Producto s) { return new AltaProducto(s.nombre(), s.descripcion(), s.precio().doubleValue(), imagen(s.imagen()), s.categoriaId()); }
-    public static AltaProducto alta(Solicitudes.Combo s) { return new AltaProducto(s.nombre(), s.descripcion(), s.precio().doubleValue(), imagen(s.imagen()), s.categoriaId()); }
+    public static AltaProducto alta(Solicitudes.Producto s) { return new AltaProducto(s.nombre(), s.descripcion(), s.precio(), imagen(s.imagen()), s.categoriaId()); }
+    public static AltaProducto alta(Solicitudes.Combo s) { return new AltaProducto(s.nombre(), s.descripcion(), s.precio(), imagen(s.imagen()), s.categoriaId()); }
     private static ImagenProducto imagen(Solicitudes.Imagen imagen) {
         if (imagen == null) return null;
         byte[] contenido;
@@ -32,19 +32,19 @@ public final class MapeadorDto {
         Integer exhibicion = exponeStock ? s.getStockExhibicion() : null;
         Integer reservado = exponeStock ? s.getStockReservado() : null;
         return new Respuestas.Producto(s.getProducto().getId(), s.getProducto().getNombre(), s.getProducto().getDescripcion(),
-                BigDecimal.valueOf(s.getProducto().getPrecio()).setScale(2), tipo(s), s.getDisponible(),
+                s.getProducto().getPrecio().setScale(2), tipo(s), s.getDisponible(),
                 fisico, exhibicion, reservado, componentes,
                 s.getProducto().getImagenVersion() == null ? null : "/api/productos/" + s.getProducto().getId() + "/imagen?v=" + s.getProducto().getImagenVersion(), s.getProducto().getCategoriaId());
     }
     private static String tipo(Stock s) { return s.getTipo().name(); }
     public static MovimientoStock movimiento(Solicitudes.Movimiento s, String usuario, Clock reloj) {
-        return new MovimientoStock(s.stockId(), TipoMovimiento.valueOf(s.tipo().name()), s.cantidad(), reloj.instant(), s.motivo(), usuario);
+        return new MovimientoStock(s.stockId(), s.tipo(), s.cantidad(), reloj.instant(), s.motivo(), usuario);
     }
     public static MovimientoStock movimiento(Solicitudes.MovimientoSucursal s, String usuario, Clock reloj) {
         return new MovimientoStock(s.stockId(), TipoMovimiento.valueOf(s.tipo().name()), s.cantidad(), reloj.instant(), s.motivo(), usuario);
     }
-    public static MovimientoStock movimiento(Solicitudes.Operacion s, Solicitudes.TipoMovimiento tipo, String usuario, Clock reloj) {
-        return new MovimientoStock(s.stockId(), TipoMovimiento.valueOf(tipo.name()), s.cantidad(), reloj.instant(), s.motivo(), usuario);
+    public static MovimientoStock movimiento(Solicitudes.Operacion s, TipoMovimiento tipo, String usuario, Clock reloj) {
+        return new MovimientoStock(s.stockId(), tipo, s.cantidad(), reloj.instant(), s.motivo(), usuario);
     }
     public static Respuestas.Pedido pedido(PedidoRegistrado p) {
         return new Respuestas.Pedido(p.id(), p.pedido().getStockId(), p.pedido().getFecha().toInstant(), p.pedido().getCantidad(), p.pedido().getEstado().name());
@@ -60,18 +60,18 @@ public final class MapeadorDto {
         return new Respuestas.Auditoria(a.stockId(), a.fecha(), a.disponibleAnterior(), a.disponibleActual(), a.detalle());
     }
     public static PoliticaReposicion politica(int id, Solicitudes.Politica p) {
-        return new PoliticaReposicion(id, PoliticaReposicion.Tipo.valueOf(p.tipo().name()), p.puntoPedido(), p.stockObjetivo(),
-                p.demandaDiaria().doubleValue(), p.diasCobertura(), p.umbralAlerta(), p.destinoAlerta() == null ? "configuracion-global" : p.destinoAlerta(), p.contactoId(), p.canalAlerta() == null ? null : p.canalAlerta().name());
+        return new PoliticaReposicion(id, p.tipo(), p.puntoPedido(), p.stockObjetivo(),
+                p.demandaDiaria().doubleValue(), p.diasCobertura(), p.umbralAlerta(), p.destinoAlerta() == null ? "configuracion-global" : p.destinoAlerta(), p.contactoId(), p.canalAlerta());
     }
     public static Respuestas.Politica politica(PoliticaReposicion p) {
         return new Respuestas.Politica(p.stockId(), p.tipo().name(), p.puntoPedido(), p.stockObjetivo(), BigDecimal.valueOf(p.demandaDiaria()),
                 p.diasCobertura(), p.umbralAlerta(), p.destinoAlerta(), p.contactoId(), p.canalAlerta());
     }
     public static Promocion promocion(int productoId, long id, Solicitudes.Promocion p) {
-        return new Promocion(id, productoId, Promocion.Tipo.valueOf(p.tipo().name()), p.porcentaje().doubleValue(), p.orden(), p.activa(), p.medioPago());
+        return new Promocion(id, productoId, p.tipo(), p.porcentaje(), p.orden(), p.activa(), p.medioPago());
     }
     public static Respuestas.Promocion promocion(Promocion p) {
-        return new Respuestas.Promocion(p.id(), p.productoId(), p.tipo().name(), BigDecimal.valueOf(p.porcentaje()), p.orden(), p.activa(), p.medioPago());
+        return new Respuestas.Promocion(p.id(), p.productoId(), p.tipo().name(), p.porcentaje(), p.orden(), p.activa(), p.medioPago());
     }
     public static Respuestas.Precio precio(ConsultaPrecios.PrecioCalculado p) {
         return new Respuestas.Precio(p.productoId(), p.cantidad(), p.precioLista(), p.precioFinal(), p.ahorro(), p.promocionesAplicadas());

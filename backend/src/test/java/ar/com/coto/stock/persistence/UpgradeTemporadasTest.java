@@ -15,8 +15,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** El factor fijo de la política estacional pasa a ser una temporada de todo el año, sin cambiar pedidos. */
 class UpgradeTemporadasTest {
+    /** Cadena completa desde v0.1: destinatarios, reservas virtuales de combos y temporadas. */
     static final String[] CADENA = Stream.concat(Arrays.stream(UpgradeDestinatariosTest.CADENA),
-            Stream.of("/db/upgrade-temporadas.sql")).toArray(String[]::new);
+            Stream.of(UpgradeReservasComboTest.SCRIPT, "/db/upgrade-temporadas.sql")).toArray(String[]::new);
 
     private void ejecutar(Connection conexion, String archivo) throws Exception {
         try (var lector = new InputStreamReader(Objects.requireNonNull(getClass().getResourceAsStream(archivo)), StandardCharsets.UTF_8)) {
@@ -32,6 +33,7 @@ class UpgradeTemporadasTest {
     @Test void migraElFactorAnteriorYEsIdempotente() throws Exception {
         try (var conexion = DriverManager.getConnection("jdbc:h2:mem:" + UUID.randomUUID() + ";MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE")) {
             for (String archivo : UpgradeDestinatariosTest.CADENA) ejecutar(conexion, archivo);
+            ejecutar(conexion, UpgradeReservasComboTest.SCRIPT);
             try (var sentencia = conexion.createStatement()) {
                 // Un factor en una política no estacional nunca se usó: no genera temporada.
                 sentencia.executeUpdate("UPDATE politica_reposicion SET factor_estacional = 2 WHERE stock_id = 1");

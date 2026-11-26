@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import { AlertTriangle, CalendarRange, Edit3, FolderOpen, Package, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { api } from '../api';
 import { ajuste, diaMes, diasDelMes, factor, meses, number, periodoCorto, periodoLargo, sku, todoElAnio } from '../format';
+import { MAX_FACTOR_TEMPORADA } from '../limites';
 import { useStore } from '../store';
 import { useResource } from '../useResource';
 import type { Politica, Producto, Snapshot, SolicitudTemporada, Temporada } from '../types';
@@ -202,7 +203,7 @@ export function SeasonForm({ existing, onClose }: { existing?: Temporada; onClos
       </div>
       <Field label="Factor de temporada" hint={!factorValido ? 'Mayor que 0 y hasta 10. Por ejemplo, 1,5 repone un 50 % más que el objetivo base.'
         : f === 1 ? 'Sin ajuste: repone el objetivo base.' : `Repone un ${ajuste(f)} que el objetivo base.`}>
-        <input required type="number" inputMode="decimal" min="0.0001" max="10" step="0.0001" placeholder="1,5" value={values.factor} disabled={busy} onChange={e => set({ factor: e.target.value })} />
+        <input required type="number" inputMode="decimal" min="0.0001" max={MAX_FACTOR_TEMPORADA} step="0.0001" placeholder="1,5" value={values.factor} disabled={busy} onChange={e => set({ factor: e.target.value })} />
       </Field>
       <ErrorMessage error={error} />
     </div><footer className="modal-footer"><Button onClick={onClose} disabled={busy}>Cancelar</Button><Button variant="primary" type="submit" loading={busy}>{existing ? 'Guardar cambios' : 'Crear temporada'}</Button></footer></form>
