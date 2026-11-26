@@ -7,7 +7,9 @@ import ar.com.coto.stock.domain.port.*;
 import ar.com.coto.stock.domain.reposicion.ReposicionPuntoDePedido;
 import ar.com.coto.stock.service.*;
 import org.springframework.context.annotation.*;
+import org.springframework.beans.factory.annotation.Value;
 import java.time.Clock;
+import java.time.ZoneId;
 import java.util.Map;
 
 /** Único punto de composición. Servicios y dominio reciben contratos, no repositorios concretos. */
@@ -16,7 +18,8 @@ public class ConfiguracionAplicacion {
     private static final int UMBRAL_REPOSICION_DEFECTO = 20;
     private static final int OBJETIVO_REPOSICION_DEFECTO = 100;
 
-    @Bean Clock reloj() { return Clock.systemUTC(); }
+    /** Los instantes no dependen de la zona; la zona sólo define qué día es en la sucursal (temporadas). */
+    @Bean Clock reloj(@Value("${coto.sucursal.zona-horaria:America/Argentina/Buenos_Aires}") ZoneId zona) { return Clock.system(zona); }
     @Bean ApiProveedorExterno proveedorExterno() { return new ApiProveedorExterno(); }
     @Bean SistemaERPExterno erpExterno() { return new SistemaERPExterno(); }
     @Bean ApiCotoDigitalExterna cotoDigitalExterno() { return new ApiCotoDigitalExterna(); }
@@ -44,8 +47,12 @@ public class ConfiguracionAplicacion {
     @Bean ServicioCategorias categorias(RepositorioCategorias categorias, RepositorioContactos contactos, RepositorioStock stocks, UnidadDeTrabajo unidad) {
         return new ServicioCategorias(categorias, contactos, stocks, unidad);
     }
-    @Bean ServicioReposicion reposicion(Clock reloj) {
-        return new ServicioReposicion(new ReposicionPuntoDePedido(UMBRAL_REPOSICION_DEFECTO, OBJETIVO_REPOSICION_DEFECTO), reloj);
+    @Bean ServicioReposicion reposicion(Clock reloj, RepositorioTemporadas temporadas) {
+        return new ServicioReposicion(new ReposicionPuntoDePedido(UMBRAL_REPOSICION_DEFECTO, OBJETIVO_REPOSICION_DEFECTO), reloj, temporadas);
+    }
+    @Bean ServicioTemporadas temporadas(RepositorioTemporadas temporadas, RepositorioStock stocks, RepositorioCategorias categorias,
+                                        UnidadDeTrabajo unidad, Clock reloj) {
+        return new ServicioTemporadas(temporadas, stocks, categorias, unidad, reloj);
     }
     @Bean ServicioValorizacion valorizacion(RepositorioStock stock, RepositorioPromociones promociones, UnidadDeTrabajo unidad) {
         return new ServicioValorizacion(stock, promociones, unidad);

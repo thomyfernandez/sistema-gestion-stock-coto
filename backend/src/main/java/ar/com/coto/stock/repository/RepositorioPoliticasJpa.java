@@ -18,7 +18,7 @@ public class RepositorioPoliticasJpa implements RepositorioPoliticas {
         em.createQuery("select p from PoliticaEntity p order by p.stockId", PoliticaEntity.class).getResultList().forEach(p ->
                 politicas.put(p.stockId, new PoliticaReposicion(p.stockId, PoliticaReposicion.Tipo.valueOf(p.tipo),
                         p.puntoPedido, p.stockObjetivo, p.demandaDiaria.doubleValue(), p.diasCobertura,
-                        p.factorEstacional.doubleValue(), p.umbralAlerta, p.destinoAlerta, p.contactoId, p.canalAlerta == null ? null : Canal.valueOf(p.canalAlerta))));
+                        p.umbralAlerta, p.destinoAlerta, p.contactoId, p.canalAlerta == null ? null : Canal.valueOf(p.canalAlerta))));
         return politicas;
     }
     @Override public void guardar(PoliticaReposicion p) {
@@ -27,7 +27,7 @@ public class RepositorioPoliticasJpa implements RepositorioPoliticas {
         if (nueva) { fila = new PoliticaEntity(); fila.stockId = p.stockId(); }
         fila.tipo = p.tipo().name(); fila.puntoPedido = p.puntoPedido(); fila.stockObjetivo = p.stockObjetivo();
         fila.demandaDiaria = BigDecimal.valueOf(p.demandaDiaria()); fila.diasCobertura = p.diasCobertura();
-        fila.factorEstacional = BigDecimal.valueOf(p.factorEstacional()); fila.umbralAlerta = p.umbralAlerta();
+        fila.umbralAlerta = p.umbralAlerta();
         fila.destinoAlerta = p.destinoAlerta(); fila.contactoId = p.contactoId(); fila.canalAlerta = p.canalAlerta() == null ? null : p.canalAlerta().name();
         if (nueva) em.persist(fila);
     }

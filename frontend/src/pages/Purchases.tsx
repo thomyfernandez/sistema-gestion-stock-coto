@@ -11,8 +11,9 @@ import { PolicyForm, ProductForm } from '../components/CatalogForms';
 import { PanelPromociones } from '../components/Promociones';
 import { Badge, Button, Confirmation, Empty, ErrorMessage, Metric, PageHeading, ProductDetail, ProductName } from '../components/ui';
 import { ReceiveOrder } from './Operations';
+import { SeasonsPanel } from './Seasons';
 
-const tabs = [['reposicion', 'Reposición'], ['catalogo', 'Productos y combos'], ['promociones', 'Promociones'], ['actividad', 'Actividad']];
+const tabs = [['reposicion', 'Reposición'], ['temporadas', 'Temporadas'], ['catalogo', 'Productos y combos'], ['promociones', 'Promociones'], ['actividad', 'Actividad']];
 const orderTones = { PENDIENTE: 'warning', ENVIADO: 'info', RECIBIDO: 'success', CANCELADO: 'neutral' } as const;
 const orderLabels = { PENDIENTE: 'Pendiente', ENVIADO: 'Enviado', RECIBIDO: 'Recibido', CANCELADO: 'Cancelado' };
 const policyLabels: Record<Politica['tipo'], string> = { PUNTO_PEDIDO: 'Punto de pedido', DEMANDA: 'Por demanda', ESTACIONAL: 'Estacional' };
@@ -257,6 +258,7 @@ export function PurchasesPage({ tab }: { tab: string }) {
       ))}
     </nav>
     {active === 'reposicion' && <Replenishment />}
+    {active === 'temporadas' && <SeasonsPanel />}
     {active === 'catalogo' && <InventoryTable onSelect={setDetail} />}
     {active === 'promociones' && <PanelPromociones />}
     {active === 'actividad' && <ActivityPanel />}

@@ -80,7 +80,7 @@ class PostgresRealTest {
     @Autowired ApiCotoDigitalExterna digital;
 
     @BeforeEach void reiniciar() {
-        for (String tabla : List.of("usuario", "imagen_producto", "configuracion_avisos", "evento_integracion", "promocion", "politica_reposicion", "auditoria_stock", "pedido_reposicion",
+        for (String tabla : List.of("usuario", "imagen_producto", "configuracion_avisos", "evento_integracion", "promocion", "temporada_reposicion", "politica_reposicion", "auditoria_stock", "pedido_reposicion",
                 "movimiento_stock", "linea_combo", "stock", "producto", "destinatario_aviso", "categoria", "proveedor", "bloqueo_operacion")) jdbc.update("DELETE FROM " + tabla);
         new ResourceDatabasePopulator(new ClassPathResource("data.sql")).execute(dataSource);
         mensajes.setDisponible(true); erp.setDisponible(true); digital.setDisponible(true);
@@ -172,12 +172,12 @@ class PostgresRealTest {
         jdbc.execute("CREATE DATABASE coto_upgrade");
         String url = postgres.getJdbcUrl().replace("/coto_stock", "/coto_upgrade");
         try (var conexion = DriverManager.getConnection(url, postgres.getUsername(), postgres.getPassword())) {
-            for (String archivo : UpgradeDestinatariosTest.CADENA) {
+            for (String archivo : UpgradeTemporadasTest.CADENA) {
                 ScriptUtils.executeSqlScript(conexion, new EncodedResource(new ClassPathResource(archivo.substring(1)), StandardCharsets.UTF_8));
             }
             ScriptUtils.executeSqlScript(conexion, new EncodedResource(new ClassPathResource("db/upgrade-destinatarios.sql"), StandardCharsets.UTF_8));
             ScriptUtils.executeSqlScript(conexion, new EncodedResource(new ClassPathResource("db/upgrade-reservas-combo.sql"), StandardCharsets.UTF_8));
-            ScriptUtils.executeSqlScript(conexion, new EncodedResource(new ClassPathResource("db/upgrade-reservas-combo.sql"), StandardCharsets.UTF_8));
+            ScriptUtils.executeSqlScript(conexion, new EncodedResource(new ClassPathResource("db/upgrade-temporadas.sql"), StandardCharsets.UTF_8));
             try (var sentencia = conexion.createStatement()) {
                 for (String[] caso : new String[][]{
                         {"SELECT COUNT(*) FROM producto", "6"},
@@ -185,7 +185,9 @@ class PostgresRealTest {
                         {"SELECT COUNT(*) FROM movimiento_stock", "14"},
                         {"SELECT COUNT(*) FROM categoria", "5"},
                         {"SELECT COUNT(*) FROM usuario", "4"},
-                        {"SELECT COUNT(*) FROM destinatario_aviso", "0"}}) {
+                        {"SELECT COUNT(*) FROM destinatario_aviso", "0"},
+                        {"SELECT COUNT(*) FROM temporada_reposicion t JOIN temporada_articulo a ON a.temporada_id = t.id WHERE a.stock_id = 5 AND t.factor = 1.5", "1"},
+                        {"SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'politica_reposicion' AND column_name = 'factor_estacional'", "0"}}) {
                     try (var resultado = sentencia.executeQuery(caso[0])) {
                         assertTrue(resultado.next()); assertEquals(caso[1], resultado.getString(1), caso[0]);
                     }

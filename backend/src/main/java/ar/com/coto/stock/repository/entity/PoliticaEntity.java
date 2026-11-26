@@ -15,7 +15,6 @@ public class PoliticaEntity {
     @Column(nullable = false) public int stockObjetivo;
     @Column(nullable = false, precision = 12, scale = 3) public BigDecimal demandaDiaria;
     @Column(nullable = false) public int diasCobertura;
-    @Column(nullable = false, precision = 12, scale = 4) public BigDecimal factorEstacional;
     @Column(nullable = false) public int umbralAlerta;
     @Column(nullable = false, length = 200) public String destinoAlerta;
     @Column(nullable = false) public boolean alertaActiva;

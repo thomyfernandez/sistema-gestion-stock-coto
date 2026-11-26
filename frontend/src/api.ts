@@ -1,4 +1,4 @@
-import type { Producto, Pedido, TipoMovimiento, Movimiento, Operacion, OperacionCombo, ResultadoMovimiento, Auditoria, Politica, Promocion, Precio, Integraciones, Contacto, Categoria, ConfiguracionAvisos, ImagenCarga, UsuarioSesion, ListaDestinatarios, Pagina } from './types';
+import type { Producto, Pedido, TipoMovimiento, Movimiento, Operacion, OperacionCombo, ResultadoMovimiento, Auditoria, Politica, Promocion, Temporada, SolicitudTemporada, FactorEstacional, Precio, Integraciones, Contacto, Categoria, ConfiguracionAvisos, ImagenCarga, UsuarioSesion, ListaDestinatarios, Pagina } from './types';
 
 export class ApiError extends Error {
   constructor(message: string, public status: number, public codigo = '', public errores: Record<string, string[]> = {}) { super(message); }
@@ -87,6 +87,10 @@ export const api = {
   destinatarios: (signal?: AbortSignal) => request<ListaDestinatarios[]>('/configuracion/destinatarios', { signal }),
   guardarDestinatarios: (categoriaId: number | null, emails: string[]) => request<ListaDestinatarios>(`/configuracion/destinatarios/${categoriaId === null ? 'general' : `categorias/${categoriaId}`}`, json('PUT', { emails })),
   guardarPolitica: (id: number, body: Omit<Politica, 'stockId'>) => request<Politica>(`/productos/${id}/politica-reposicion`, json('PUT', body)),
+  temporadas: (signal?: AbortSignal) => request<Temporada[]>('/temporadas', { signal }),
+  guardarTemporada: (body: SolicitudTemporada, id?: number) => request<Temporada>(`/temporadas${id ? `/${id}` : ''}`, json(id ? 'PUT' : 'POST', body)),
+  eliminarTemporada: (id: number) => request<void>(`/temporadas/${id}`, { method: 'DELETE' }),
+  factorEstacional: (id: number, signal?: AbortSignal) => request<FactorEstacional>(`/productos/${id}/factor-estacional`, { signal }),
   promociones: (id: number, signal?: AbortSignal) => request<Promocion[]>(`/productos/${id}/promociones`, { signal }),
   guardarPromocion: (id: number, body: Omit<Promocion, 'id' | 'productoId'>, promocionId?: number) => request<Promocion>(`/productos/${id}/promociones${promocionId ? `/${promocionId}` : ''}`, json(promocionId ? 'PUT' : 'POST', body)),
   eliminarPromocion: (id: number, promocionId: number) => request<void>(`/productos/${id}/promociones/${promocionId}`, { method: 'DELETE' }),

@@ -58,12 +58,16 @@ INSERT INTO auditoria_stock
 INSERT INTO bloqueo_operacion (id) VALUES (1), (2);
 INSERT INTO politica_reposicion
     (stock_id, tipo, punto_pedido, stock_objetivo, demanda_diaria, dias_cobertura,
-     factor_estacional, umbral_alerta, destino_alerta) VALUES
-    (1, 'PUNTO_PEDIDO', 20, 100, 0, 1, 1, 20, 'compras@coto.example'),
-    (2, 'PUNTO_PEDIDO', 10, 60, 0, 1, 1, 10, 'compras@coto.example'),
-    (3, 'DEMANDA', 0, 36, 12, 3, 1, 10, 'compras@coto.example'),
-    (4, 'DEMANDA', 0, 20, 8, 2, 1, 5, 'compras@coto.example'),
-    (5, 'ESTACIONAL', 0, 40, 0, 1, 1.5, 10, 'compras@coto.example');
+     umbral_alerta, destino_alerta) VALUES
+    (1, 'PUNTO_PEDIDO', 20, 100, 0, 1, 20, 'compras@coto.example'),
+    (2, 'PUNTO_PEDIDO', 10, 60, 0, 1, 10, 'compras@coto.example'),
+    (3, 'DEMANDA', 0, 36, 12, 3, 10, 'compras@coto.example'),
+    (4, 'DEMANDA', 0, 20, 8, 2, 5, 'compras@coto.example'),
+    (5, 'ESTACIONAL', 0, 40, 0, 1, 10, 'compras@coto.example');
+-- El pan dulce se refuerza de mediados de noviembre a Reyes; el resto del año se repone con el objetivo base.
+INSERT INTO temporada_reposicion (id, nombre, desde_mes, desde_dia, hasta_mes, hasta_dia, factor) VALUES
+    (1, 'Navidad y Reyes', 11, 15, 1, 6, 1.5);
+INSERT INTO temporada_articulo (temporada_id, stock_id) VALUES (1, 5);
 
 INSERT INTO promocion (id, producto_id, tipo, porcentaje, orden, activa, medio_pago) VALUES
     (1, 1, 'DOS_POR_UNO', 0, 10, TRUE, NULL),

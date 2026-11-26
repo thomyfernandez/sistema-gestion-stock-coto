@@ -4,6 +4,7 @@ import ar.com.coto.stock.domain.model.*;
 import ar.com.coto.stock.domain.observer.*;
 import ar.com.coto.stock.domain.port.*;
 import ar.com.coto.stock.domain.reposicion.PoliticaReposicion;
+import ar.com.coto.stock.domain.reposicion.Temporada;
 import java.util.*;
 
 /** Observa un grafo de inventario dentro de una transacción y persiste sus efectos:
@@ -102,12 +103,15 @@ final class CoordinadorEventosStock {
 
     private List<PedidoRegistrado> reponer(Set<Integer> afectados) {
         List<PedidoRegistrado> generados = new ArrayList<>();
+        // Las temporadas se leen una vez por evaluación y sólo si alguna política afectada es estacional.
+        List<Temporada> temporadas = afectados.stream().map(politicas::get).anyMatch(p -> p != null && p.tipo() == PoliticaReposicion.Tipo.ESTACIONAL)
+                ? d.reposicion().temporadas() : List.of();
         for (int id : List.copyOf(afectados)) {
             PoliticaReposicion politica = politicas.get(id);
             if (politica == null) continue;
             Stock stock = grafo.get(id);
             if (stock == null) throw new EntidadNoEncontradaException("Stock", id);
-            d.reposicion().planificar(stock, politica.crearEstrategia(), d.pedidos().cantidadPendiente(id))
+            d.reposicion().planificar(stock, d.reposicion().estrategiaPara(politica, stock, temporadas), d.pedidos().cantidadPendiente(id))
                     .ifPresent(pedido -> {
                         PedidoRegistrado registrado = d.pedidos().guardar(pedido);
                         generados.add(registrado);

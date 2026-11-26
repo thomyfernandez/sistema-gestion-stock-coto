@@ -28,7 +28,7 @@ const allViews: readonly Vista[] = [
 /** Pestaña que se abre cuando la ruta sólo indica la vista. */
 const TAB_POR_DEFECTO: Record<VistaId, string> = { stock: 'inventario', descuentos: '', recepcion: '', compras: 'reposicion', configuracion: 'avisos' };
 
-const subtitles: Record<string, string> = { inventario: 'Existencias', digital: 'Reservas y despachos', avisos: 'Alertas y avisos', categorias: 'Categorías', reposicion: 'Reposición', catalogo: 'Productos y combos', promociones: 'Promociones', actividad: 'Actividad' };
+const subtitles: Record<string, string> = { inventario: 'Existencias', digital: 'Reservas y despachos', avisos: 'Alertas y avisos', categorias: 'Categorías', reposicion: 'Reposición', temporadas: 'Temporadas', catalogo: 'Productos y combos', promociones: 'Promociones', actividad: 'Actividad' };
 
 const esVista = (id: string): id is VistaId => allViews.some(v => v.id === id);
 

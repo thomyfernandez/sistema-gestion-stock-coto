@@ -144,13 +144,12 @@ Configuración completa de ejemplo:
   "stockObjetivo":200,
   "demandaDiaria":100,
   "diasCobertura":2,
-  "factorEstacional":1,
   "umbralAlerta":20,
   "destinoAlerta":"compras@coto.example"
 }
 ```
 
-`tipo` admite `PUNTO_PEDIDO`, `DEMANDA` o `ESTACIONAL`. Todos los parámetros se envían en el PUT, incluidos los no utilizados por la estrategia elegida. Se validan los límites del esquema SQL. Cambiar la configuración no modifica existencias ni dispara inmediatamente un pedido: se puede ejecutar una evaluación o registrar un movimiento.
+`tipo` admite `PUNTO_PEDIDO`, `DEMANDA` o `ESTACIONAL`. El factor de la política estacional ya no viaja en este cuerpo: sale de las [temporadas de reposición](temporadas-de-reposicion.md). Todos los parámetros se envían en el PUT, incluidos los no utilizados por la estrategia elegida. Se validan los límites del esquema SQL. Cambiar la configuración no modifica existencias ni dispara inmediatamente un pedido: se puede ejecutar una evaluación o registrar un movimiento.
 
 Los filtros de estado aceptan `PENDIENTE`, `ENVIADO`, `RECIBIDO` o `CANCELADO`. La reposición automática sigue ejecutándose al cambiar los artículos afectados y descuenta pedidos pendientes/enviados.
 

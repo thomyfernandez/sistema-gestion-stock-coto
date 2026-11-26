@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import type { Categoria, ConfiguracionAvisos, Contacto, ListaDestinatarios, Movimiento, Pedido, Politica, Producto } from '../types';
+import type { Categoria, ConfiguracionAvisos, Contacto, FactorEstacional, ListaDestinatarios, Movimiento, Pedido, Politica, Producto, SolicitudTemporada, Temporada } from '../types';
 
 /** Backend en memoria para las pruebas: responde como la API real y registra cada solicitud. */
 export interface Solicitud { method: string; path: string; query: URLSearchParams; body: unknown; authorization: string | null }
@@ -11,7 +11,7 @@ const producto = (id: number, nombre: string, categoriaId: number | null, dispon
   componentes: [], imagenUrl: null, ...extra,
 });
 const politica = (stockId: number, extra: Partial<Politica> = {}): Politica => ({
-  stockId, tipo: 'PUNTO_PEDIDO', puntoPedido: 20, stockObjetivo: 100, demandaDiaria: 0, diasCobertura: 1, factorEstacional: 1,
+  stockId, tipo: 'PUNTO_PEDIDO', puntoPedido: 20, stockObjetivo: 100, demandaDiaria: 0, diasCobertura: 1,
   umbralAlerta: 10, destinoAlerta: 'configuracion-global', contactoId: null, canalAlerta: null, ...extra,
 });
 
@@ -24,6 +24,10 @@ export function datosIniciales() {
       { id: 3, nombre: 'Verdulería', contactoId: null, canalAlerta: null }] as Categoria[],
     contactos: [{ id: 1000, nombre: 'Supervisión de frescos', email: '', telefono: '+541155552222' }] as Contacto[],
     avisos: { canal: 'EMAIL', email: 'compras@coto.example', telefono: '+541100000000' } as ConfiguracionAvisos,
+    temporadas: [{ id: 1, nombre: 'Navidad y Reyes', stockIds: [1], categoriaId: null, desdeDia: 15, desdeMes: 11, hastaDia: 6, hastaMes: 1,
+      factor: 1.5, cruzaElAnio: true, vigente: true }] as Temporada[],
+    /** Lo que responde /productos/{id}/factor-estacional; por defecto, sin temporada. */
+    factores: {} as Record<number, Omit<FactorEstacional, 'stockId'>>,
     destinatarios: [{ categoriaId: null, emails: [] }, { categoriaId: 3, emails: ['verduleria@coto.example', 'jefe.verduleria@coto.example'] }] as ListaDestinatarios[],
     movimientos: Array.from({ length: 30 }, (_, i) => ({
       id: 30 - i, stockId: i % 2 ? 1 : 3, tipo: i % 3 ? 'RESERVA_DIGITAL' : 'RECEPCION', cantidad: i + 1,
@@ -55,6 +59,22 @@ export function crearBackend() {
         return json(filtrados.slice(pagina * limite, (pagina + 1) * limite), { headers: { 'X-Total-Count': String(filtrados.length) } });
       }
       case '/auditoria': return json([], { headers: { 'X-Total-Count': '0' } });
+      case '/temporadas': return json(datos.temporadas);
+    }
+    const factor = method === 'GET' && path.match(/^\/productos\/(\d+)\/factor-estacional$/);
+    if (factor) {
+      const stockId = Number(factor[1]);
+      return json({ stockId, ...(datos.factores[stockId] ?? { fecha: '2026-11-26', factor: 1, origen: 'SIN_TEMPORADA', temporadaId: null, temporada: null }) });
+    }
+    const temporada = path.match(/^\/temporadas(?:\/(\d+))?$/);
+    if (temporada && method !== 'GET') {
+      const id = temporada[1] ? Number(temporada[1]) : Math.max(999, ...datos.temporadas.map(t => t.id)) + 1;
+      if (temporada[1] && !datos.temporadas.some(t => t.id === id)) return { status: 404, body: { detail: 'Temporada no encontrada: ' + id } };
+      if (method === 'DELETE') { datos.temporadas = datos.temporadas.filter(t => t.id !== id); return { status: 204 }; }
+      const s = body as SolicitudTemporada;
+      const nueva: Temporada = { ...s, id, cruzaElAnio: s.desdeMes * 100 + s.desdeDia > s.hastaMes * 100 + s.hastaDia, vigente: false };
+      datos.temporadas = [...datos.temporadas.filter(t => t.id !== id), nueva];
+      return { status: temporada[1] ? 200 : 201, body: nueva };
     }
     const politicaPut = method === 'PUT' && path.match(/^\/productos\/(\d+)\/politica-reposicion$/);
     if (politicaPut) {

@@ -3,6 +3,7 @@ package ar.com.coto.stock.controller;
 import ar.com.coto.stock.domain.model.EntidadNoEncontradaException;
 import ar.com.coto.stock.domain.model.EstadoInvalidoException;
 import ar.com.coto.stock.domain.model.StockInsuficienteException;
+import ar.com.coto.stock.domain.reposicion.TemporadaSuperpuestaException;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -40,6 +41,10 @@ public class ManejadorErrores extends ResponseEntityExceptionHandler {
     @ExceptionHandler(StockInsuficienteException.class)
     public ResponseEntity<Object> sinStock(StockInsuficienteException ex, WebRequest request) {
         return responder(ex, HttpStatus.CONFLICT, "STOCK_INSUFICIENTE", ex.getMessage(), request);
+    }
+    @ExceptionHandler(TemporadaSuperpuestaException.class)
+    public ResponseEntity<Object> temporadaSuperpuesta(TemporadaSuperpuestaException ex, WebRequest request) {
+        return responder(ex, HttpStatus.CONFLICT, "TEMPORADA_SUPERPUESTA", ex.getMessage(), request);
     }
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Object> argumento(IllegalArgumentException ex, WebRequest request) {

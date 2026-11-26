@@ -198,7 +198,7 @@ El modelo conserva el patrón **Composite** (`ComboStock` y `StockSimple`) y añ
 
 ## Base de datos
 
-`schema.sql` y `data.sql` inicializan una base vacía. Además de las seis tablas del esquema inicial, se agregan `politica_reposicion`, `promocion`, `evento_integracion` y `bloqueo_operacion`. Los ajustes de backoffice agregan `configuracion_avisos`, `imagen_producto`, `proveedor` (agenda de contactos internos) y `categoria`. La autenticación agrega `usuario`, con los cuatro operadores de prueba. Las listas de emails de avisos se guardan en `destinatario_aviso`.
+`schema.sql` y `data.sql` inicializan una base vacía. Además de las seis tablas del esquema inicial, se agregan `politica_reposicion`, `promocion`, `evento_integracion` y `bloqueo_operacion`. Los ajustes de backoffice agregan `configuracion_avisos`, `imagen_producto`, `proveedor` (agenda de contactos internos) y `categoria`. La autenticación agrega `usuario`, con los cuatro operadores de prueba. Las listas de emails de avisos se guardan en `destinatario_aviso`. Las temporadas de la política estacional se guardan en `temporada_reposicion` y sus artículos en `temporada_articulo`; la política ya no tiene columna de factor.
 
 El perfil `demo` usa H2 en memoria y sus datos se recrean con cada ejecución. Para conservar información entre reinicios, está disponible el perfil PostgreSQL. Crear primero una base local y ejecutar **una sola vez**:
 
@@ -226,7 +226,8 @@ psql -v ON_ERROR_STOP=1 -1 -d coto_stock \
   -f backend/src/main/resources/db/upgrade-auth.sql \
   -f backend/src/main/resources/db/upgrade-combos-stock.sql \
   -f backend/src/main/resources/db/upgrade-destinatarios.sql \
-  -f backend/src/main/resources/db/upgrade-reservas-combo.sql
+  -f backend/src/main/resources/db/upgrade-reservas-combo.sql \
+  -f backend/src/main/resources/db/upgrade-temporadas.sql
 ```
 
 Estas actualizaciones agregan las tablas/configuraciones de reposición, avisos, imágenes, contactos y categorías, y encolan pedidos pendientes sin borrar el inventario existente. Se ejecuta una sola vez y está pensada para bases creadas con el esquema v0.1. El modo `-1` aplica todo en una transacción. Si ya se aplicaron migraciones anteriores, ejecutar solamente las que falten, en el orden indicado.
@@ -239,7 +240,7 @@ mvn -f backend/pom.xml test
 
 La suite incluye las pruebas de dominio y pruebas de integración reales con Spring, Hibernate, H2 y PostgreSQL 17 (Testcontainers; requiere Docker y, sin él, esas pruebas se omiten). Verifica reservas concurrentes, rollback tardío, auditoría correlacionada, reposición sin duplicados, reintentos FIFO, episodios de alerta persistidos, recepción única, alta de combos y promociones acumulables. Los proveedores son simulados: no se envían correos, SMS, WhatsApp ni pedidos reales.
 
-Verificación actual: **190 pruebas aprobadas, sin fallos ni omitidas** (8 contra PostgreSQL real), JAR empaquetado; en el frontend, 28 pruebas de Vitest y 3 recorridos de Playwright. Incluye regresiones por renovación de conexiones de H2 y pruebas de avisos compartidos, contactos internos, destinatarios por artículo/categoría, clasificación del catálogo e imágenes de productos. La validación de la API también comprobó **37 solicitudes de Postman contra el servidor HTTP real**. La prueba del servidor usó el puerto 18080; el puerto predeterminado para uso normal es 8080.
+Verificación actual: **228 pruebas de backend** (8 contra PostgreSQL real, que se omiten si no hay Docker), JAR empaquetado; en el frontend, 37 pruebas de Vitest y 4 recorridos de Playwright. Incluye regresiones por renovación de conexiones de H2 y pruebas de avisos compartidos, contactos internos, destinatarios por artículo/categoría, clasificación del catálogo e imágenes de productos. La validación de la API también comprobó **37 solicitudes de Postman contra el servidor HTTP real**. La prueba del servidor usó el puerto 18080; el puerto predeterminado para uso normal es 8080.
 
 Los scripts, la cadena de migraciones desde v0.1 y el mapeo JPA se verifican con H2 y también contra un servidor PostgreSQL 17 real (`PostgresRealTest`), incluidos los bloqueos con reservas concurrentes. [Cómo probar el perfil a mano con Docker](docs/rendimiento-y-pruebas.md#postgresql-real).
 
@@ -248,6 +249,8 @@ Los scripts, la cadena de migraciones desde v0.1 y el mapeo JPA se verifican con
 - [Especificación funcional de los tres ejes: descuentos, combos y alertas](docs/tres-ejes-funcionales.md).
 
 - [Destinatarios de avisos: listas de emails por categoría y general](docs/destinatarios-de-avisos.md).
+
+- [Temporadas de reposición: la política estacional según la fecha, para varios artículos o una categoría](docs/temporadas-de-reposicion.md).
 
 - [Rendimiento del frontend y pruebas automatizadas](docs/rendimiento-y-pruebas.md).
 

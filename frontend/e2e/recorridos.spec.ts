@@ -83,3 +83,56 @@ test('destinatarios: la lista de la categoría recibe un email por dirección', 
     expect(mensajes.filter(m => m.canal === 'EMAIL').map(m => m.destino)).toEqual(expect.arrayContaining(['almacen@coto.example', 'jefe.almacen@coto.example']));
   }).toPass({ timeout: 15_000 });
 });
+
+test('temporadas: Compras carga una temporada por categoría y la política estacional muestra el factor de hoy', async ({ page }) => {
+  await ingresar(page, '/#/compras/temporadas');
+  const tabla = page.getByRole('region', { name: 'Temporadas de reposición' });
+  // La temporada de ejemplo del pan dulce cruza el año.
+  const navidad = tabla.getByRole('row').filter({ hasText: 'Navidad y Reyes' });
+  await expect(navidad).toContainText('Artículo: Pan dulce COTO 500 g');
+  await expect(navidad).toContainText('15/11 al 06/01');
+  await expect(navidad).toContainText('Cruza el año');
+
+  await page.getByRole('button', { name: 'Nueva temporada' }).click();
+  const dialogo = page.getByRole('dialog', { name: 'Nueva temporada' });
+  await dialogo.getByLabel('Nombre de la temporada').fill('Invierno almacén E2E');
+  await dialogo.getByText('Una categoría').click();
+  await dialogo.getByLabel('Categoría', { exact: true }).selectOption({ label: 'Almacén' });
+  const desde = dialogo.getByRole('group', { name: 'Desde' });
+  await desde.getByLabel('Mes').selectOption('6');
+  await desde.getByLabel('Día').selectOption('1');
+  const hasta = dialogo.getByRole('group', { name: 'Hasta' });
+  await hasta.getByLabel('Mes').selectOption('8');
+  await hasta.getByLabel('Día').selectOption('31');
+  await dialogo.getByLabel('Factor de temporada').fill('1.2');
+  await dialogo.getByRole('button', { name: 'Crear temporada' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Temporada creada' })).toBeVisible();
+  await expect(tabla.getByRole('row').filter({ hasText: 'Invierno almacén E2E' })).toContainText('Categoría: Almacén');
+
+  // Superponer otra temporada de la misma categoría devuelve el detalle del backend y deja el modal abierto.
+  await page.getByRole('button', { name: 'Nueva temporada' }).click();
+  await dialogo.getByLabel('Nombre de la temporada').fill('Vacaciones de invierno');
+  await dialogo.getByText('Una categoría').click();
+  await dialogo.getByLabel('Categoría', { exact: true }).selectOption({ label: 'Almacén' });
+  await desde.getByLabel('Mes').selectOption('7');
+  await desde.getByLabel('Día').selectOption('10');
+  await hasta.getByLabel('Mes').selectOption('7');
+  await hasta.getByLabel('Día').selectOption('25');
+  await dialogo.getByLabel('Factor de temporada').fill('1.4');
+  await dialogo.getByRole('button', { name: 'Crear temporada' }).click();
+  await expect(dialogo.getByRole('alert')).toContainText('Se superpone con «Invierno almacén E2E» (01/06 al 31/08)');
+  await dialogo.getByRole('button', { name: 'Cancelar' }).click();
+
+  await page.getByRole('button', { name: 'Eliminar temporada Invierno almacén E2E' }).click();
+  await page.getByRole('dialog', { name: 'Eliminar temporada Invierno almacén E2E' }).getByRole('button', { name: 'Eliminar temporada' }).click();
+  await expect(tabla.getByRole('row').filter({ hasText: 'Invierno almacén E2E' })).toHaveCount(0);
+
+  await page.goto('/#/compras/reposicion');
+  await page.getByRole('button', { name: 'Configurar política de Pan dulce COTO 500 g' }).click();
+  const politica = page.getByRole('dialog', { name: 'Política de reposición' });
+  await expect(politica.getByLabel('Factor de temporada', { exact: true })).toHaveCount(0);
+  const tarjeta = politica.getByRole('region', { name: 'Factor de temporada vigente' });
+  await expect(tarjeta).toContainText('Objetivo de hoy');
+  // Sea cual sea el día, el backend decide entre la temporada del pan dulce o ninguna.
+  await expect(tarjeta).toContainText(/Hoy rige «Navidad y Reyes» · ×1,5|Hoy no rige ninguna temporada · ×1/);
+});
