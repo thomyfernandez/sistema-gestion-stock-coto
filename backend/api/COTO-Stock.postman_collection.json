@@ -123,7 +123,7 @@
             "url": "{{baseUrl}}/api/digital/reservas",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"stockId\": 6,\n  \"cantidad\": 2,\n  \"motivo\": \"Prueba Postman\",\n  \"usuario\": \"demo\"\n}",
+              "raw": "{\n  \"stockId\": 6,\n  \"cantidad\": 2,\n  \"motivo\": \"Prueba Postman\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -176,7 +176,7 @@
             "url": "{{baseUrl}}/api/digital/cancelaciones",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"stockId\": 6,\n  \"cantidad\": 1,\n  \"motivo\": \"Prueba Postman\",\n  \"usuario\": \"demo\"\n}",
+              "raw": "{\n  \"stockId\": 6,\n  \"cantidad\": 1,\n  \"motivo\": \"Prueba Postman\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -209,7 +209,7 @@
             "url": "{{baseUrl}}/api/digital/despachos",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"stockId\": 6,\n  \"cantidad\": 1,\n  \"motivo\": \"Prueba Postman\",\n  \"usuario\": \"demo\"\n}",
+              "raw": "{\n  \"stockId\": 6,\n  \"cantidad\": 1,\n  \"motivo\": \"Prueba Postman\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -247,7 +247,7 @@
             "url": "{{baseUrl}}/api/recepcion/ingresos",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"stockId\": 1,\n  \"cantidad\": 10,\n  \"motivo\": \"Prueba Postman\",\n  \"usuario\": \"demo\"\n}",
+              "raw": "{\n  \"stockId\": 1,\n  \"cantidad\": 10,\n  \"motivo\": \"Prueba Postman\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -280,7 +280,7 @@
             "url": "{{baseUrl}}/api/sucursal/movimientos",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"stockId\": 1,\n  \"cantidad\": 5,\n  \"motivo\": \"Prueba Postman\",\n  \"usuario\": \"demo\",\n  \"tipo\": \"TRASLADO_A_GONDOLA\"\n}",
+              "raw": "{\n  \"stockId\": 1,\n  \"cantidad\": 5,\n  \"motivo\": \"Prueba Postman\",\n  \"tipo\": \"TRASLADO_A_GONDOLA\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -313,7 +313,7 @@
             "url": "{{baseUrl}}/api/sucursal/movimientos",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"stockId\": 1,\n  \"cantidad\": 1,\n  \"motivo\": \"Prueba Postman\",\n  \"usuario\": \"demo\",\n  \"tipo\": \"MERMA_GONDOLA\"\n}",
+              "raw": "{\n  \"stockId\": 1,\n  \"cantidad\": 1,\n  \"motivo\": \"Prueba Postman\",\n  \"tipo\": \"MERMA_GONDOLA\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -695,22 +695,8 @@
           "name": "Recibir pedido inicial",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{baseUrl}}/api/pedidos/1/recepcion",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"usuario\": \"recepcion.demo\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "header": [],
+            "url": "{{baseUrl}}/api/pedidos/1/recepcion"
           },
           "event": [
             {
@@ -794,7 +780,7 @@
             "url": "{{baseUrl}}/api/digital/reservas",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"stockId\": 1,\n  \"cantidad\": 1,\n  \"motivo\": \"Prueba Postman\",\n  \"usuario\": \"demo\"\n}",
+              "raw": "{\n  \"stockId\": 1,\n  \"cantidad\": 1,\n  \"motivo\": \"Prueba Postman\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -922,7 +908,7 @@
             "url": "{{baseUrl}}/api/digital/reservas",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"stockId\": 6,\n  \"cantidad\": 100000,\n  \"motivo\": \"Prueba Postman\",\n  \"usuario\": \"demo\"\n}",
+              "raw": "{\n  \"stockId\": 6,\n  \"cantidad\": 100000,\n  \"motivo\": \"Prueba Postman\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -955,7 +941,7 @@
             "url": "{{baseUrl}}/api/recepcion/ingresos",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"stockId\": 1,\n  \"cantidad\": 0,\n  \"motivo\": \"Prueba Postman\",\n  \"usuario\": \"demo\"\n}",
+              "raw": "{\n  \"stockId\": 1,\n  \"cantidad\": 0,\n  \"motivo\": \"Prueba Postman\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

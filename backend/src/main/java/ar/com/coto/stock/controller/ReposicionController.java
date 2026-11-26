@@ -2,7 +2,6 @@ package ar.com.coto.stock.controller;
 
 import ar.com.coto.stock.dto.*;
 import ar.com.coto.stock.service.GestionInventario;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import org.springframework.http.ResponseEntity;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,9 +30,8 @@ public class ReposicionController {
     @PostMapping("/reposicion/evaluaciones") public List<Respuestas.Pedido> evaluar() {
         return inventario.evaluarReposicion().stream().map(MapeadorDto::pedido).toList();
     }
-    @PostMapping("/pedidos/{id}/recepcion") public ResponseEntity<Respuestas.ResultadoMovimiento> recibir(@PathVariable @Positive long id,
-            @Valid @RequestBody Solicitudes.Usuario s) {
-        var resultado = MapeadorDto.resultado(inventario.recibirPedido(id, s.usuario()));
+    @PostMapping("/pedidos/{id}/recepcion") public ResponseEntity<Respuestas.ResultadoMovimiento> recibir(@PathVariable @Positive long id, @OperadorAutenticado String operador) {
+        var resultado = MapeadorDto.resultado(inventario.recibirPedido(id, operador));
         return ResponseEntity.created(URI.create("/api/movimientos/" + resultado.id())).body(resultado);
     }
     @PostMapping("/pedidos/{id}/cancelacion") public ResponseEntity<Void> cancelar(@PathVariable @Positive long id) {

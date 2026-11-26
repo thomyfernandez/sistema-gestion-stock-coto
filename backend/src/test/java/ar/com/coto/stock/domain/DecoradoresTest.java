@@ -5,41 +5,56 @@ import ar.com.coto.stock.domain.valorizacion.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import java.math.BigDecimal;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DecoradoresTest {
     private Producto producto() { return new Producto(1, "Arroz COTO", "1 kg", 1000); }
 
+    private static void assertImporte(String esperado, ItemValorizable item) {
+        assertEquals(0, new BigDecimal(esperado).compareTo(item.getImporte()),
+                () -> "Se esperaba " + esperado + " y se obtuvo " + item.getImporte());
+    }
+
     @Test void precioDeListaUnitarioYTotalDeLinea() {
-        assertEquals(1000, new PrecioLista(producto()).getPrecio());
-        assertEquals(3000, new PrecioLista(producto(), 3).getPrecio());
+        assertImporte("1000", new PrecioLista(producto()));
+        assertImporte("3000", new PrecioLista(producto(), 3));
     }
 
     @Test void descuentosSonAcumulablesYMultiplicativos() {
         ItemValorizable precio = new DescuentoDecorator(
                 new DescuentoDecorator(new PrecioLista(producto()), 10), 20);
-        assertEquals(720, precio.getPrecio(), 0.001);
+        assertImporte("720", precio);
     }
 
     @ParameterizedTest
     @CsvSource({"1,1000", "2,1000", "3,2000", "4,2000", "5,3000"})
-    void dosPorUnoRespetaParesYUnidadesImpares(int cantidad, double esperado) {
-        ItemValorizable precio = new PromocionDecorator(new PrecioLista(producto(), cantidad), "2x1");
-        assertEquals(esperado, precio.getPrecio(), 0.001);
+    void dosPorUnoRespetaParesYUnidadesImpares(int cantidad, String esperado) {
+        ItemValorizable precio = new DosPorUnoDecorator(new PrecioLista(producto(), cantidad));
+        assertImporte(esperado, precio);
         assertEquals(cantidad, precio.getCantidad());
     }
 
     @Test void combinaDosPorUnoDescuentoYMedioDePago() {
-        ItemValorizable precio = new PromocionDecorator(
-                new DescuentoDecorator(new PromocionDecorator(new PrecioLista(producto(), 3), "2x1"), 10),
-                "Descuento Medio de Pago", 15);
-        assertEquals(1530, precio.getPrecio(), 0.001); // 3000 -> 2000 -> 1800 -> 1530.
+        ItemValorizable precio = new MedioPagoDecorator(
+                new DescuentoDecorator(new DosPorUnoDecorator(new PrecioLista(producto(), 3)), 10),
+                15);
+        assertImporte("1530", precio); // 3000 -> 2000 -> 1800 -> 1530.
+    }
+
+    @Test void preservaPrecisionDecimalSinRedondeoIntermedio() {
+        Producto centavos = new Producto(1, "Fideos", "500 g", 10.05);
+        ItemValorizable precio = new MedioPagoDecorator(
+                new DescuentoDecorator(new DosPorUnoDecorator(new PrecioLista(centavos, 3)), 15),
+                10);
+        // 30.15 -> 20.10 -> 17.085 -> 15.3765 exacto en BigDecimal
+        assertImporte("15.3765", precio);
     }
 
     @Test void porcentajesExtremosValidosYProductoNoSeModifica() {
         Producto producto = producto();
-        assertEquals(0, new DescuentoDecorator(new PrecioLista(producto), 100).getPrecio());
-        assertEquals(1000, new DescuentoDecorator(new PrecioLista(producto), 0).getPrecio());
+        assertImporte("0", new DescuentoDecorator(new PrecioLista(producto), 100));
+        assertImporte("1000", new DescuentoDecorator(new PrecioLista(producto), 0));
         assertEquals(1000, producto.getPrecio());
     }
 
@@ -49,8 +64,7 @@ class DecoradoresTest {
         assertThrows(IllegalArgumentException.class, () -> new PrecioLista(producto(), 0));
         assertThrows(IllegalArgumentException.class, () -> new DescuentoDecorator(new PrecioLista(producto()), 101));
         assertThrows(IllegalArgumentException.class, () -> new DescuentoDecorator(new PrecioLista(producto()), Double.NaN));
-        assertThrows(IllegalArgumentException.class, () -> new PromocionDecorator(new PrecioLista(producto()), "3x2"));
-        assertThrows(IllegalArgumentException.class, () -> new PromocionDecorator(new PrecioLista(producto()), "Descuento Medio de Pago"));
-        assertThrows(IllegalArgumentException.class, () -> new PromocionDecorator(new PrecioLista(producto()), "2x1", 10));
+        assertThrows(IllegalArgumentException.class, () -> new MedioPagoDecorator(new PrecioLista(producto()), 101));
+        assertThrows(IllegalArgumentException.class, () -> new MedioPagoDecorator(new PrecioLista(producto()), -5));
     }
 }

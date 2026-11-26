@@ -5,7 +5,7 @@ import { destinoAviso } from '../notifications';
 import { useStore } from '../store';
 import type { Politica, Producto, Promocion } from '../types';
 import { ImageUpload, type ImageSelection } from './ImageUpload';
-import { Button, ErrorMessage, Field, Modal, ProductName } from './ui';
+import { Button, ErrorMessage, Field, Modal, OperadorSesion, ProductName } from './ui';
 
 export function ProductForm({ combo, onClose }: { combo: boolean; onClose: () => void }) {
   const { data, busy, run } = useStore();
@@ -139,10 +139,9 @@ export function PromotionForm({ product, existing, nextOrder, onClose }: { produ
 }
 
 export function ComboArmadoForm({ combo, mode, onClose }: { combo: Producto; mode: 'armar' | 'desarmar'; onClose: () => void }) {
-  const { busy, run, usuario: sesion } = useStore();
+  const { busy, run } = useStore();
   const [cantidad, setCantidad] = useState('1');
   const [motivo, setMotivo] = useState(mode === 'armar' ? 'Armado de combos para salón' : 'Desarmado por rotura o devolución');
-  const [usuario, setUsuario] = useState(sesion?.username || 'repositor.demo');
   const [error, setError] = useState<Error | null>(null);
 
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -151,8 +150,8 @@ export function ComboArmadoForm({ combo, mode, onClose }: { combo: Producto; mod
     try {
       await run(
         () => mode === 'armar'
-          ? api.armarCombo(combo.id, { cantidad: Number(cantidad), motivo: motivo.trim(), usuario: usuario.trim() })
-          : api.desarmarCombo(combo.id, { cantidad: Number(cantidad), motivo: motivo.trim(), usuario: usuario.trim() }),
+          ? api.armarCombo(combo.id, { cantidad: Number(cantidad), motivo: motivo.trim() })
+          : api.desarmarCombo(combo.id, { cantidad: Number(cantidad), motivo: motivo.trim() }),
         mode === 'armar' ? 'Combo armado correctamente. Stock propio actualizado.' : 'Combo desarmado correctamente. Componentes restituidos.'
       );
       onClose();
@@ -198,15 +197,7 @@ export function ComboArmadoForm({ combo, mode, onClose }: { combo: Producto; mod
               disabled={busy}
             />
           </Field>
-          <Field label="Operador">
-            <input
-              required
-              maxLength={100}
-              value={usuario}
-              onChange={e => setUsuario(e.target.value)}
-              disabled={busy}
-            />
-          </Field>
+          <OperadorSesion />
           <ErrorMessage error={error} />
         </div>
         <footer className="modal-footer">

@@ -24,37 +24,27 @@ public final class MapeadorDto {
         return s.componentes().stream().map(c -> new ComponenteCombo(c.stockId(), c.cantidad())).toList();
     }
     public static Respuestas.Producto producto(Stock s) {
-        List<Respuestas.Componente> componentes = s instanceof ComboStock combo ? combo.getComponentes().stream().map(l ->
+        List<Respuestas.Componente> componentes = s.getComponentes().stream().map(l ->
                 new Respuestas.Componente(l.getComponente().getProducto().getId(), l.getComponente().getProducto().getNombre(),
-                        tipo(l.getComponente()), l.getCantidadEnCombo(), l.getComponente().getDisponible())).toList() : List.of();
-        StockSimple simple = s instanceof StockSimple hoja ? hoja : null;
-        ComboStock combo = s instanceof ComboStock c ? c : null;
-        Integer fisico = null;
-        Integer exhibicion = null;
-        Integer reservado = null;
-        if (simple != null) {
-            fisico = simple.getStockFisico();
-            exhibicion = simple.getStockExhibicion();
-            reservado = simple.getStockReservado();
-        } else if (combo != null && combo.getStockFisico() > 0) {
-            fisico = combo.getStockFisico();
-            exhibicion = combo.getStockExhibicion();
-            reservado = combo.getStockReservado();
-        }
+                        tipo(l.getComponente()), l.getCantidadEnCombo(), l.getComponente().getDisponible())).toList();
+        boolean exponeStock = s.getTipo() == Stock.Tipo.SIMPLE || s.getStockFisico() > 0;
+        Integer fisico = exponeStock ? s.getStockFisico() : null;
+        Integer exhibicion = exponeStock ? s.getStockExhibicion() : null;
+        Integer reservado = exponeStock ? s.getStockReservado() : null;
         return new Respuestas.Producto(s.getProducto().getId(), s.getProducto().getNombre(), s.getProducto().getDescripcion(),
                 BigDecimal.valueOf(s.getProducto().getPrecio()).setScale(2), tipo(s), s.getDisponible(),
                 fisico, exhibicion, reservado, componentes,
                 s.getProducto().getImagenVersion() == null ? null : "/api/productos/" + s.getProducto().getId() + "/imagen?v=" + s.getProducto().getImagenVersion(), s.getProducto().getCategoriaId());
     }
-    private static String tipo(Stock s) { return s instanceof StockSimple ? "SIMPLE" : "COMBO"; }
-    public static MovimientoStock movimiento(Solicitudes.Movimiento s, Clock reloj) {
-        return new MovimientoStock(s.stockId(), TipoMovimiento.valueOf(s.tipo().name()), s.cantidad(), reloj.instant(), s.motivo(), s.usuario());
+    private static String tipo(Stock s) { return s.getTipo().name(); }
+    public static MovimientoStock movimiento(Solicitudes.Movimiento s, String usuario, Clock reloj) {
+        return new MovimientoStock(s.stockId(), TipoMovimiento.valueOf(s.tipo().name()), s.cantidad(), reloj.instant(), s.motivo(), usuario);
     }
-    public static MovimientoStock movimiento(Solicitudes.MovimientoSucursal s, Clock reloj) {
-        return new MovimientoStock(s.stockId(), TipoMovimiento.valueOf(s.tipo().name()), s.cantidad(), reloj.instant(), s.motivo(), s.usuario());
+    public static MovimientoStock movimiento(Solicitudes.MovimientoSucursal s, String usuario, Clock reloj) {
+        return new MovimientoStock(s.stockId(), TipoMovimiento.valueOf(s.tipo().name()), s.cantidad(), reloj.instant(), s.motivo(), usuario);
     }
-    public static MovimientoStock movimiento(Solicitudes.Operacion s, Solicitudes.TipoMovimiento tipo, Clock reloj) {
-        return new MovimientoStock(s.stockId(), TipoMovimiento.valueOf(tipo.name()), s.cantidad(), reloj.instant(), s.motivo(), s.usuario());
+    public static MovimientoStock movimiento(Solicitudes.Operacion s, Solicitudes.TipoMovimiento tipo, String usuario, Clock reloj) {
+        return new MovimientoStock(s.stockId(), TipoMovimiento.valueOf(tipo.name()), s.cantidad(), reloj.instant(), s.motivo(), usuario);
     }
     public static Respuestas.Pedido pedido(PedidoRegistrado p) {
         return new Respuestas.Pedido(p.id(), p.pedido().getStockId(), p.pedido().getFecha().toInstant(), p.pedido().getCantidad(), p.pedido().getEstado().name());

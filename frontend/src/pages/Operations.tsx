@@ -8,12 +8,12 @@ import type { Pedido, Producto } from '../types';
 import { InventoryTable } from '../components/InventoryTable';
 import { OperationForm } from '../components/OperationForm';
 import { ComboArmadoForm } from '../components/CatalogForms';
-import { Badge, Button, Confirmation, Empty, Field, Metric, Modal, PageHeading, ProductDetail } from '../components/ui';
+import { Badge, Button, Confirmation, Empty, Metric, Modal, OperadorSesion, PageHeading, ProductDetail } from '../components/ui';
 
 export function SucursalPage({ embedded = false }: { embedded?: boolean }) {
   const { data, tienePermiso } = useStore();
   const [comboOperation, setComboOperation] = useState<{ combo: Producto; mode: 'armar' | 'desarmar' } | null>(null);
-  const puedeOperarCombo = tienePermiso(['REPOSITOR', 'SUPERVISOR']);
+  const puedeOperarCombo = tienePermiso('operarCombo');
   const [detail, setDetail] = useState<Producto | null>(null);
   const [move, setMove] = useState<number | null>(null);
   if (!data) return null;
@@ -33,12 +33,11 @@ export function SucursalPage({ embedded = false }: { embedded?: boolean }) {
 }
 
 export function ReceiveOrder({ order, onClose }: { order: Pedido; onClose: () => void }) {
-  const { data, busy, run } = useStore();
-  const [usuario, setUsuario] = useState('recepcion.demo');
+  const { data, run } = useStore();
   const product = data?.productos.find(p => p.id === order.stockId);
   return <Confirmation title={`Recibir pedido ${sku(order.id)}`} text={`Se sumarán ${number(order.cantidad)} unidades de ${product?.nombre || `artículo ${order.stockId}`} al depósito.`} onClose={onClose} label="Confirmar recepción"
-    onConfirm={async () => { if (!usuario.trim()) throw new Error('Indicá el operador que recibe el pedido.'); return run(() => api.recibirPedido(order.id, usuario.trim()), r => `Pedido recibido. Movimiento #${r.id} confirmado.`); }}>
-    <Field label="Operador"><input required value={usuario} maxLength={100} onChange={e => setUsuario(e.target.value)} disabled={busy} /></Field>
+    onConfirm={async () => run(() => api.recibirPedido(order.id), r => `Pedido recibido. Movimiento #${r.id} confirmado.`)}>
+    <OperadorSesion />
   </Confirmation>;
 }
 

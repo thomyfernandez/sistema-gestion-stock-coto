@@ -77,7 +77,7 @@ test('destinatarios: la lista de la categoría recibe un email por dirección', 
 
   // Arroz (Almacén) baja de 80 a 19 disponibles, por debajo de su umbral de 20.
   const api = await apiConSesion(page);
-  expect((await api.post('/digital/reservas', { stockId: 1, cantidad: 61, motivo: 'Prueba de aviso E2E', usuario: 'digital.demo' })).status()).toBe(201);
+  expect((await api.post('/digital/reservas', { stockId: 1, cantidad: 61, motivo: 'Prueba de aviso E2E' })).status()).toBe(201);
   await expect(async () => {
     const { mensajes } = await (await api.get('/integraciones')).json() as { mensajes: { canal: string; destino: string }[] };
     expect(mensajes.filter(m => m.canal === 'EMAIL').map(m => m.destino)).toEqual(expect.arrayContaining(['almacen@coto.example', 'jefe.almacen@coto.example']));

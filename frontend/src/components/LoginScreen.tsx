@@ -13,6 +13,8 @@ interface DemoUser {
   descripcion: string;
 }
 
+const DEMO_PASSWORD = 'coto123';
+
 const USUARIOS_DEMO: DemoUser[] = [
   { username: 'supervisor.demo', nombre: 'Supervisor de Sucursal', rol: 'SUPERVISOR', icono: ShieldCheck, descripcion: 'Control total de inventario y canales' },
   { username: 'repositor.demo', nombre: 'Repositor de Salón', rol: 'REPOSITOR', icono: UserCheck, descripcion: 'Stock, armado de combos y góndolas' },
@@ -23,7 +25,7 @@ const USUARIOS_DEMO: DemoUser[] = [
 export function LoginScreen() {
   const { login } = useStore();
   const [username, setUsername] = useState('supervisor.demo');
-  const [password, setPassword] = useState('coto123');
+  const [password, setPassword] = useState(DEMO_PASSWORD);
   const [cargando, setCargando] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -44,7 +46,7 @@ export function LoginScreen() {
 
   const seleccionarDemo = (u: DemoUser) => {
     setUsername(u.username);
-    setPassword('coto123');
+    setPassword(DEMO_PASSWORD);
     setErrorMsg(null);
   };
 

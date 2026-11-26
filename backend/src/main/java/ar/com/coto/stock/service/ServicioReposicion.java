@@ -21,7 +21,7 @@ public final class ServicioReposicion {
         return planificar(s, estrategia.get(), 0).orElseThrow(() -> new IllegalStateException("No se necesita reposición"));
     }
     public Optional<PedidoReposicion> planificar(Stock s, EstrategiaReposicion politica, int cantidadPendiente) {
-        if (!(Objects.requireNonNull(s) instanceof StockSimple)) throw new IllegalArgumentException("Reponer componentes simples, no combos");
+        if (Objects.requireNonNull(s).getTipo() != Stock.Tipo.SIMPLE) throw new IllegalArgumentException("Reponer componentes simples, no combos");
         Reglas.noNegativo(cantidadPendiente, "cantidadPendiente");
         int propuesta = Objects.requireNonNull(politica).calcularCantidad(s);
         Reglas.noNegativo(propuesta, "propuesta de reposición");

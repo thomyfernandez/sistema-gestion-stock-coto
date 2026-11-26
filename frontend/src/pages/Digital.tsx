@@ -16,7 +16,7 @@ function syncStatus(product: Producto, published: string | undefined, pending: b
 }
 
 function AvailabilityTable({ products, integration, pending, onOperate }: {
-  products: Producto[]; integration: Integraciones; pending: Evento[]; onOperate: (id: number) => void;
+  products: Producto[]; integration: Integraciones; pending: Evento[]; onOperate?: (id: number) => void;
 }) {
   const { data } = useStore();
   const [category, setCategory] = useState('TODAS');
@@ -32,13 +32,13 @@ function AvailabilityTable({ products, integration, pending, onOperate }: {
     <div className="table-toolbar"><div className="search-field"><Search size={24} aria-hidden="true" /><input aria-label="Buscar stock digital" placeholder="Buscar por nombre o código…" value={search} onChange={e => setSearch(e.target.value)} /></div>
       <div className="filter-group"><select aria-label="Filtrar stock digital por categoría" value={category} onChange={e => setCategory(e.target.value)}><option value="TODAS">Todas las categorías</option><option value="SIN_CATEGORIA">Sin categoría</option>{data?.categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select><select aria-label="Filtrar stock digital" value={type} onChange={e => setType(e.target.value)}><option value="TODOS">Todos los artículos</option><option value="RESERVADOS">Simples con reservas</option><option value="SIMPLE">Artículos simples</option><option value="COMBO">Combos</option></select>
         <select aria-label="Estado de sincronización" value={status} onChange={e => setStatus(e.target.value)}><option value="TODOS">Todos los estados</option><option value="PENDIENTE">Pendiente</option><option value="SINCRONIZADO">Sincronizado</option><option value="DESACTUALIZADO">Desactualizado</option><option value="SIN_ENVIO">Sin envío</option></select></div></div>
-    <div className="table-scroll" role="region" aria-label="Stock y reservas digitales" tabIndex={0}><table><thead><tr><th scope="col">Artículo</th><th scope="col" className="numeric">Reservado</th><th scope="col" className="numeric">Disponible local</th><th scope="col" className="numeric">Publicado online</th><th scope="col">Sincronización</th><th scope="col"><span className="sr-only">Acciones</span></th></tr></thead>
+    <div className="table-scroll" role="region" aria-label="Stock y reservas digitales" tabIndex={0}><table><thead><tr><th scope="col">Artículo</th><th scope="col" className="numeric">Reservado</th><th scope="col" className="numeric">Disponible local</th><th scope="col" className="numeric">Publicado online</th><th scope="col">Sincronización</th>{onOperate && <th scope="col"><span className="sr-only">Acciones</span></th>}</tr></thead>
       <tbody>{rows.map(p => {
         const published = integration.catalogoDigital[p.id];
         const state = syncStatus(p, published, pendingIds.has(p.id));
         return <tr key={p.id}><td><div className="stacked-cell"><strong>{p.nombre}</strong><span className="caption">{sku(p.id)} · {p.tipo === 'COMBO' ? 'Combo · reservas en sus componentes' : 'Artículo simple'}</span></div></td>
           <td className="numeric">{p.stockReservado === null ? '—' : number(p.stockReservado)}</td><td className="numeric available">{number(p.disponible)}</td><td className="numeric">{published === undefined ? '—' : number(Number(published))}</td><td><Badge tone={state.tone}>{state.label}</Badge></td>
-          <td><Button variant="ghost" icon={ArrowRightLeft} aria-label={`Registrar operación de ${p.nombre}`} onClick={() => onOperate(p.id)}>Operar</Button></td></tr>;
+          {onOperate && <td><Button variant="ghost" icon={ArrowRightLeft} aria-label={`Registrar operación de ${p.nombre}`} onClick={() => onOperate(p.id)}>Operar</Button></td>}</tr>;
       })}</tbody></table></div>
     {!rows.length && <Empty title="Sin artículos para estos filtros" action={<Button onClick={() => { setSearch(''); setCategory('TODAS'); setType('TODOS'); setStatus('TODOS'); }}>Limpiar filtros</Button>} />}
     <footer className="table-footer"><span>Mostrando {rows.length} de {products.length} artículos</span><span>Un valor sin envío no equivale a cero disponible</span></footer>
@@ -48,8 +48,9 @@ function AvailabilityTable({ products, integration, pending, onOperate }: {
 const sinIntegraciones: Integraciones = { entregas: [], proveedoresDisponibles: { ERP: true, MENSAJERIA: true, COTO_DIGITAL: true }, mensajes: [], pedidosERP: [], catalogoDigital: {} };
 const ULTIMOS_DIGITALES = 10;
 export function DigitalPage({ embedded = false }: { embedded?: boolean }) {
-  const { data, error, revision } = useStore();
+  const { data, error, revision, tienePermiso } = useStore();
   const [operation, setOperation] = useState<{ id?: number } | null>(null);
+  const puedeOperar = tienePermiso('operarDigital');
   // Cada recurso se pide sólo mientras la vista está abierta y se renueva cuando cambia el inventario.
   const integracionesActuales = useResource('integraciones', signal => api.integraciones(signal), revision);
   const digitales = useResource('movimientos-digitales', signal => api.movimientos({ tipos: ['RESERVA_DIGITAL', 'CANCELACION_RESERVA', 'DESPACHO_DIGITAL'], limite: ULTIMOS_DIGITALES }, signal), revision);
@@ -63,14 +64,14 @@ export function DigitalPage({ embedded = false }: { embedded?: boolean }) {
   const totalDigitales = digitales.data?.total ?? 0;
   return <>
     {!embedded && <PageHeading eyebrow="Control de stock · Coto Digital" title="Operaciones digitales" text="Gestioná las reservas y el despacho de mercadería del canal online."
-      actions={<Button variant="primary" icon={Plus} disabled={!!error || !productos.length} onClick={() => setOperation({})}>Registrar operación</Button>} />}
+      actions={puedeOperar ? <Button variant="primary" icon={Plus} disabled={!!error || !productos.length} onClick={() => setOperation({})}>Registrar operación</Button> : undefined} />}
     {!embedded && <div className="metrics-grid">
       <Metric label="Unidades reservadas" value={simples.reduce((total, p) => total + (p.stockReservado || 0), 0)} hint="Comprometidas en artículos simples" icon={ClipboardList} />
       <Metric label="Disponible para reservar" value={simples.reduce((total, p) => total + p.disponible, 0)} hint="Unidades simples en depósito" icon={Boxes} />
       <Metric label="Sincronizaciones pendientes" value={pending.length} hint="Actualizaciones de disponibilidad" icon={RefreshCw} tone={pending.length ? 'warning' : ''} />
       <Metric label="Despachos registrados" value={despachos.data?.total ?? 0} hint="Movimientos confirmados del canal" icon={Truck} />
     </div>}
-    <AvailabilityTable products={productos} integration={integraciones} pending={pending} onOperate={id => setOperation({ id })} />
+    <AvailabilityTable products={productos} integration={integraciones} pending={pending} onOperate={puedeOperar ? id => setOperation({ id }) : undefined} />
     <p className="digital-note">Las reservas se controlan por artículo. Los combos comprometen unidades de sus componentes; los totales suman únicamente artículos simples.</p>
     <section className="panel"><div className="panel-heading"><div><h2>Últimos movimientos digitales</h2><p>Reservas, cancelaciones y despachos confirmados · horario de Argentina.</p></div><a className="text-link" href="#/compras/actividad">Ver actividad <ArrowRight size={24} aria-hidden="true" /></a></div>
       <div className="table-scroll" role="region" aria-label="Movimientos digitales" tabIndex={0}><table><thead><tr><th scope="col">Movimiento</th><th scope="col">Artículo</th><th scope="col">Operación</th><th scope="col" className="numeric">Cantidad</th><th scope="col">Operador y motivo</th><th scope="col">Fecha</th></tr></thead><tbody>{movements.map(m => <tr key={m.id}><td>{sku(m.id)}</td><td>{productos.find(p => p.id === m.stockId)?.nombre || `Artículo ${sku(m.stockId)}`}</td><td><Badge tone={m.tipo === 'DESPACHO_DIGITAL' ? 'success' : m.tipo === 'RESERVA_DIGITAL' ? 'info' : 'neutral'}>{movementLabels[m.tipo]}</Badge></td><td className="numeric">{number(m.cantidad)}</td><td><div className="stacked-cell digital-movement-detail"><span>{m.usuario}</span><span className="caption">{m.motivo}</span></div></td><td className="nowrap">{date(m.fecha)}</td></tr>)}</tbody></table></div>

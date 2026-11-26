@@ -1,7 +1,6 @@
 package ar.com.coto.stock.service;
 
 import ar.com.coto.stock.domain.model.*;
-import ar.com.coto.stock.domain.observer.*;
 import ar.com.coto.stock.domain.port.*;
 import ar.com.coto.stock.domain.reposicion.PoliticaReposicion;
 import ar.com.coto.stock.domain.valorizacion.Promocion;
@@ -52,23 +51,13 @@ public final class GestorInventario implements GestionInventario {
     private ResultadoMovimiento registrarDentroDeTransaccion(Dependencias d, MovimientoStock m) {
         Map<Integer, Stock> grafo = d.stocks.cargarInventario();
         Stock objetivo = exigirStock(grafo, m.getStockId());
-        Map<Integer, PoliticaReposicion> politicas = d.politicas.listar();
-        Observaciones observaciones = observar(d, grafo, politicas);
-        if (objetivo instanceof StockSimple simple) simple.aplicarMovimiento(m);
-        else if (objetivo instanceof ComboStock combo) combo.aplicarMovimiento(m);
+        var coordinador = new CoordinadorEventosStock(d, grafo, d.politicas.listar());
+        objetivo.aplicarMovimiento(m);
         long movimientoId = d.movimientos.guardar(m);
-        observaciones.disponibilidades.keySet().forEach(id -> {
-            Stock s = grafo.get(id);
-            if (s instanceof StockSimple simple) d.stocks.guardarEstado(simple);
-            else if (s instanceof ComboStock combo) d.stocks.guardarEstadoCombo(combo);
-        });
-        observaciones.auditorias.values().forEach(a -> d.auditoria.guardar(a, movimientoId));
-        String clave = "mov:" + movimientoId;
-        observaciones.disponibilidades.forEach((id, disponible) -> encolarStock(d, clave + ":stock:" + id, id, disponible));
-        guardarAlertas(d, observaciones, politicas, grafo, clave);
-        List<PedidoRegistrado> pedidos = reponer(d, grafo, politicas, observaciones.disponibilidades.keySet());
+        coordinador.guardarMovimiento(movimientoId);
+        List<PedidoRegistrado> pedidos = coordinador.reponerAfectados();
         d.unidad.despuesDeConfirmar(d.integraciones::procesarPendientes);
-        return new ResultadoMovimiento(movimientoId, observaciones.disponibilidades, pedidos);
+        return new ResultadoMovimiento(movimientoId, coordinador.disponibilidades(), pedidos);
     }
 
     @Override public List<PedidoRegistrado> evaluarReposicion() {
@@ -76,81 +65,13 @@ public final class GestorInventario implements GestionInventario {
         return d.unidad.ejecutar(() -> {
             d.stocks.bloquearInventario();
             Map<Integer, Stock> grafo = d.stocks.cargarInventario();
-            Map<Integer, PoliticaReposicion> politicas = d.politicas.listar();
-            Observaciones o = observar(d, grafo, politicas);
-            // Evalúa también un stock inicialmente bajo, aunque aún no haya recibido movimientos.
-            o.alertas.forEach((id, alerta) -> {
-                alerta.actualizar(exigirStock(grafo, id));
-                o.disponibilidades.put(id, grafo.get(id).getDisponible());
-            });
-            guardarAlertas(d, o, politicas, grafo, "eval:" + UUID.randomUUID());
-            List<PedidoRegistrado> pedidos = reponer(d, grafo, politicas, politicas.keySet());
+            var coordinador = new CoordinadorEventosStock(d, grafo, d.politicas.listar());
+            coordinador.evaluarAlertasVigentes();
+            coordinador.guardarAlertas("eval:" + UUID.randomUUID());
+            List<PedidoRegistrado> pedidos = coordinador.reponerConPolitica();
             d.unidad.despuesDeConfirmar(d.integraciones::procesarPendientes);
             return pedidos;
         });
-    }
-
-    private List<PedidoRegistrado> reponer(Dependencias d, Map<Integer, Stock> grafo,
-                                          Map<Integer, PoliticaReposicion> politicas, Set<Integer> afectados) {
-        List<PedidoRegistrado> generados = new ArrayList<>();
-        for (int id : afectados) {
-            PoliticaReposicion politica = politicas.get(id);
-            if (politica == null) continue;
-            d.reposicion.planificar(exigirStock(grafo, id), politica.crearEstrategia(), d.pedidos.cantidadPendiente(id))
-                    .ifPresent(pedido -> {
-                        PedidoRegistrado registrado = d.pedidos.guardar(pedido);
-                        generados.add(registrado);
-                        d.eventos.encolar(new EventoIntegracion(0, "pedido:" + registrado.id(), EventoIntegracion.Tipo.PEDIDO_ERP,
-                                id, registrado.id(), null, null, null, null, d.reloj.instant()));
-                    });
-        }
-        return List.copyOf(generados);
-    }
-
-    private Observaciones observar(Dependencias d, Map<Integer, Stock> grafo, Map<Integer, PoliticaReposicion> politicas) {
-        Observaciones o = new Observaciones();
-        AuditorMovimientos auditor = new AuditorMovimientos(a -> o.auditorias.merge(a.stockId(), a, (primero, ultimo) ->
-                new AuditoriaStock(a.stockId(), ultimo.fecha(), primero.disponibleAnterior(), ultimo.disponibleActual(), ultimo.detalle())), d.reloj);
-        SincronizadorCotoDigital sincronizador = new SincronizadorCotoDigital(o.disponibilidades::put);
-        grafo.forEach((id, stock) -> {
-            auditor.establecerLineaBase(stock);
-            stock.agregarObservador(auditor);
-            stock.agregarObservador(sincronizador);
-            PoliticaReposicion politica = politicas.get(id);
-            if (politica != null) {
-                AlertaStockBajo alerta = new AlertaStockBajo(politica.umbralAlerta(), politica.destinoAlerta(),
-                        a -> o.avisos.put(id, a.getUltimoAviso()));
-                alerta.restaurarEstado(id, d.politicas.alertaActiva(id));
-                o.alertas.put(id, alerta);
-                stock.agregarObservador(alerta);
-            }
-        });
-        return o;
-    }
-
-    private void guardarAlertas(Dependencias d, Observaciones o, Map<Integer, PoliticaReposicion> politicas,
-                                Map<Integer, Stock> grafo, String clave) {
-        if (!o.avisos.isEmpty()) {
-            var general = d.notificaciones.consultarConfiguracion();
-            o.avisos.forEach((id, aviso) -> {
-                var destinos = d.contactos.resolver(politicas.get(id), grafo.get(id).getProducto(), general);
-                // Un evento por dirección: cada email se entrega y reintenta por separado.
-                for (int i = 0; i < destinos.size(); i++) {
-                    var destino = destinos.get(i);
-                    d.eventos.encolar(new EventoIntegracion(0, clave + ":alerta:" + id + (destinos.size() == 1 ? "" : ":" + i),
-                            EventoIntegracion.Tipo.ALERTA, id, null, null, destino.canal(),
-                            destino.destino(), aviso.getTexto(), d.reloj.instant()));
-                }
-            });
-        }
-        o.disponibilidades.keySet().forEach(id -> {
-            PoliticaReposicion p = politicas.get(id);
-            if (p != null) d.politicas.marcarAlerta(id, grafo.get(id).getDisponible() < p.umbralAlerta());
-        });
-    }
-    private void encolarStock(Dependencias d, String clave, int id, int disponible) {
-        d.eventos.encolar(new EventoIntegracion(0, clave, EventoIntegracion.Tipo.STOCK_DIGITAL, id,
-                null, disponible, null, null, null, d.reloj.instant()));
     }
 
     @Override public Stock consultarStock(int id) {
@@ -172,7 +93,7 @@ public final class GestorInventario implements GestionInventario {
             d.stocks.bloquearInventario();
             if (datos.categoriaId() != null) d.categorias.consultar(datos.categoriaId());
             Stock stock = d.stocks.crear(datos, false);
-            encolarStock(d, "alta:" + stock.getProducto().getId(), stock.getProducto().getId(), 0);
+            CoordinadorEventosStock.encolarStock(d, "alta:" + stock.getProducto().getId(), stock.getProducto().getId(), 0);
             d.unidad.despuesDeConfirmar(d.integraciones::procesarPendientes);
             return stock;
         });
@@ -188,11 +109,12 @@ public final class GestorInventario implements GestionInventario {
             if (datos.categoriaId() != null) d.categorias.consultar(datos.categoriaId());
             ComboStock combo = (ComboStock) d.stocks.crear(datos, true);
             lineas.forEach(l -> combo.agregar(exigirStock(grafo, l.stockId()), l.cantidad()));
-            if (combo.getComponentes().stream().anyMatch(l -> l.getComponente() instanceof ComboStock c && c.getComponentes().isEmpty())) {
+            if (combo.getComponentes().stream().anyMatch(l ->
+                    l.getComponente().getTipo() == Stock.Tipo.COMBO && l.getComponente().getComponentes().isEmpty())) {
                 throw new IllegalArgumentException("No se puede publicar un combo incompleto");
             }
             d.stocks.guardarComposicion(combo);
-            encolarStock(d, "alta:" + combo.getProducto().getId(), combo.getProducto().getId(), combo.getDisponible());
+            CoordinadorEventosStock.encolarStock(d, "alta:" + combo.getProducto().getId(), combo.getProducto().getId(), combo.getDisponible());
             d.unidad.despuesDeConfirmar(d.integraciones::procesarPendientes);
             return combo;
         });
@@ -211,10 +133,11 @@ public final class GestorInventario implements GestionInventario {
         Dependencias d = d();
         d.unidad.ejecutar(() -> {
             d.stocks.bloquearInventario();
-            if (!(exigirStock(d.stocks.cargarInventario(), politica.stockId()) instanceof StockSimple)) {
+            Stock stock = exigirStock(d.stocks.cargarInventario(), politica.stockId());
+            if (stock.getTipo() != Stock.Tipo.SIMPLE) {
                 throw new IllegalArgumentException("La política requiere un producto simple");
             }
-            d.contactos.respaldo(politica, exigirStock(d.stocks.cargarInventario(), politica.stockId()).getProducto(), d.notificaciones.consultarConfiguracion());
+            d.contactos.respaldo(politica, stock.getProducto(), d.notificaciones.consultarConfiguracion());
             d.politicas.guardar(politica);
             return null;
         });
@@ -297,11 +220,5 @@ public final class GestorInventario implements GestionInventario {
         Stock stock = grafo.get(id);
         if (stock == null) throw new EntidadNoEncontradaException("Stock", id);
         return stock;
-    }
-    private static final class Observaciones {
-        final Map<Integer, AuditoriaStock> auditorias = new LinkedHashMap<>();
-        final Map<Integer, Integer> disponibilidades = new LinkedHashMap<>();
-        final Map<Integer, AlertaStockBajo.Aviso> avisos = new LinkedHashMap<>();
-        final Map<Integer, AlertaStockBajo> alertas = new LinkedHashMap<>();
     }
 }

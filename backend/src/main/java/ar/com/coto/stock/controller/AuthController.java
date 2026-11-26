@@ -2,6 +2,8 @@ package ar.com.coto.stock.controller;
 
 import ar.com.coto.stock.adapter.UsuarioSecurityAdapter;
 import ar.com.coto.stock.config.JwtTokenService;
+import ar.com.coto.stock.config.RolSucursal;
+import ar.com.coto.stock.config.UsuarioJwt;
 import ar.com.coto.stock.dto.Respuestas;
 import ar.com.coto.stock.dto.Solicitudes;
 import io.swagger.v3.oas.annotations.Operation;
@@ -64,10 +66,16 @@ public class AuthController {
         }
         String rol = auth.getAuthorities().stream()
                 .findFirst()
-                .map(a -> a.getAuthority().replace("ROLE_", ""))
+                .map(RolSucursal::rol)
                 .orElse("DESCONOCIDO");
 
-        return ResponseEntity.ok(new Respuestas.Perfil(auth.getName(), auth.getName(), rol));
+        String nombreCompleto = switch (auth.getPrincipal()) {
+            case UsuarioJwt jwt -> jwt.nombreCompleto();
+            case UsuarioSecurityAdapter user -> user.getNombreCompleto();
+            default -> auth.getName();
+        };
+
+        return ResponseEntity.ok(new Respuestas.Perfil(auth.getName(), nombreCompleto, rol));
     }
 }
 

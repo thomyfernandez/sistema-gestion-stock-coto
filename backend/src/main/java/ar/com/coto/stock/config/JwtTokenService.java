@@ -1,6 +1,8 @@
 package ar.com.coto.stock.config;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +18,8 @@ import java.util.Optional;
 /** Servicio de generación y validación de tokens JWT sin estado. */
 @Service
 public class JwtTokenService {
+    private static final System.Logger LOGGER = System.getLogger(JwtTokenService.class.getName());
+
     private final SecretKey key;
     private final long duracionHoras;
 
@@ -51,7 +55,11 @@ public class JwtTokenService {
                     .parseSignedClaims(token)
                     .getPayload();
             return Optional.of(claims);
-        } catch (Exception e) {
+        } catch (ExpiredJwtException e) {
+            LOGGER.log(System.Logger.Level.DEBUG, "Token JWT expirado: {0}", e.getMessage());
+            return Optional.empty();
+        } catch (JwtException | IllegalArgumentException e) {
+            LOGGER.log(System.Logger.Level.DEBUG, "Token JWT inválido: {0}", e.getMessage());
             return Optional.empty();
         }
     }

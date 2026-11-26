@@ -36,7 +36,7 @@ curl -s http://localhost:8080/api/auth/login \
 curl -i http://localhost:8080/api/digital/reservas \
   -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
-  -d '{"stockId":6,"cantidad":2,"motivo":"Compra web de prueba","usuario":"digital.demo"}'
+  -d '{"stockId":6,"cantidad":2,"motivo":"Compra web de prueba"}'
 ```
 
 Devuelve `201 Created` y los disponibles finales de los artículos y del combo. Los errores usan `application/problem+json`, con código y detalle.
@@ -172,6 +172,10 @@ Contraseña unificada para los operadores de demostración: `coto123`.
 - `POST /api/auth/login`: Recibe `{"username": "...", "password": "..."}` y devuelve `{token, username, nombreCompleto, rol}`.
 - `GET /api/auth/perfil`: Con encabezado `Authorization: Bearer <token>`, retorna el perfil activo del operador autenticado.
 
+### Operador de los movimientos
+
+Cada movimiento (recepción, movimientos de sucursal, operaciones digitales, armado y desarmado de combos y recepción de pedidos) registra como operador al usuario del token. Los cuerpos no llevan `usuario`: si se envía, la API responde 400, igual que con cualquier campo desconocido, y nadie puede registrar movimientos a nombre de otro. Los formularios muestran el operador de la sesión sin permitir editarlo. El registro genérico `POST /api/movimientos` y las operaciones de `/api/digital/**` quedan reservados al rol `SUPERVISOR`.
+
 ## Combos: armado, desarmado y stock propio
 
 El modelo conserva el patrón **Composite** (`ComboStock` y `StockSimple`) y añade soporte para armado físico de combos (por ejemplo, canastas navideñas o canastas promocionales) con stock propio:
@@ -188,9 +192,9 @@ El modelo conserva el patrón **Composite** (`ComboStock` y `StockSimple`) y añ
     - `ReservaFisicoPrimero` (**por defecto**): compromete primero unidades armadas en stock propio para minimizar impacto en los componentes sueltos; si no alcanza, reserva componentes virtuales.
     - `ReservaVirtualPrimero` (**configurable**): reserva primero componentes virtuales preservando los bultos ya armados en góndola o depósito.
 - **Endpoints REST y seguridad:**
-  - `POST /api/combos/{id}/armado`: recibe `{cantidad, motivo, usuario}` y confirma el armado.
-  - `POST /api/combos/{id}/desarmado`: recibe `{cantidad, motivo, usuario}` y confirma el desarmado.
-  - Autorización: restringido a operadores con rol `REPOSITOR` y `SUPERVISOR`.
+  - `POST /api/combos/{id}/armado`: recibe `{cantidad, motivo}` y confirma el armado.
+  - `POST /api/combos/{id}/desarmado`: recibe `{cantidad, motivo}` y confirma el desarmado.
+  - Autorización: restringido a operadores con rol `REPOSITOR` y `SUPERVISOR`. El operador se toma del token.
 
 ## Base de datos
 

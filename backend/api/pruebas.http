@@ -19,31 +19,31 @@ GET {{baseUrl}}/api/digital/catalogo?medioPago=DEBITO
 POST {{baseUrl}}/api/digital/reservas
 Content-Type: application/json
 
-{"stockId":6,"cantidad":2,"motivo":"Compra web de prueba","usuario":"digital.demo"}
+{"stockId":6,"cantidad":2,"motivo":"Compra web de prueba"}
 
 ### Liberar 1 combo reservado
 POST {{baseUrl}}/api/digital/cancelaciones
 Content-Type: application/json
 
-{"stockId":6,"cantidad":1,"motivo":"Cancelación web de prueba","usuario":"digital.demo"}
+{"stockId":6,"cantidad":1,"motivo":"Cancelación web de prueba"}
 
 ### Despachar 1 combo reservado
 POST {{baseUrl}}/api/digital/despachos
 Content-Type: application/json
 
-{"stockId":6,"cantidad":1,"motivo":"Despacho web de prueba","usuario":"digital.demo"}
+{"stockId":6,"cantidad":1,"motivo":"Despacho web de prueba"}
 
 ### Puesto de recepción
 POST {{baseUrl}}/api/recepcion/ingresos
 Content-Type: application/json
 
-{"stockId":1,"cantidad":10,"motivo":"Ingreso por remito de prueba","usuario":"recepcion.demo"}
+{"stockId":1,"cantidad":10,"motivo":"Ingreso por remito de prueba"}
 
 ### PDA: mover 5 arroces a góndola
 POST {{baseUrl}}/api/sucursal/movimientos
 Content-Type: application/json
 
-{"stockId":1,"tipo":"TRASLADO_A_GONDOLA","cantidad":5,"motivo":"Carga de góndola","usuario":"pda.demo"}
+{"stockId":1,"tipo":"TRASLADO_A_GONDOLA","cantidad":5,"motivo":"Carga de góndola"}
 
 ### Strategy: cambiar canal de notificación
 PUT {{baseUrl}}/api/notificaciones/canal
@@ -68,9 +68,6 @@ GET {{baseUrl}}/api/pedidos
 
 ### Recibir pedido inicial (primero debe estar ENVIADO)
 POST {{baseUrl}}/api/pedidos/1/recepcion
-Content-Type: application/json
-
-{"usuario":"recepcion.demo"}
 
 ### Observer: auditoría de hojas y combos
 GET {{baseUrl}}/api/auditoria
@@ -88,7 +85,7 @@ Content-Type: application/json
 POST {{baseUrl}}/api/digital/reservas
 Content-Type: application/json
 
-{"stockId":1,"cantidad":1,"motivo":"Prueba de recuperación","usuario":"digital.demo"}
+{"stockId":1,"cantidad":1,"motivo":"Prueba de recuperación"}
 
 ### Consultar entregas pendientes y último error
 GET {{baseUrl}}/api/integraciones
@@ -124,13 +121,13 @@ Content-Type: application/json
 POST {{baseUrl}}/api/digital/reservas
 Content-Type: application/json
 
-{"stockId":6,"cantidad":100000,"motivo":"Prueba sin stock suficiente","usuario":"digital.demo"}
+{"stockId":6,"cantidad":100000,"motivo":"Prueba sin stock suficiente"}
 
 ### Error esperado: 400
 POST {{baseUrl}}/api/recepcion/ingresos
 Content-Type: application/json
 
-{"stockId":1,"cantidad":0,"motivo":"Cantidad inválida","usuario":"demo"}
+{"stockId":1,"cantidad":0,"motivo":"Cantidad inválida"}
 
 
 ### Configuración compartida de alertas y avisos

@@ -45,7 +45,7 @@ Si se sirve `dist` desde un servidor diferente, se debe reenviar `/api` al backe
 
 Compras también incluye el historial de movimientos, la auditoría y el panel de integraciones. Este último permite seleccionar el canal de notificación, consultar mensajes/pedidos/sincronizaciones simulados, reintentar entregas y simular caídas de ERP, mensajería o Coto Digital en el perfil `demo`.
 
-Las reservas del backend son cantidades agregadas por artículo: esta versión no incorpora clientes, carrito, cobros ni identificación de pedidos web individuales. Los campos de operador registran la identificación declarada en la auditoría; no representan autenticación ni permisos por rol.
+Las reservas del backend son cantidades agregadas por artículo: esta versión no incorpora clientes, carrito, cobros ni identificación de pedidos web individuales. El operador de cada movimiento es el usuario autenticado: los formularios lo muestran como dato de sólo lectura y el backend lo toma del token.
 
 ## Panel interno del canal digital
 
@@ -53,7 +53,7 @@ La ruta `#/digital` se conserva, con el nombre de navegación **Canal digital** 
 
 - Los indicadores suman reservado y disponible únicamente de artículos simples, evitando contar nuevamente los componentes de combos. Los despachos se cuentan como movimientos, no como pedidos web.
 - La tabla compara el disponible del backend con `integraciones.catalogoDigital`, el último valor conocido por el proveedor. Un artículo sin publicaciones muestra `—` y **Sin envío**, no un cero inventado. Los estados distinguen sincronizado, pendiente y desactualizado.
-- El formulario ofrece reserva, cancelación y despacho, registra operador y motivo, y muestra el efecto de cada operación. Para simples limita las cancelaciones/despachos por el reservado; para combos la API valida las reservas de sus componentes.
+- El formulario, disponible para el rol `SUPERVISOR`, ofrece reserva, cancelación y despacho, registra motivo y el operador de la sesión, y muestra el efecto de cada operación. Para simples limita las cancelaciones/despachos por el reservado; para combos la API valida las reservas de sus componentes.
 - El historial muestra los últimos diez movimientos digitales, su tipo, cantidad, operador, motivo y fecha. El enlace de actividad permite consultar el resto.
 - La búsqueda y los filtros permiten revisar artículos simples, combos, simples con reservas y estados de sincronización. Los errores de integración se consultan y reintentan desde Integraciones.
 

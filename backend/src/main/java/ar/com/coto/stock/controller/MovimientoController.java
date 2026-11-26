@@ -43,8 +43,8 @@ public class MovimientoController {
     @GetMapping("/movimientos/{id}") public Respuestas.Movimiento obtener(@PathVariable @Positive long id) {
         return MapeadorDto.movimiento(inventario.consultarMovimiento(id));
     }
-    @PostMapping("/movimientos") public ResponseEntity<Respuestas.ResultadoMovimiento> registrar(@Valid @RequestBody Solicitudes.Movimiento s) {
-        var resultado = MapeadorDto.resultado(inventario.registrarMovimiento(MapeadorDto.movimiento(s, reloj)));
+    @PostMapping("/movimientos") public ResponseEntity<Respuestas.ResultadoMovimiento> registrar(@Valid @RequestBody Solicitudes.Movimiento s, @OperadorAutenticado String operador) {
+        var resultado = MapeadorDto.resultado(inventario.registrarMovimiento(MapeadorDto.movimiento(s, operador, reloj)));
         return ResponseEntity.created(URI.create("/api/movimientos/" + resultado.id())).body(resultado);
     }
     @GetMapping("/auditoria") public ResponseEntity<List<Respuestas.Auditoria>> auditoria(@RequestParam(required = false) @Positive Integer stockId,

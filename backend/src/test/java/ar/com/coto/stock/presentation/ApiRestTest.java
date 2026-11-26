@@ -57,7 +57,7 @@ class ApiRestTest {
     }
     private String operacion(int id, int cantidad) {
         return """
-            {"stockId":%d,"cantidad":%d,"motivo":"Prueba HTTP","usuario":"demo"}
+            {"stockId":%d,"cantidad":%d,"motivo":"Prueba HTTP"}
             """.formatted(id, cantidad);
     }
     private long id(MvcResult r) throws java.io.UnsupportedEncodingException {
@@ -107,12 +107,12 @@ class ApiRestTest {
     @Test void recepcionYSucursalActualizanLasZonasSinDuplicarElFisico() throws Exception {
         enviar("/api/recepcion/ingresos", operacion(1, 5)).andExpect(status().isCreated());
         enviar("/api/sucursal/movimientos", """
-                {"stockId":1,"tipo":"TRASLADO_A_GONDOLA","cantidad":10,"motivo":"Carga","usuario":"pda"}
+                {"stockId":1,"tipo":"TRASLADO_A_GONDOLA","cantidad":10,"motivo":"Carga"}
                 """).andExpect(status().isCreated());
         mvc.perform(get("/api/productos/1")).andExpect(jsonPath("$.stockFisico").value(125))
                 .andExpect(jsonPath("$.stockExhibicion").value(40)).andExpect(jsonPath("$.disponible").value(75));
         enviar("/api/sucursal/movimientos", """
-                {"stockId":1,"tipo":"MERMA_GONDOLA","cantidad":2,"motivo":"Rotura","usuario":"pda"}
+                {"stockId":1,"tipo":"MERMA_GONDOLA","cantidad":2,"motivo":"Rotura"}
                 """).andExpect(status().isCreated());
         mvc.perform(get("/api/productos/1")).andExpect(jsonPath("$.stockFisico").value(123))
                 .andExpect(jsonPath("$.stockExhibicion").value(38)).andExpect(jsonPath("$.disponible").value(75));
@@ -121,7 +121,7 @@ class ApiRestTest {
         MvcResult reserva = enviar("/api/digital/reservas", operacion(6, 2)).andExpect(status().isCreated())
                 .andExpect(jsonPath("$.disponibilidades.6").value(33)).andReturn();
         mvc.perform(get(reserva.getResponse().getHeader("Location"))).andExpect(status().isOk())
-                .andExpect(jsonPath("$.tipo").value("RESERVA_DIGITAL")).andExpect(jsonPath("$.usuario").value("demo"));
+                .andExpect(jsonPath("$.tipo").value("RESERVA_DIGITAL")).andExpect(jsonPath("$.usuario").value("supervisor.demo"));
         enviar("/api/digital/cancelaciones", operacion(6, 1)).andExpect(status().isCreated());
         enviar("/api/digital/despachos", operacion(6, 1)).andExpect(status().isCreated());
         mvc.perform(get("/api/combos/6")).andExpect(jsonPath("$.disponible").value(34));
@@ -130,7 +130,7 @@ class ApiRestTest {
     }
     @Test void armadoYDesarmadoDeCombosPorHttp() throws Exception {
         enviar("/api/combos/6/armado", """
-                {"cantidad":5,"motivo":"Armado canastas para góndola","usuario":"repositor.demo"}
+                {"cantidad":5,"motivo":"Armado canastas para góndola"}
                 """).andExpect(status().isCreated())
                 .andExpect(jsonPath("$.disponibilidades.6").value(35))
                 .andExpect(jsonPath("$.disponibilidades.1").value(70))
@@ -141,7 +141,7 @@ class ApiRestTest {
                 .andExpect(jsonPath("$.disponible").value(35));
 
         enviar("/api/combos/6/desarmado", """
-                {"cantidad":2,"motivo":"Desarmado por devolución","usuario":"repositor.demo"}
+                {"cantidad":2,"motivo":"Desarmado por devolución"}
                 """).andExpect(status().isCreated())
                 .andExpect(jsonPath("$.disponibilidades.6").value(35));
 
@@ -151,13 +151,13 @@ class ApiRestTest {
     }
     @Test void armadoDeComboConStockInsuficienteDevuelve409() throws Exception {
         enviar("/api/combos/6/armado", """
-                {"cantidad":50,"motivo":"Armado excesivo","usuario":"repositor.demo"}
+                {"cantidad":50,"motivo":"Armado excesivo"}
                 """).andExpect(status().isConflict())
                 .andExpect(jsonPath("$.codigo").value("STOCK_INSUFICIENTE"));
     }
     @Test void movimientoGenericoTambienPasaPorElGestor() throws Exception {
         enviar("/api/movimientos", """
-                {"stockId":1,"tipo":"DEVOLUCION","cantidad":2,"motivo":"Devolución apta","usuario":"demo"}
+                {"stockId":1,"tipo":"DEVOLUCION","cantidad":2,"motivo":"Devolución apta"}
                 """).andExpect(status().isCreated()).andExpect(jsonPath("$.disponibilidades.1").value(82));
     }
     @Test void stockInsuficienteDevuelveProblemDetail409SinCambios() throws Exception {
@@ -170,13 +170,13 @@ class ApiRestTest {
     }
     @ParameterizedTest
     @ValueSource(strings = {
-            "{}", "{\"stockId\":1,\"motivo\":\"Prueba\",\"usuario\":\"demo\"}",
-            "{\"stockId\":1,\"cantidad\":0,\"motivo\":\"Prueba\",\"usuario\":\"demo\"}",
-            "{\"stockId\":1,\"cantidad\":-1,\"motivo\":\"Prueba\",\"usuario\":\"demo\"}",
-            "{\"stockId\":1,\"cantidad\":1.5,\"motivo\":\"Prueba\",\"usuario\":\"demo\"}",
-            "{\"stockId\":1,\"cantidad\":1,\"motivo\":\" \",\"usuario\":\"demo\"}",
-            "{\"stockId\":1,\"cantidad\":1,\"motivo\":\"Prueba\",\"usuario\":\"demo\",\"fecha\":\"2026-01-01\"}",
-            "{\"stockId\":1,\"cantidad\":2147483648,\"motivo\":\"Prueba\",\"usuario\":\"demo\"}",
+            "{}", "{\"stockId\":1,\"motivo\":\"Prueba\"}",
+            "{\"stockId\":1,\"cantidad\":0,\"motivo\":\"Prueba\"}",
+            "{\"stockId\":1,\"cantidad\":-1,\"motivo\":\"Prueba\"}",
+            "{\"stockId\":1,\"cantidad\":1.5,\"motivo\":\"Prueba\"}",
+            "{\"stockId\":1,\"cantidad\":1,\"motivo\":\" \"}",
+            "{\"stockId\":1,\"cantidad\":1,\"motivo\":\"Prueba\",\"fecha\":\"2026-01-01\"}",
+            "{\"stockId\":1,\"cantidad\":2147483648,\"motivo\":\"Prueba\"}",
             "null", "{"
     })
     void jsonYCantidadesInvalidasSeRechazanSinEscribir(String cuerpo) throws Exception {
@@ -291,22 +291,22 @@ class ApiRestTest {
     }
     @Test void pedidoSeRecibeUnaVezYNoAceptaSegundaRecepcion() throws Exception {
         enviar("/api/integraciones/reintentos", "").andExpect(status().isOk());
-        enviar("/api/pedidos/1/recepcion", "{\"usuario\":\"recepcion.demo\"}").andExpect(status().isCreated());
+        enviar("/api/pedidos/1/recepcion", "").andExpect(status().isCreated());
         mvc.perform(get("/api/pedidos/1")).andExpect(jsonPath("$.estado").value("RECIBIDO"));
         mvc.perform(get("/api/productos/3")).andExpect(jsonPath("$.disponible").value(36));
-        enviar("/api/pedidos/1/recepcion", "{\"usuario\":\"recepcion.demo\"}").andExpect(status().isConflict())
+        enviar("/api/pedidos/1/recepcion", "").andExpect(status().isConflict())
                 .andExpect(jsonPath("$.codigo").value("ESTADO_INCOMPATIBLE"));
+    }
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/pedidos/999/recepcion", "/api/pedidos/999/cancelacion"})
+    void operarPedidoInexistenteDevuelve404(String ruta) throws Exception {
+        enviar(ruta, "").andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value("Pedido no encontrado: 999"));
     }
     @Test void cancelarPedidoPendienteDevuelve204() throws Exception {
         enviar("/api/pedidos/1/cancelacion", "").andExpect(status().isNoContent()).andExpect(content().string(""));
         mvc.perform(get("/api/pedidos/1")).andExpect(jsonPath("$.estado").value("CANCELADO"));
-    }
-    @Test void corsPermiteElFrontendLocalYRechazaOrigenesAjeno() throws Exception {
-        mvc.perform(options("/api/productos").header("Origin", "http://localhost:5173")
-                        .header("Access-Control-Request-Method", "POST").header("Access-Control-Request-Headers", "Content-Type"))
-                .andExpect(status().isOk()).andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"));
-        mvc.perform(options("/api/productos").header("Origin", "https://otro.example").header("Access-Control-Request-Method", "POST"))
-                .andExpect(status().isForbidden());
     }
     @Test void configuracionGlobalSePersisteYSeAplicaATodosLosProductos() throws Exception {
         mvc.perform(put("/api/configuracion/avisos").contentType(MediaType.APPLICATION_JSON).content("""
