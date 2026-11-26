@@ -10,6 +10,8 @@ import { SettingsPage } from './pages/Settings';
 import { DiscountsPage } from './pages/Discounts';
 import cotoLogo from './assets/coto-superapp.png';
 
+const SIDEBAR_STORAGE_KEY = 'coto.sidebar.collapsed';
+
 const allViews = [
   { id: 'stock', name: 'Stock', icon: Warehouse, roles: ['REPOSITOR', 'SUPERVISOR'] },
   { id: 'descuentos', name: 'Descuentos', icon: Tag, roles: ['COMPRAS', 'SUPERVISOR'] },
@@ -37,7 +39,7 @@ export default function App() {
     if (window.location.hash === '#/compras/integraciones') window.history.replaceState(null, '', '#/compras/reposicion');
   }, [route]);
 
-  const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem('coto.sidebar.collapsed') !== 'false'; } catch { return true; } });
+  const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem(SIDEBAR_STORAGE_KEY) !== 'false'; } catch { return true; } });
   const [help, setHelp] = useState(false);
   const [alerts, setAlerts] = useState(false);
 
@@ -48,7 +50,7 @@ export default function App() {
     return () => { window.removeEventListener('hashchange', update); window.removeEventListener('keydown', escape); };
   }, []);
 
-  useEffect(() => { try { localStorage.setItem('coto.sidebar.collapsed', String(collapsed)); } catch { /* La navegación sigue funcionando sin almacenamiento local. */ } }, [collapsed]);
+  useEffect(() => { try { localStorage.setItem(SIDEBAR_STORAGE_KEY, String(collapsed)); } catch { /* La navegación sigue funcionando sin almacenamiento local. */ } }, [collapsed]);
 
   const currentViewObj = allViews.find(v => v.id === route.view);
   const title = currentViewObj?.name || 'Stock';

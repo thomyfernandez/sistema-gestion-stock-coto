@@ -7,6 +7,15 @@ export type Grupo = 'inventario' | 'politicas' | 'configuracion';
 export const GRUPOS: readonly Grupo[] = ['inventario', 'politicas', 'configuracion'];
 /** El sondeo periódico sólo trae inventario y se pausa con la pestaña oculta. */
 export const INTERVALO_SONDEO = 20000;
+const TOAST_DURATION_MS = 8000;
+
+/** Acciones restringidas de la UI; replican la matriz de roles de ConfiguracionSeguridad en el backend. */
+export const PERMISOS = {
+  operarDigital: ['SUPERVISOR'],
+  operarCombo: ['REPOSITOR', 'SUPERVISOR'],
+  editarCategoria: ['COMPRAS', 'SUPERVISOR'],
+} as const satisfies Record<string, readonly RolUsuario[]>;
+export type Permiso = keyof typeof PERMISOS;
 
 const avisosVacios = { canal: 'EMAIL' as const, email: '', telefono: '' };
 const cargadores: Record<Grupo, (signal: AbortSignal) => Promise<Partial<Snapshot>>> = {
@@ -39,7 +48,7 @@ interface Store {
   usuario: UsuarioSesion | null;
   login: (credenciales: { username: string; password: string }) => Promise<void>;
   logout: () => void;
-  tienePermiso: (rolRequerido: RolUsuario | RolUsuario[]) => boolean;
+  tienePermiso: (permiso: Permiso) => boolean;
 }
 const Context = createContext<Store | null>(null);
 
@@ -98,12 +107,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setToast({ message: `¡Bienvenido, ${sesion.nombreCompleto}!`, tone: 'success' });
   };
 
-  const tienePermiso = useCallback((rolRequerido: RolUsuario | RolUsuario[]): boolean => {
-    if (!usuario) return false;
-    if (usuario.rol === 'SUPERVISOR') return true;
-    const requeridos = Array.isArray(rolRequerido) ? rolRequerido : [rolRequerido];
-    return requeridos.includes(usuario.rol);
-  }, [usuario]);
+  const tienePermiso = useCallback((permiso: Permiso): boolean =>
+    !!usuario && (PERMISOS[permiso] as readonly RolUsuario[]).includes(usuario.rol), [usuario]);
 
   /** Una carga más reciente del mismo grupo reemplaza a la anterior; los demás grupos no se descartan. */
   const cargar = useCallback(async (grupos: readonly Grupo[], sondeo: boolean) => {
@@ -165,7 +170,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!toast || toast.tone === 'danger') return;
-    const timer = setTimeout(() => setToast(null), 8000);
+    const timer = setTimeout(() => setToast(null), TOAST_DURATION_MS);
     return () => clearTimeout(timer);
   }, [toast]);
 

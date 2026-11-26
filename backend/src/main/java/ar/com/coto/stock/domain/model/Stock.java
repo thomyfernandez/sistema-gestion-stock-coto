@@ -7,6 +7,8 @@ import java.util.Objects;
 
 /** Component del Composite y sujeto del Observer. No tiene anotaciones JPA/Spring. */
 public abstract class Stock {
+    public enum Tipo { SIMPLE, COMBO }
+
     /* Un monitor compartido mantiene atómicas las operaciones sobre varios componentes
        dentro de una JVM. Las transacciones/bloqueos SQL corresponden a la etapa 2. */
     protected static final Object MONITOR = new Object();
@@ -16,7 +18,13 @@ public abstract class Stock {
     protected Stock(Producto producto) { this.producto = Objects.requireNonNull(producto); }
 
     public final Producto getProducto() { return producto; }
+    public abstract Tipo getTipo();
     public abstract int getDisponible();
+    public abstract int getStockFisico();
+    public abstract int getStockExhibicion();
+    public abstract int getStockReservado();
+    public List<LineaCombo> getComponentes() { return List.of(); }
+    public abstract void aplicarMovimiento(MovimientoStock m);
     public abstract void reservar(int cant);
     public abstract void liberarReserva(int cant);
     public abstract void despacharReserva(int cant);

@@ -1,9 +1,10 @@
-import type { Producto, Pedido, TipoMovimiento, Movimiento, Operacion, ResultadoMovimiento, Auditoria, Politica, Promocion, Precio, ItemCatalogo, Canal, Sistema, Integraciones, Contacto, Categoria, ConfiguracionAvisos, ImagenCarga, RolUsuario, UsuarioSesion, ListaDestinatarios, Pagina } from './types';
+import type { Producto, Pedido, TipoMovimiento, Movimiento, Operacion, OperacionCombo, ResultadoMovimiento, Auditoria, Politica, Promocion, Precio, ItemCatalogo, Canal, Sistema, Integraciones, Contacto, Categoria, ConfiguracionAvisos, ImagenCarga, RolUsuario, UsuarioSesion, ListaDestinatarios, Pagina } from './types';
 
 export class ApiError extends Error {
   constructor(message: string, public status: number, public codigo = '', public errores: Record<string, string[]> = {}) { super(message); }
 }
 const base = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+const REQUEST_TIMEOUT_MS = 20_000;
 
 export const imagenSrc = (url: string) => `${base}${url}`;
 
@@ -20,7 +21,7 @@ export function setOnUnauthorized(cb: () => void) {
 
 async function send(path: string, options: RequestInit = {}): Promise<{ response: Response; body: unknown }> {
   const mutation = options.method && options.method !== 'GET';
-  const timeout = AbortSignal.timeout(20000);
+  const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
   const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
   let response: Response;
   try {
@@ -94,13 +95,13 @@ export const api = {
   catalogo: (medioPago: string, signal?: AbortSignal) => request<ItemCatalogo[]>(`/digital/catalogo?${query({ medioPago })}`, { signal }),
   crearProducto: (body: { nombre: string; descripcion: string; precio: number; categoriaId: number | null; imagen?: ImagenCarga }) => request<Producto>('/productos', json('POST', body)),
   crearCombo: (body: { nombre: string; descripcion: string; precio: number; componentes: { stockId: number; cantidad: number }[]; categoriaId: number | null; imagen?: ImagenCarga }) => request<Producto>('/combos', json('POST', body)),
-  armarCombo: (id: number, body: { cantidad: number; motivo: string; usuario: string }) => request<ResultadoMovimiento>(`/combos/${id}/armado`, json('POST', body)),
-  desarmarCombo: (id: number, body: { cantidad: number; motivo: string; usuario: string }) => request<ResultadoMovimiento>(`/combos/${id}/desarmado`, json('POST', body)),
+  armarCombo: (id: number, body: OperacionCombo) => request<ResultadoMovimiento>(`/combos/${id}/armado`, json('POST', body)),
+  desarmarCombo: (id: number, body: OperacionCombo) => request<ResultadoMovimiento>(`/combos/${id}/desarmado`, json('POST', body)),
   ingresar: (body: Operacion) => request<ResultadoMovimiento>('/recepcion/ingresos', json('POST', body)),
   mover: (body: Operacion & { tipo: TipoMovimiento }) => request<ResultadoMovimiento>('/sucursal/movimientos', json('POST', body)),
   digital: (accion: 'reservas' | 'cancelaciones' | 'despachos', body: Operacion) => request<ResultadoMovimiento>(`/digital/${accion}`, json('POST', body)),
   evaluar: () => request<Pedido[]>('/reposicion/evaluaciones', json('POST')),
-  recibirPedido: (id: number, usuario: string) => request<ResultadoMovimiento>(`/pedidos/${id}/recepcion`, json('POST', { usuario })),
+  recibirPedido: (id: number) => request<ResultadoMovimiento>(`/pedidos/${id}/recepcion`, json('POST')),
   cancelarPedido: (id: number) => request<void>(`/pedidos/${id}/cancelacion`, json('POST')),
   canal: (signal?: AbortSignal) => request<{ canal: Canal }>('/notificaciones/canal', { signal }),
   guardarCanal: (canal: Canal) => request<{ canal: Canal }>('/notificaciones/canal', json('PUT', { canal })),

@@ -62,7 +62,8 @@ export function ProductName({ product }: { product: Pick<Producto, 'id' | 'nombr
     <div><strong>{product.nombre}</strong><span className="caption">{sku(product.id)} · {product.tipo === 'COMBO' ? 'Combo promocional' : 'Artículo simple'}</span></div></div>;
 }
 function ProductCategory({ product }: { product: Producto }) {
-  const { data, busy, run } = useStore();
+  const { data, busy, run, tienePermiso } = useStore();
+  const puedeEditar = tienePermiso('editarCategoria');
   const [categoryId, setCategoryId] = useState(product.categoriaId);
   const [error, setError] = useState<Error | null>(null);
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -70,7 +71,7 @@ function ProductCategory({ product }: { product: Producto }) {
     try { await run(() => api.asignarCategoria(product.id, categoryId), 'Categoría del artículo actualizada.'); }
     catch (e) { setError(e as Error); }
   }
-  return <form className="product-category-form" onSubmit={submit}><Field label="Categoría del artículo"><select value={categoryId ?? ''} disabled={busy} onChange={e => setCategoryId(e.target.value ? Number(e.target.value) : null)}><option value="">Sin categoría</option>{data?.categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></Field><Button type="submit" loading={busy} disabled={categoryId === product.categoriaId}>Guardar categoría</Button><ErrorMessage error={error} /></form>;
+  return <form className="product-category-form" onSubmit={submit}><Field label="Categoría del artículo"><select value={categoryId ?? ''} disabled={busy || !puedeEditar} onChange={e => setCategoryId(e.target.value ? Number(e.target.value) : null)}><option value="">Sin categoría</option>{data?.categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></Field>{puedeEditar && <Button type="submit" loading={busy} disabled={categoryId === product.categoriaId}>Guardar categoría</Button>}<ErrorMessage error={error} /></form>;
 }
 export function ProductDetail({ product, onClose, onMove, onArmar, onDesarmar }: { product: Producto; onClose: () => void; onMove?: () => void; onArmar?: () => void; onDesarmar?: () => void }) {
   const { data } = useStore();
@@ -97,5 +98,10 @@ export function Confirmation({ title, text, children, onClose, onConfirm, label,
       if (errorRef.current) errorRef.current.textContent = '';
       void onConfirm().then(onClose).catch((e: Error) => { if (errorRef.current) errorRef.current.textContent = e.message; });
     }}>{label}</Button></footer></Modal>;
+}
+/** Operador de la sesión: el backend lo toma del token, por eso no se edita. */
+export function OperadorSesion({ hint }: { hint?: string }) {
+  const { usuario } = useStore();
+  return <Field label="Operador" hint={hint}><input value={usuario ? `${usuario.nombreCompleto} (${usuario.username})` : ''} disabled /></Field>;
 }
 export function SuccessIcon() { return <CheckCircle2 size={24} aria-hidden="true" />; }

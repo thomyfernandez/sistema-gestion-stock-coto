@@ -26,29 +26,38 @@ public final class ServicioValorizacion implements ConsultaPrecios {
         Reglas.positivo(cantidad, "cantidad");
         return unidad.consultar(() -> stocks.cargarInventario().values().stream().map(s ->
                 new ItemCatalogo(s.getProducto().getId(), s.getProducto().getNombre(), s.getProducto().getDescripcion(),
-                        s instanceof StockSimple ? "SIMPLE" : "COMBO", s.getDisponible(), calcular(s, cantidad, medioPago))).toList());
+                        s.getTipo().name(), s.getDisponible(), calcular(s, cantidad, medioPago))).toList());
     }
     private PrecioCalculado calcular(Stock stock, int cantidad, String medioPago) {
-            int productoId = stock.getProducto().getId();
-            ItemValorizable precio = new PrecioLista(stock.getProducto(), cantidad);
-            BigDecimal lista = moneda(precio.getPrecio());
-            List<Long> aplicadas = new ArrayList<>();
-            boolean dosPorUnoAplicado = false;
-            for (Promocion p : promociones.listar(productoId)) {
-                if (!p.activa() || (p.tipo() == Promocion.Tipo.MEDIO_PAGO && !p.medioPago().equalsIgnoreCase(medioPago))) continue;
-                precio = switch (p.tipo()) {
-                    case DESCUENTO -> new DescuentoDecorator(precio, p.porcentaje());
-                    case DOS_POR_UNO -> {
-                        if (dosPorUnoAplicado) throw new IllegalStateException("No se puede aplicar dos veces el 2x1");
-                        dosPorUnoAplicado = true;
-                        yield new PromocionDecorator(precio, PromocionDecorator.DOS_POR_UNO);
-                    }
-                    case MEDIO_PAGO -> new PromocionDecorator(precio, PromocionDecorator.MEDIO_DE_PAGO, p.porcentaje());
-                };
-                aplicadas.add(p.id());
-            }
-            BigDecimal total = moneda(precio.getPrecio());
-            return new PrecioCalculado(productoId, cantidad, lista, total, lista.subtract(total), aplicadas);
+        int productoId = stock.getProducto().getId();
+        ItemValorizable precio = new PrecioLista(stock.getProducto(), cantidad);
+        BigDecimal lista = moneda(precio.getImporte());
+        List<Long> aplicadas = new ArrayList<>();
+        boolean dosPorUnoAplicado = false;
+        for (Promocion p : promociones.listar(productoId)) {
+            if (!aplicaPromocion(p, medioPago)) continue;
+            precio = switch (p.tipo()) {
+                case DESCUENTO -> new DescuentoDecorator(precio, p.porcentaje());
+                case DOS_POR_UNO -> {
+                    if (dosPorUnoAplicado) throw new IllegalStateException("No se puede aplicar dos veces el 2x1");
+                    dosPorUnoAplicado = true;
+                    yield new DosPorUnoDecorator(precio);
+                }
+                case MEDIO_PAGO -> new MedioPagoDecorator(precio, p.porcentaje());
+            };
+            aplicadas.add(p.id());
+        }
+        BigDecimal total = moneda(precio.getImporte());
+        return new PrecioCalculado(productoId, cantidad, lista, total, lista.subtract(total), aplicadas);
     }
-    private BigDecimal moneda(double importe) { return BigDecimal.valueOf(importe).setScale(2, RoundingMode.HALF_UP); }
+
+    private static boolean aplicaPromocion(Promocion p, String medioPago) {
+        if (!p.activa()) return false;
+        if (p.tipo() != Promocion.Tipo.MEDIO_PAGO) return true;
+        return p.medioPago() != null && medioPago != null && p.medioPago().equalsIgnoreCase(medioPago);
+    }
+
+    private static BigDecimal moneda(BigDecimal importe) {
+        return importe.setScale(2, RoundingMode.HALF_UP);
+    }
 }

@@ -68,7 +68,7 @@ La respuesta de producto es plana. Los simples contienen `stockFisico`, `stockEx
 | --- | --- | --- |
 | POST | `/api/recepcion/ingresos` | Recepción física de un producto simple |
 | POST | `/api/sucursal/movimientos` | Traslados, retorno, devoluciones y mermas |
-| POST | `/api/movimientos` | Registro genérico para probar los nueve tipos de movimiento |
+| POST | `/api/movimientos` | Registro genérico para probar los nueve tipos de movimiento (sólo `SUPERVISOR`) |
 | GET | `/api/movimientos` | Historial; filtro opcional `stockId` |
 | GET | `/api/movimientos/{id}` | Movimiento por ID |
 | GET | `/api/auditoria` | Auditoría de hojas y combos; filtro opcional `stockId` |
@@ -76,18 +76,18 @@ La respuesta de producto es plana. Los simples contienen `stockFisico`, `stockEx
 Ingreso de mercadería:
 
 ```json
-{"stockId":1,"cantidad":10,"motivo":"Remito de prueba","usuario":"recepcion.demo"}
+{"stockId":1,"cantidad":10,"motivo":"Remito de prueba"}
 ```
 
 Movimiento de PDA:
 
 ```json
-{"stockId":1,"tipo":"TRASLADO_A_GONDOLA","cantidad":5,"motivo":"Carga de góndola","usuario":"pda.demo"}
+{"stockId":1,"tipo":"TRASLADO_A_GONDOLA","cantidad":5,"motivo":"Carga de góndola"}
 ```
 
 La ruta de sucursal admite `TRASLADO_A_GONDOLA`, `RETORNO_A_DEPOSITO`, `DEVOLUCION`, `MERMA_DEPOSITO` y `MERMA_GONDOLA`. El registro genérico admite además `RECEPCION`, `RESERVA_DIGITAL`, `CANCELACION_RESERVA` y `DESPACHO_DIGITAL`.
 
-La fecha se toma del reloj del servidor; no se admite un campo `fecha` enviado por el cliente. `usuario` es un dato de auditoría del prototipo, no una identidad autenticada.
+La fecha se toma del reloj del servidor; no se admite un campo `fecha` enviado por el cliente. El operador se toma del token JWT (`Authorization: Bearer <token>`); no se admite un campo `usuario` en el cuerpo (responde 400).
 
 Un movimiento confirmado retorna `201 Created`, `Location: /api/movimientos/{id}` y:
 
@@ -110,12 +110,13 @@ El ejemplo corresponde a reservar dos combos desde el fixture inicial. Los IDs g
 | POST | `/api/digital/cancelaciones` | Liberación de una cantidad reservada |
 | POST | `/api/digital/despachos` | Retiro físico de unidades previamente reservadas |
 
-Las tres operaciones POST reciben `stockId`, `cantidad`, `motivo` y `usuario`, y retornan un movimiento 201. Por ejemplo:
+Las tres operaciones POST reciben `stockId`, `cantidad` y `motivo`, requieren rol `SUPERVISOR` y retornan un movimiento 201. El operador se toma del token. Por ejemplo:
 
 ```sh
 curl -i http://localhost:8080/api/digital/reservas \
+  -H 'Authorization: Bearer <token>' \
   -H 'Content-Type: application/json' \
-  -d '{"stockId":6,"cantidad":2,"motivo":"Compra web","usuario":"digital.demo"}'
+  -d '{"stockId":6,"cantidad":2,"motivo":"Compra web"}'
 ```
 
 La cancelación/despacho opera sobre cantidades agregadas de stock. El modelo de las versiones previas no registra una entidad de orden web ni asigna reservas a compradores. Los clientes deben evitar reenviar una operación confirmada: cada POST válido genera un nuevo movimiento y no hay una clave de idempotencia de compra.
@@ -153,11 +154,7 @@ Configuración completa de ejemplo:
 
 Los filtros de estado aceptan `PENDIENTE`, `ENVIADO`, `RECIBIDO` o `CANCELADO`. La reposición automática sigue ejecutándose al cambiar los artículos afectados y descuenta pedidos pendientes/enviados.
 
-Recepción de pedido:
-
-```json
-{"usuario":"recepcion.demo"}
-```
+Recepción de pedido: no requiere cuerpo; el operador que recibe se toma del token.
 
 Sólo se recibe un pedido `ENVIADO`. Una segunda recepción genera 409 sin volver a aumentar stock. Sólo se cancela un pedido `PENDIENTE`.
 

@@ -5,7 +5,7 @@
 .button { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1); min-height: 44px; border: 1px solid transparent; padding: 10px 15px; border-radius: var(--radius-small); font-size: var(--body-medium); font-weight: var(--weight-bold); line-height: 1.35; white-space: nowrap; transition: background .14s, border-color .14s, box-shadow .14s; }
 .button.sm { min-height: 40px; padding: var(--space-1) 12px; font-size: var(--caption); }
 .button.lg { min-height: 56px; padding: 14px var(--space-3); font-size: var(--body-large); }
-.button.block { width: 100%; }
+.button.block { display: flex; width: 100%; }
 /* Primary: acción principal, una por zona */
 .button.primary { background: var(--primary-500); color: var(--neutral-00); border-color: var(--primary-500); box-shadow: var(--shadow-100); }
 .button.primary:hover:not(:disabled) { background: var(--color-action-hover); border-color: var(--color-action-hover); box-shadow: var(--shadow-400); }

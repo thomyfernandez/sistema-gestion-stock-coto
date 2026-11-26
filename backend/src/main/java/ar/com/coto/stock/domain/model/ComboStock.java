@@ -69,13 +69,13 @@ public final class ComboStock extends Stock implements ObservadorStock {
         }
     }
 
-    public List<LineaCombo> getComponentes() {
+    @Override public List<LineaCombo> getComponentes() {
         synchronized (MONITOR) { return List.copyOf(componentes); }
     }
 
-    public int getStockFisico() { synchronized (MONITOR) { return stockFisicoPropio; } }
-    public int getStockExhibicion() { synchronized (MONITOR) { return stockExhibicionPropio; } }
-    public int getStockReservado() { synchronized (MONITOR) { return stockReservadoPropio; } }
+    @Override public int getStockFisico() { synchronized (MONITOR) { return stockFisicoPropio; } }
+    @Override public int getStockExhibicion() { synchronized (MONITOR) { return stockExhibicionPropio; } }
+    @Override public int getStockReservado() { synchronized (MONITOR) { return stockReservadoPropio; } }
 
     public int getDisponiblePropio() {
         synchronized (MONITOR) { return stockFisicoPropio - stockExhibicionPropio - stockReservadoPropio; }
@@ -89,6 +89,8 @@ public final class ComboStock extends Stock implements ObservadorStock {
                     .mapToInt(e -> e.getKey().getDisponible() / e.getValue()).min().orElse(0);
         }
     }
+
+    @Override public Tipo getTipo() { return Tipo.COMBO; }
 
     @Override public int getDisponible() {
         synchronized (MONITOR) {
@@ -156,7 +158,7 @@ public final class ComboStock extends Stock implements ObservadorStock {
         }
     }
 
-    public void aplicarMovimiento(MovimientoStock m) {
+    @Override public void aplicarMovimiento(MovimientoStock m) {
         Objects.requireNonNull(m);
         if (m.getStockId() != producto.getId()) {
             throw new IllegalArgumentException("El movimiento corresponde a otro stock");

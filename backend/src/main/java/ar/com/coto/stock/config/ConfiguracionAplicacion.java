@@ -12,6 +12,9 @@ import java.util.Map;
 /** Único punto de composición. Servicios y dominio reciben contratos, no repositorios concretos. */
 @Configuration(proxyBeanMethods = false)
 public class ConfiguracionAplicacion {
+    private static final int UMBRAL_REPOSICION_DEFECTO = 20;
+    private static final int OBJETIVO_REPOSICION_DEFECTO = 100;
+
     @Bean Clock reloj() { return Clock.systemUTC(); }
     @Bean ApiProveedorExterno proveedorExterno() { return new ApiProveedorExterno(); }
     @Bean SistemaERPExterno erpExterno() { return new SistemaERPExterno(); }
@@ -23,9 +26,9 @@ public class ConfiguracionAplicacion {
     }
     @Bean ServicioNotificaciones notificaciones(ApiProveedorExterno api, RepositorioAvisos avisos, UnidadDeTrabajo unidad) {
         return new ServicioNotificaciones(Map.of(
-                ServicioNotificaciones.Canal.EMAIL, new EmailNotificador(new AdaptadorProveedor(api, "EMAIL")),
+                ServicioNotificaciones.Canal.EMAIL, new EmailNotificador(new AdaptadorProveedor(api, ServicioNotificaciones.Canal.EMAIL.name())),
                 ServicioNotificaciones.Canal.SMS, new SmsNotificador(new AdaptadorProveedorSMS(api)),
-                ServicioNotificaciones.Canal.WHATSAPP, new WhatsAppNotificador(new AdaptadorProveedor(api, "WHATSAPP"))), avisos, unidad);
+                ServicioNotificaciones.Canal.WHATSAPP, new WhatsAppNotificador(new AdaptadorProveedor(api, ServicioNotificaciones.Canal.WHATSAPP.name()))), avisos, unidad);
     }
     @Bean ServicioContactos contactos(RepositorioContactos contactos, RepositorioPoliticas politicas, RepositorioStock stocks, UnidadDeTrabajo unidad,
                                       RepositorioCategorias categorias, RepositorioDestinatarios destinatarios) {
@@ -37,7 +40,9 @@ public class ConfiguracionAplicacion {
     @Bean ServicioCategorias categorias(RepositorioCategorias categorias, RepositorioContactos contactos, RepositorioStock stocks, UnidadDeTrabajo unidad) {
         return new ServicioCategorias(categorias, contactos, stocks, unidad);
     }
-    @Bean ServicioReposicion reposicion(Clock reloj) { return new ServicioReposicion(new ReposicionPuntoDePedido(20, 100), reloj); }
+    @Bean ServicioReposicion reposicion(Clock reloj) {
+        return new ServicioReposicion(new ReposicionPuntoDePedido(UMBRAL_REPOSICION_DEFECTO, OBJETIVO_REPOSICION_DEFECTO), reloj);
+    }
     @Bean ServicioValorizacion valorizacion(RepositorioStock stock, RepositorioPromociones promociones, UnidadDeTrabajo unidad) {
         return new ServicioValorizacion(stock, promociones, unidad);
     }

@@ -91,7 +91,7 @@ class PostgresRealTest {
     }
     private static String operacion(int id, int cantidad) {
         return """
-            {"stockId":%d,"cantidad":%d,"motivo":"Prueba PostgreSQL","usuario":"demo"}
+            {"stockId":%d,"cantidad":%d,"motivo":"Prueba PostgreSQL"}
             """.formatted(id, cantidad);
     }
 

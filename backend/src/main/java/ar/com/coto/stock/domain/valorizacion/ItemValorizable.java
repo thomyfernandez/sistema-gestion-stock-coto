@@ -1,7 +1,9 @@
 package ar.com.coto.stock.domain.valorizacion;
 
-/** getPrecio retorna el TOTAL de la línea; getCantidad permite promociones por unidades. */
+import java.math.BigDecimal;
+
+/** getImporte retorna el TOTAL de la línea; getCantidad permite promociones por unidades. */
 public interface ItemValorizable {
-    double getPrecio();
+    BigDecimal getImporte();
     default int getCantidad() { return 1; }
 }

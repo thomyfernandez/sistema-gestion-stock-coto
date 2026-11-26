@@ -1,6 +1,7 @@
 package ar.com.coto.stock.controller;
 
 import ar.com.coto.stock.domain.model.MovimientoStock;
+import ar.com.coto.stock.domain.model.Stock;
 import ar.com.coto.stock.domain.model.TipoMovimiento;
 import ar.com.coto.stock.dto.*;
 import ar.com.coto.stock.service.GestionInventario;
@@ -26,7 +27,7 @@ public class ComboController {
     }
 
     @GetMapping public List<Respuestas.Producto> listar() {
-        return inventario.listarStock().stream().map(MapeadorDto::producto).filter(p -> "COMBO".equals(p.tipo())).toList();
+        return inventario.listarStock().stream().filter(s -> s.getTipo() == Stock.Tipo.COMBO).map(MapeadorDto::producto).toList();
     }
 
     @GetMapping("/{id}") public Respuestas.Producto obtener(@PathVariable @Positive int id) {
@@ -41,19 +42,23 @@ public class ComboController {
     @PostMapping("/{id}/armado")
     public ResponseEntity<Respuestas.ResultadoMovimiento> armar(
             @PathVariable @Positive int id,
-            @Valid @RequestBody Solicitudes.OperacionCombo solicitud) {
-        MovimientoStock movimiento = new MovimientoStock(id, TipoMovimiento.ARMADO_COMBO,
-                solicitud.cantidad(), reloj.instant(), solicitud.motivo(), solicitud.usuario());
-        var resultado = MapeadorDto.resultado(inventario.registrarMovimiento(movimiento));
-        return ResponseEntity.created(URI.create("/api/movimientos/" + resultado.id())).body(resultado);
+            @Valid @RequestBody Solicitudes.OperacionCombo solicitud,
+            @OperadorAutenticado String operador) {
+        return operarCombo(id, solicitud, TipoMovimiento.ARMADO_COMBO, operador);
     }
 
     @PostMapping("/{id}/desarmado")
     public ResponseEntity<Respuestas.ResultadoMovimiento> desarmar(
             @PathVariable @Positive int id,
-            @Valid @RequestBody Solicitudes.OperacionCombo solicitud) {
-        MovimientoStock movimiento = new MovimientoStock(id, TipoMovimiento.DESARMADO_COMBO,
-                solicitud.cantidad(), reloj.instant(), solicitud.motivo(), solicitud.usuario());
+            @Valid @RequestBody Solicitudes.OperacionCombo solicitud,
+            @OperadorAutenticado String operador) {
+        return operarCombo(id, solicitud, TipoMovimiento.DESARMADO_COMBO, operador);
+    }
+
+    private ResponseEntity<Respuestas.ResultadoMovimiento> operarCombo(
+            int id, Solicitudes.OperacionCombo solicitud, TipoMovimiento tipo, String operador) {
+        MovimientoStock movimiento = new MovimientoStock(id, tipo,
+                solicitud.cantidad(), reloj.instant(), solicitud.motivo(), operador);
         var resultado = MapeadorDto.resultado(inventario.registrarMovimiento(movimiento));
         return ResponseEntity.created(URI.create("/api/movimientos/" + resultado.id())).body(resultado);
     }

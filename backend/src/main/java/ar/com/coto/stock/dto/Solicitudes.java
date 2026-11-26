@@ -37,25 +37,20 @@ public final class Solicitudes {
             @NotNull @Positive Integer stockId,
             @NotNull TipoMovimiento tipo,
             @NotNull @Positive Integer cantidad,
-            @NotBlank @Size(max = 500) String motivo,
-            @NotBlank @Size(max = 100) String usuario) { }
+            @NotBlank @Size(max = 500) String motivo) { }
     public record MovimientoSucursal(
             @NotNull @Positive Integer stockId,
             @NotNull TipoSucursal tipo,
             @NotNull @Positive Integer cantidad,
-            @NotBlank @Size(max = 500) String motivo,
-            @NotBlank @Size(max = 100) String usuario) { }
+            @NotBlank @Size(max = 500) String motivo) { }
     public record Operacion(
             @NotNull @Positive Integer stockId,
             @NotNull @Positive Integer cantidad,
-            @NotBlank @Size(max = 500) String motivo,
-            @NotBlank @Size(max = 100) String usuario) { }
+            @NotBlank @Size(max = 500) String motivo) { }
     public record OperacionCombo(
             @NotNull @Positive Integer cantidad,
-            @NotBlank @Size(max = 500) String motivo,
-            @NotBlank @Size(max = 100) String usuario) { }
+            @NotBlank @Size(max = 500) String motivo) { }
     public record Login(@NotBlank @Size(max = 60) String username, @NotBlank @Size(max = 100) String password) { }
-    public record Usuario(@NotBlank @Size(max = 100) String usuario) { }
     public record Politica(
             @NotNull Estrategia tipo,
             @NotNull @PositiveOrZero Integer puntoPedido,

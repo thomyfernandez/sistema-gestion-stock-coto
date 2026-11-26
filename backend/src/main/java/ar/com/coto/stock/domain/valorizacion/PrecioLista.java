@@ -7,20 +7,17 @@ import java.util.Objects;
 
 /** ConcreteComponent. Una unidad por defecto, o la cantidad de una línea del carrito. */
 public final class PrecioLista implements ItemValorizable {
-    private final Producto producto;
+    private final BigDecimal importe;
     private final int cantidad;
 
     public PrecioLista(Producto producto) { this(producto, 1); }
 
     public PrecioLista(Producto producto, int cantidad) {
-        this.producto = Objects.requireNonNull(producto);
         this.cantidad = Reglas.positivo(cantidad, "cantidad");
-        Reglas.noNegativo(getPrecio(), "total de lista");
+        this.importe = BigDecimal.valueOf(Objects.requireNonNull(producto).getPrecio()).multiply(BigDecimal.valueOf(cantidad));
     }
 
-    @Override public double getPrecio() {
-        return BigDecimal.valueOf(producto.getPrecio()).multiply(BigDecimal.valueOf(cantidad)).doubleValue();
-    }
+    @Override public BigDecimal getImporte() { return importe; }
 
     @Override public int getCantidad() { return cantidad; }
 }

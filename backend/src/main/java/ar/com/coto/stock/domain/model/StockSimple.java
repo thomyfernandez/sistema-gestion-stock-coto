@@ -21,13 +21,15 @@ public final class StockSimple extends Stock {
         this.stockReservado = stockReservado;
     }
 
+    @Override public Tipo getTipo() { return Tipo.SIMPLE; }
+
     @Override public int getDisponible() {
         synchronized (MONITOR) { return stockFisico - stockExhibicion - stockReservado; }
     }
 
-    public int getStockFisico() { synchronized (MONITOR) { return stockFisico; } }
-    public int getStockExhibicion() { synchronized (MONITOR) { return stockExhibicion; } }
-    public int getStockReservado() { synchronized (MONITOR) { return stockReservado; } }
+    @Override public int getStockFisico() { synchronized (MONITOR) { return stockFisico; } }
+    @Override public int getStockExhibicion() { synchronized (MONITOR) { return stockExhibicion; } }
+    @Override public int getStockReservado() { synchronized (MONITOR) { return stockReservado; } }
 
     @Override public void reservar(int cant) {
         synchronized (MONITOR) {
@@ -53,7 +55,7 @@ public final class StockSimple extends Stock {
         }
     }
 
-    public void aplicarMovimiento(MovimientoStock m) {
+    @Override public void aplicarMovimiento(MovimientoStock m) {
         Objects.requireNonNull(m);
         if (m.getStockId() != producto.getId()) {
             throw new IllegalArgumentException("El movimiento corresponde a otro stock");

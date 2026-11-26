@@ -13,8 +13,12 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -75,19 +79,101 @@ class AutenticacionYRolesTest {
     }
 
     @Test
-    @DisplayName("Recepción puede ingresar mercadería con su rol")
+    @DisplayName("Recepción puede ingresar mercadería con su rol y la auditoría toma el usuario del JWT")
     void recepcionPuedeIngresarMercaderia() throws Exception {
-        String token = jwtTokenService.generarToken("recepcion.demo", "RECEPCION", "Recepción");
+        String token = jwtTokenService.generarToken("recepcion.demo", "RECEPCION", "Operador de Recepción");
         String json = """
-                {"stockId":1,"cantidad":5,"motivo":"Remito ingreso","usuario":"recepcion.demo"}
+                {"stockId":1,"cantidad":5,"motivo":"Remito ingreso"}
                 """;
 
-        mvc.perform(post("/api/recepcion/ingresos")
+        var resultado = mvc.perform(post("/api/recepcion/ingresos")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id", notNullValue()));
+                .andExpect(jsonPath("$.id", notNullValue()))
+                .andReturn();
+
+        mvc.perform(get(resultado.getResponse().getHeader("Location"))
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.usuario", is("recepcion.demo")));
+    }
+
+    @Test
+    @DisplayName("Un operador declarado en el cuerpo se rechaza: no se puede suplantar al usuario del JWT")
+    void operadorDeclaradoEnElCuerpoSeRechaza() throws Exception {
+        String token = jwtTokenService.generarToken("recepcion.demo", "RECEPCION", "Operador de Recepción");
+
+        mvc.perform(post("/api/recepcion/ingresos")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"stockId":1,"cantidad":5,"motivo":"Remito ingreso","usuario":"otro.suplantado"}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Perfil autenticado devuelve el nombre completo del JWT")
+    void perfilDevuelveNombreCompletoDelJwt() throws Exception {
+        String token = jwtTokenService.generarToken("supervisor.demo", "SUPERVISOR", "Supervisor de Sucursal");
+
+        mvc.perform(get("/api/auth/perfil")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username", is("supervisor.demo")))
+                .andExpect(jsonPath("$.nombreCompleto", is("Supervisor de Sucursal")))
+                .andExpect(jsonPath("$.rol", is("SUPERVISOR")));
+    }
+
+    @Test
+    @DisplayName("Endpoints de configuración, categorías, promociones y movimientos genéricos validan rol")
+    void endpointsRestringidosValidanRol() throws Exception {
+        String tokenRepositor = jwtTokenService.generarToken("repositor.demo", "REPOSITOR", "Repositor");
+        String tokenCompras = jwtTokenService.generarToken("compras.demo", "COMPRAS", "Compras");
+
+        mvc.perform(delete("/api/productos/1/promociones/1")
+                        .header("Authorization", "Bearer " + tokenRepositor))
+                .andExpect(status().isForbidden());
+
+        mvc.perform(put("/api/productos/1/categoria")
+                        .header("Authorization", "Bearer " + tokenRepositor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"categoriaId\":1}"))
+                .andExpect(status().isForbidden());
+
+        mvc.perform(post("/api/movimientos")
+                        .header("Authorization", "Bearer " + tokenRepositor)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"stockId\":1,\"tipo\":\"DEVOLUCION\",\"cantidad\":1,\"motivo\":\"Prueba\"}"))
+                .andExpect(status().isForbidden());
+
+        mvc.perform(put("/api/notificaciones/canal")
+                        .header("Authorization", "Bearer " + tokenCompras)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"canal\":\"EMAIL\"}"))
+                .andExpect(status().isForbidden());
+
+        mvc.perform(post("/api/integraciones/reintentos")
+                        .header("Authorization", "Bearer " + tokenCompras))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("CORS habilita origen configurado con Authorization y rechaza orígenes ajenos")
+    void corsPermiteFrontendLocalYRechazaOrigenesAjenos() throws Exception {
+        mvc.perform(options("/api/productos")
+                        .header("Origin", "http://localhost:5173")
+                        .header("Access-Control-Request-Method", "POST")
+                        .header("Access-Control-Request-Headers", "Content-Type, Authorization"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"));
+
+        mvc.perform(options("/api/productos")
+                        .header("Origin", "https://otro.example")
+                        .header("Access-Control-Request-Method", "POST"))
+                .andExpect(status().isForbidden());
     }
 }
 
