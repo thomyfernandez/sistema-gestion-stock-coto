@@ -39,7 +39,7 @@ Para probar a mano el perfil contra un contenedor:
 docker run --name coto-postgres -e POSTGRES_DB=coto_stock -e POSTGRES_USER=coto -e POSTGRES_PASSWORD=coto -p 5432:5432 -d postgres:17-alpine
 docker exec -i coto-postgres psql -v ON_ERROR_STOP=1 -U coto -d coto_stock < backend/src/main/resources/schema.sql
 docker exec -i coto-postgres psql -v ON_ERROR_STOP=1 -U coto -d coto_stock < backend/src/main/resources/data.sql
-COTO_DB_PASSWORD=coto java -jar backend/target/gestion-stock-0.3.0-SNAPSHOT.jar --spring.profiles.active=postgres
+COTO_DB_PASSWORD=coto COTO_JWT_SECRET=$(openssl rand -hex 32) java -jar backend/target/gestion-stock-0.3.0-SNAPSHOT.jar --spring.profiles.active=postgres
 ```
 
 ### Frontend

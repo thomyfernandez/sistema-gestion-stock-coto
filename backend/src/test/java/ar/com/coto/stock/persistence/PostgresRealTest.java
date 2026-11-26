@@ -62,10 +62,13 @@ class PostgresRealTest {
     @Container static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:17-alpine")
             .withDatabaseName("coto_stock").withUsername("coto").withPassword("coto");
 
+    private static final String JWT_SECRETO_PRUEBA = java.util.UUID.randomUUID().toString();
+
     @DynamicPropertySource static void baseDeDatos(DynamicPropertyRegistry registro) {
         registro.add("spring.datasource.url", postgres::getJdbcUrl);
         registro.add("spring.datasource.username", postgres::getUsername);
         registro.add("spring.datasource.password", postgres::getPassword);
+        registro.add("coto.seguridad.jwt.secreto", () -> JWT_SECRETO_PRUEBA);
     }
 
     @Autowired MockMvc mvc;

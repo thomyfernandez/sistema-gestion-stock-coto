@@ -20,8 +20,11 @@ public class JwtTokenService {
     private final long duracionHoras;
 
     public JwtTokenService(
-            @Value("${coto.seguridad.jwt.secreto:coto-clave-secreta-de-seguridad-inventario-sucursal-super-segura-2026}") String secreto,
+            @Value("${coto.seguridad.jwt.secreto}") String secreto,
             @Value("${coto.seguridad.jwt.duracion-horas:12}") long duracionHoras) {
+        if (secreto == null || secreto.isBlank()) {
+            throw new IllegalArgumentException("La propiedad coto.seguridad.jwt.secreto es obligatoria y no puede estar vacía.");
+        }
         this.key = Keys.hmacShaKeyFor(secreto.getBytes(StandardCharsets.UTF_8));
         this.duracionHoras = duracionHoras;
     }

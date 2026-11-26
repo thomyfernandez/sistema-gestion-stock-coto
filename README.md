@@ -204,7 +204,7 @@ psql -v ON_ERROR_STOP=1 -1 -d coto_stock \
   -f backend/src/main/resources/data.sql
 ```
 
-Configurar `COTO_DB_URL`, `COTO_DB_USER` y `COTO_DB_PASSWORD` en el entorno y arrancar con:
+Configurar `COTO_DB_URL`, `COTO_DB_USER`, `COTO_DB_PASSWORD` y `COTO_JWT_SECRET` (mínimo 32 caracteres) en el entorno y arrancar con:
 
 ```sh
 java -jar backend/target/gestion-stock-0.3.0-SNAPSHOT.jar \
