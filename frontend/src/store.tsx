@@ -14,6 +14,14 @@ export const PERMISOS = {
   operarDigital: ['SUPERVISOR'],
   operarCombo: ['REPOSITOR', 'SUPERVISOR'],
   editarCategoria: ['COMPRAS', 'SUPERVISOR'],
+  /** Vistas del menú principal. */
+  verStock: ['REPOSITOR', 'SUPERVISOR'],
+  verDescuentos: ['COMPRAS', 'SUPERVISOR'],
+  verRecepcion: ['RECEPCION', 'SUPERVISOR'],
+  verCompras: ['COMPRAS', 'SUPERVISOR'],
+  verConfiguracion: ['SUPERVISOR'],
+  /** Accesos de supervisión: actividad del stock en el menú y atajos a reposición y avisos desde las notificaciones. */
+  verSeguimiento: ['SUPERVISOR'],
 } as const satisfies Record<string, readonly RolUsuario[]>;
 export type Permiso = keyof typeof PERMISOS;
 

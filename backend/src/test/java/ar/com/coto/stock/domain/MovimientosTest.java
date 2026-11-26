@@ -1,5 +1,6 @@
 package ar.com.coto.stock.domain;
 
+import java.math.BigDecimal;
 import ar.com.coto.stock.domain.model.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -9,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class MovimientosTest {
     private StockSimple stock() {
-        return new StockSimple(new Producto(1, "Arroz COTO", "Paquete 1 kg", 1890), 100, 20, 10);
+        return new StockSimple(new Producto(1, "Arroz COTO", "Paquete 1 kg", new BigDecimal("1890")), 100, 20, 10);
     }
 
     private MovimientoStock movimiento(TipoMovimiento tipo, int cantidad) {

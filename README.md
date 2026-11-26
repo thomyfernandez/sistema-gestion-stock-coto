@@ -225,7 +225,8 @@ psql -v ON_ERROR_STOP=1 -1 -d coto_stock \
   -f backend/src/main/resources/db/upgrade-categorias.sql \
   -f backend/src/main/resources/db/upgrade-auth.sql \
   -f backend/src/main/resources/db/upgrade-combos-stock.sql \
-  -f backend/src/main/resources/db/upgrade-destinatarios.sql
+  -f backend/src/main/resources/db/upgrade-destinatarios.sql \
+  -f backend/src/main/resources/db/upgrade-reservas-combo.sql
 ```
 
 Estas actualizaciones agregan las tablas/configuraciones de reposición, avisos, imágenes, contactos y categorías, y encolan pedidos pendientes sin borrar el inventario existente. Se ejecuta una sola vez y está pensada para bases creadas con el esquema v0.1. El modo `-1` aplica todo en una transacción. Si ya se aplicaron migraciones anteriores, ejecutar solamente las que falten, en el orden indicado.

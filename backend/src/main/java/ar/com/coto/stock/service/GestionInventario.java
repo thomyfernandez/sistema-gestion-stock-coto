@@ -33,14 +33,8 @@ public interface GestionInventario {
     ResultadoMovimiento recibirPedido(long id, String usuario);
     void cancelarPedido(long id);
     PoliticaReposicion consultarPolitica(int stockId);
-    default MovimientoRegistrado consultarMovimiento(long id) {
-        return listarMovimientos().stream().filter(m -> m.id() == id).findFirst()
-                .orElseThrow(() -> new EntidadNoEncontradaException("Movimiento", id));
-    }
-    default PedidoRegistrado consultarPedido(long id) {
-        return listarPedidos().stream().filter(p -> p.id() == id).findFirst()
-                .orElseThrow(() -> new EntidadNoEncontradaException("Pedido", id));
-    }
+    MovimientoRegistrado consultarMovimiento(long id);
+    PedidoRegistrado consultarPedido(long id);
     default Promocion consultarPromocion(int productoId, long id) {
         return listarPromociones(productoId).stream().filter(p -> p.id() == id).findFirst()
                 .orElseThrow(() -> new EntidadNoEncontradaException("Promoción", id));

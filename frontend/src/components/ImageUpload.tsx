@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { ImagePlus, X } from 'lucide-react';
+import { MAX_IMAGEN_BYTES } from '../limites';
 import type { ImagenCarga } from '../types';
 import { Button, ErrorMessage } from './ui';
 
@@ -10,7 +11,7 @@ export function ImageUpload({ value, onChange, disabled }: { value: ImageSelecti
   const [file, setFile] = useState<File | null>(null);
   useEffect(() => {
     if (!file) { onChange({ loading: false, error: null }); return; }
-    if (!['image/png', 'image/jpeg'].includes(file.type) || file.size === 0 || file.size > 2 * 1024 * 1024) {
+    if (!['image/png', 'image/jpeg'].includes(file.type) || file.size === 0 || file.size > MAX_IMAGEN_BYTES) {
       onChange({ loading: false, error: new Error('Elegí una imagen PNG o JPEG de hasta 2 MB.') }); return;
     }
     const reader = new FileReader();

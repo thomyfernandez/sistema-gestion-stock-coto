@@ -7,9 +7,9 @@ import java.math.BigDecimal;
 public abstract class DecoradorPorcentual extends DecoradorPrecio {
     private final BigDecimal factor;
 
-    protected DecoradorPorcentual(ItemValorizable envuelto, double porcentaje) {
+    protected DecoradorPorcentual(ItemValorizable envuelto, BigDecimal porcentaje) {
         super(envuelto);
-        this.factor = BigDecimal.ONE.subtract(BigDecimal.valueOf(Reglas.porcentaje(porcentaje)).movePointLeft(2));
+        this.factor = BigDecimal.ONE.subtract(Reglas.porcentaje(porcentaje).movePointLeft(2));
     }
 
     @Override public final BigDecimal getImporte() {

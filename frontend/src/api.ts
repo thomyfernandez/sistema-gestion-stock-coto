@@ -1,4 +1,4 @@
-import type { Producto, Pedido, TipoMovimiento, Movimiento, Operacion, OperacionCombo, ResultadoMovimiento, Auditoria, Politica, Promocion, Precio, ItemCatalogo, Canal, Sistema, Integraciones, Contacto, Categoria, ConfiguracionAvisos, ImagenCarga, RolUsuario, UsuarioSesion, ListaDestinatarios, Pagina } from './types';
+import type { Producto, Pedido, TipoMovimiento, Movimiento, Operacion, OperacionCombo, ResultadoMovimiento, Auditoria, Politica, Promocion, Precio, Integraciones, Contacto, Categoria, ConfiguracionAvisos, ImagenCarga, UsuarioSesion, ListaDestinatarios, Pagina } from './types';
 
 export class ApiError extends Error {
   constructor(message: string, public status: number, public codigo = '', public errores: Record<string, string[]> = {}) { super(message); }
@@ -71,7 +71,6 @@ export interface FiltroActividad { stockId?: number; tipos?: TipoMovimiento[]; l
 
 export const api = {
   login: (credenciales: { username: string; password: string }) => request<UsuarioSesion>('/auth/login', json('POST', credenciales)),
-  perfil: (signal?: AbortSignal) => request<{ username: string; nombreCompleto: string; rol: RolUsuario }>('/auth/perfil', { signal }),
   categorias: (signal?: AbortSignal) => request<Categoria[]>('/categorias', { signal }),
   guardarCategoria: (body: Omit<Categoria, 'id'>, id?: number) => request<Categoria>(`/categorias${id ? `/${id}` : ''}`, json(id ? 'PUT' : 'POST', body)),
   asignarCategoria: (id: number, categoriaId: number | null) => request<Producto>(`/productos/${id}/categoria`, json('PUT', { categoriaId })),
@@ -92,7 +91,6 @@ export const api = {
   guardarPromocion: (id: number, body: Omit<Promocion, 'id' | 'productoId'>, promocionId?: number) => request<Promocion>(`/productos/${id}/promociones${promocionId ? `/${promocionId}` : ''}`, json(promocionId ? 'PUT' : 'POST', body)),
   eliminarPromocion: (id: number, promocionId: number) => request<void>(`/productos/${id}/promociones/${promocionId}`, { method: 'DELETE' }),
   precio: (id: number, cantidad: number, medioPago: string, signal?: AbortSignal) => request<Precio>(`/productos/${id}/precio?${query({ cantidad, medioPago })}`, { signal }),
-  catalogo: (medioPago: string, signal?: AbortSignal) => request<ItemCatalogo[]>(`/digital/catalogo?${query({ medioPago })}`, { signal }),
   crearProducto: (body: { nombre: string; descripcion: string; precio: number; categoriaId: number | null; imagen?: ImagenCarga }) => request<Producto>('/productos', json('POST', body)),
   crearCombo: (body: { nombre: string; descripcion: string; precio: number; componentes: { stockId: number; cantidad: number }[]; categoriaId: number | null; imagen?: ImagenCarga }) => request<Producto>('/combos', json('POST', body)),
   armarCombo: (id: number, body: OperacionCombo) => request<ResultadoMovimiento>(`/combos/${id}/armado`, json('POST', body)),
@@ -103,8 +101,4 @@ export const api = {
   evaluar: () => request<Pedido[]>('/reposicion/evaluaciones', json('POST')),
   recibirPedido: (id: number) => request<ResultadoMovimiento>(`/pedidos/${id}/recepcion`, json('POST')),
   cancelarPedido: (id: number) => request<void>(`/pedidos/${id}/cancelacion`, json('POST')),
-  canal: (signal?: AbortSignal) => request<{ canal: Canal }>('/notificaciones/canal', { signal }),
-  guardarCanal: (canal: Canal) => request<{ canal: Canal }>('/notificaciones/canal', json('PUT', { canal })),
-  reintentar: () => request<{ procesados: number }>('/integraciones/reintentos', json('POST')),
-  proveedor: (sistema: Sistema, disponible: boolean) => request(`/demo/proveedores/${sistema}`, json('PATCH', { disponible })),
 };

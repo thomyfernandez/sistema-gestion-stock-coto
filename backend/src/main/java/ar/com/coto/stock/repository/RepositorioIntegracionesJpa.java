@@ -1,5 +1,6 @@
 package ar.com.coto.stock.repository;
 
+import ar.com.coto.stock.domain.model.Canal;
 import ar.com.coto.stock.domain.model.EventoIntegracion;
 import ar.com.coto.stock.domain.port.RepositorioIntegraciones;
 import ar.com.coto.stock.repository.entity.*;
@@ -13,7 +14,7 @@ public class RepositorioIntegracionesJpa implements RepositorioIntegraciones {
     @Override public void encolar(EventoIntegracion e) {
         EventoEntity fila = new EventoEntity();
         fila.clave = e.clave(); fila.tipo = e.tipo().name(); fila.stockId = e.stockId(); fila.pedidoId = e.pedidoId();
-        fila.disponible = e.disponible(); fila.canal = e.canal(); fila.destino = e.destino(); fila.texto = e.texto(); fila.fecha = e.fecha();
+        fila.disponible = e.disponible(); fila.canal = e.canal() == null ? null : e.canal().name(); fila.destino = e.destino(); fila.texto = e.texto(); fila.fecha = e.fecha();
         em.persist(fila);
     }
     @Override public List<Long> pendientes(int limite) {
@@ -24,7 +25,7 @@ public class RepositorioIntegracionesJpa implements RepositorioIntegraciones {
         EventoEntity e = em.find(EventoEntity.class, id);
         if (e == null || !"PENDIENTE".equals(e.estado)) return null;
         return new EventoIntegracion(e.id, e.clave, EventoIntegracion.Tipo.valueOf(e.tipo), e.stockId, e.pedidoId,
-                e.disponible, e.canal, e.destino, e.texto, e.fecha);
+                e.disponible, e.canal == null ? null : Canal.valueOf(e.canal), e.destino, e.texto, e.fecha);
     }
     @Override public void registrarExito(long id) {
         EventoEntity fila = em.find(EventoEntity.class, id);

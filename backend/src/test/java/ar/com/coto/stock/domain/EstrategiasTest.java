@@ -1,5 +1,6 @@
 package ar.com.coto.stock.domain;
 
+import java.math.BigDecimal;
 import ar.com.coto.stock.domain.model.*;
 import ar.com.coto.stock.domain.reposicion.*;
 import ar.com.coto.stock.domain.notificacion.*;
@@ -12,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class EstrategiasTest {
     private StockSimple stock(int disponible) {
-        return new StockSimple(new Producto(1, "Leche", "COTO 1 l", 1590), disponible, 0, 0);
+        return new StockSimple(new Producto(1, "Leche", "COTO 1 l", new BigDecimal("1590")), disponible, 0, 0);
     }
 
     @Test void puntoDePedidoIncluyeElUmbral() {
@@ -64,14 +65,14 @@ class EstrategiasTest {
         fecha.setTime(2000);
         pedido.getFecha().setTime(3000);
         assertEquals(1000, pedido.getFecha().getTime());
-        assertThrows(IllegalStateException.class, pedido::marcarRecibido);
+        assertThrows(EstadoInvalidoException.class, pedido::marcarRecibido);
         pedido.marcarEnviado();
-        assertThrows(IllegalStateException.class, pedido::cancelar);
+        assertThrows(EstadoInvalidoException.class, pedido::cancelar);
         pedido.marcarRecibido();
         assertEquals(EstadoPedido.RECIBIDO, pedido.getEstado());
         assertThrows(IllegalArgumentException.class, () -> new PedidoReposicion(1, fecha, 0));
         PedidoReposicion cancelado = new PedidoReposicion(1, fecha, 1);
         cancelado.cancelar();
-        assertThrows(IllegalStateException.class, cancelado::marcarEnviado);
+        assertThrows(EstadoInvalidoException.class, cancelado::marcarEnviado);
     }
 }

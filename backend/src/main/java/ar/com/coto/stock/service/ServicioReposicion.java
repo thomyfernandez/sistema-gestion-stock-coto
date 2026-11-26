@@ -18,7 +18,7 @@ public final class ServicioReposicion {
     }
     public void setEstrategia(EstrategiaReposicion e) { estrategia.set(Objects.requireNonNull(e)); }
     public PedidoReposicion generarPedido(Stock s) {
-        return planificar(s, estrategia.get(), 0).orElseThrow(() -> new IllegalStateException("No se necesita reposición"));
+        return planificar(s, estrategia.get(), 0).orElseThrow(() -> new EstadoInvalidoException("No se necesita reposición"));
     }
     public Optional<PedidoReposicion> planificar(Stock s, EstrategiaReposicion politica, int cantidadPendiente) {
         if (Objects.requireNonNull(s).getTipo() != Stock.Tipo.SIMPLE) throw new IllegalArgumentException("Reponer componentes simples, no combos");

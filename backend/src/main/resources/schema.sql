@@ -16,8 +16,11 @@ CREATE TABLE stock (
     stock_fisico INTEGER,
     stock_exhibicion INTEGER,
     stock_reservado INTEGER,
+    -- Unidades del combo reservadas sobre sus componentes simples; los simples siempre tienen 0.
+    stock_reservado_virtual INTEGER NOT NULL DEFAULT 0,
     version BIGINT NOT NULL DEFAULT 0 CHECK (version >= 0),
     CONSTRAINT uq_stock_id_tipo UNIQUE (id, tipo),
+    CONSTRAINT ck_stock_reservado_virtual CHECK (stock_reservado_virtual >= 0 AND (tipo = 'COMBO' OR stock_reservado_virtual = 0)),
     CONSTRAINT ck_stock_segun_tipo CHECK (
         (tipo = 'SIMPLE'
             AND stock_fisico IS NOT NULL AND stock_exhibicion IS NOT NULL AND stock_reservado IS NOT NULL

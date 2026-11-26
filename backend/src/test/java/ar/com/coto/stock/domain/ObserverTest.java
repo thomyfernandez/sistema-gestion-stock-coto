@@ -1,5 +1,6 @@
 package ar.com.coto.stock.domain;
 
+import java.math.BigDecimal;
 import ar.com.coto.stock.domain.model.*;
 import ar.com.coto.stock.domain.observer.*;
 import org.junit.jupiter.api.Test;
@@ -13,13 +14,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class ObserverTest {
     private StockSimple stock() {
-        return new StockSimple(new Producto(1, "Leche COTO", "1 litro", 1590), 20, 0, 0);
+        return new StockSimple(new Producto(1, "Leche COTO", "1 litro", new BigDecimal("1590")), 20, 0, 0);
     }
 
     @Test void alertaSoloBajoUmbralYUnaVezPorEpisodio() {
         StockSimple stock = stock();
         List<AlertaStockBajo.Aviso> avisos = new ArrayList<>();
-        AlertaStockBajo alerta = new AlertaStockBajo(10, "compras@coto.example", a -> avisos.add(a.getUltimoAviso()));
+        AlertaStockBajo alerta = new AlertaStockBajo(10, a -> avisos.add(a.getUltimoAviso()));
         stock.agregarObservador(alerta);
         stock.reservar(10); // Disponible 10: aún no está por debajo.
         assertTrue(avisos.isEmpty());
@@ -46,7 +47,7 @@ class ObserverTest {
     @Test void alertaFallidaPuedeReintentarse() {
         StockSimple stock = stock();
         AtomicInteger intentos = new AtomicInteger();
-        AlertaStockBajo alerta = new AlertaStockBajo(10, "demo", a -> {
+        AlertaStockBajo alerta = new AlertaStockBajo(10, a -> {
             if (intentos.incrementAndGet() == 1) throw new IllegalStateException("Falla simulada");
         });
         stock.agregarObservador(alerta);
