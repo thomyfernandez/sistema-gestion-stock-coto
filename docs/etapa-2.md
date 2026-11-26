@@ -56,7 +56,7 @@ El estado de alerta representa **aviso encolado**, no necesariamente entregado. 
 
 `ServicioReposicion` es el Context explícito. Expone `setEstrategia(e)` y `generarPedido(s)` para seleccionar una política en forma directa. Si no hay necesidad, `generarPedido` lanza una excepción de estado; la operación automática usa `planificar`, que retorna `Optional.empty()`.
 
-Para procesar distintos productos sin competir por una estrategia global mutable, el gestor llama a `planificar(stock, politica.crearEstrategia(), pendiente)` con la política correspondiente a ese SKU.
+Para procesar distintos productos sin competir por una estrategia global mutable, el gestor llama a `planificar(stock, reposicion.estrategiaPara(politica, stock), pendiente)` con la política correspondiente a ese SKU. Para `ESTACIONAL`, `estrategiaPara` entrega a la estrategia las temporadas del artículo y de su categoría y el `Clock` de la sucursal ([temporadas de reposición](temporadas-de-reposicion.md)).
 
 | Política persistida | ConcreteStrategy |
 | --- | --- |

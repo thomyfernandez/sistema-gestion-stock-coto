@@ -10,8 +10,9 @@ import { InventoryTable } from '../components/InventoryTable';
 import { PolicyForm, ProductForm, PromotionForm } from '../components/CatalogForms';
 import { Badge, Button, Confirmation, Empty, ErrorMessage, Field, Metric, PageHeading, ProductDetail, ProductName } from '../components/ui';
 import { ReceiveOrder } from './Operations';
+import { SeasonsPanel } from './Seasons';
 
-const tabs = [['reposicion', 'Reposición'], ['catalogo', 'Productos y combos'], ['promociones', 'Promociones'], ['actividad', 'Actividad']];
+const tabs = [['reposicion', 'Reposición'], ['temporadas', 'Temporadas'], ['catalogo', 'Productos y combos'], ['promociones', 'Promociones'], ['actividad', 'Actividad']];
 const orderTones = { PENDIENTE: 'warning', ENVIADO: 'info', RECIBIDO: 'success', CANCELADO: 'neutral' } as const;
 const orderLabels = { PENDIENTE: 'Pendiente', ENVIADO: 'Enviado', RECIBIDO: 'Recibido', CANCELADO: 'Cancelado' };
 
@@ -87,7 +88,7 @@ export function PurchasesPage({ tab }: { tab: string }) {
   const active = tabs.some(([id]) => id === tab) ? tab : 'reposicion';
   return <><PageHeading eyebrow="Backoffice" title="Compras y abastecimiento" text="Anticipá la reposición y administrá el catálogo de la sucursal." actions={active === 'catalogo' && <><Button icon={Plus} onClick={() => setCreate('combo')}>Nuevo combo</Button><Button variant="primary" icon={Plus} onClick={() => setCreate('product')}>Nuevo artículo</Button></>} />
     <nav className="tabs" aria-label="Secciones de compras">{tabs.map(([id, label]) => <a key={id} href={`#/compras/${id}`} className={active === id ? 'active' : ''} aria-current={active === id ? 'page' : undefined}>{label}{id === 'reposicion' && !!data?.pedidos.filter(p => p.estado === 'PENDIENTE' || p.estado === 'ENVIADO').length && <span className="tab-count">{data.pedidos.filter(p => p.estado === 'PENDIENTE' || p.estado === 'ENVIADO').length}</span>}</a>)}</nav>
-    {active === 'reposicion' && <Replenishment />}{active === 'catalogo' && <InventoryTable onSelect={setDetail} />}{active === 'promociones' && <Promotions />}{active === 'actividad' && <ActivityPanel />}
+    {active === 'reposicion' && <Replenishment />}{active === 'temporadas' && <SeasonsPanel />}{active === 'catalogo' && <InventoryTable onSelect={setDetail} />}{active === 'promociones' && <Promotions />}{active === 'actividad' && <ActivityPanel />}
     {create && <ProductForm combo={create === 'combo'} onClose={() => setCreate(null)} />}{detail && <ProductDetail product={data?.productos.find(p => p.id === detail.id) || detail} onClose={() => setDetail(null)} />}
     {active === 'reposicion' && <div className="page-footnote"><ClipboardList size={24} aria-hidden="true" />Los pedidos recibidos se incorporan al depósito en una única operación.<a href="#/recepcion" className="text-link">Ir a recepción <ArrowRight size={24} aria-hidden="true" /></a></div>}
   </>;

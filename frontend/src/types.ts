@@ -13,7 +13,7 @@ export interface ResultadoMovimiento { id: number; disponibilidades: Record<stri
 export interface Auditoria { stockId: number; fecha: string; disponibleAnterior: number | null; disponibleActual: number; detalle: string }
 export interface Politica {
   stockId: number; tipo: 'PUNTO_PEDIDO' | 'DEMANDA' | 'ESTACIONAL'; puntoPedido: number; stockObjetivo: number;
-  demandaDiaria: number; diasCobertura: number; factorEstacional: number; umbralAlerta: number; destinoAlerta: string; contactoId: number | null; canalAlerta: Canal | null;
+  demandaDiaria: number; diasCobertura: number; umbralAlerta: number; destinoAlerta: string; contactoId: number | null; canalAlerta: Canal | null;
 }
 export interface Promocion { id: number; productoId: number; tipo: 'DESCUENTO' | 'DOS_POR_UNO' | 'MEDIO_PAGO'; porcentaje: number; orden: number; activa: boolean; medioPago: string | null }
 export interface Precio { productoId: number; cantidad: number; precioLista: number; precioFinal: number; ahorro: number; promocionesAplicadas: number[] }
@@ -40,3 +40,13 @@ export interface ImagenCarga { tipo: string; contenido: string }
 
 export type RolUsuario = 'RECEPCION' | 'REPOSITOR' | 'COMPRAS' | 'SUPERVISOR';
 export interface UsuarioSesion { token: string; username: string; nombreCompleto: string; rol: RolUsuario }
+/** Día y mes sin año: se repite cada año. desde > hasta cruza el fin de año. Alcance: uno o más artículos (stockIds) o una categoría, no ambos. */
+export interface SolicitudTemporada {
+  nombre: string; stockIds: number[]; categoriaId: number | null;
+  desdeDia: number; desdeMes: number; hastaDia: number; hastaMes: number; factor: number;
+}
+/** `vigente` lo calcula el backend con la fecha de la sucursal. */
+export interface Temporada extends SolicitudTemporada { id: number; cruzaElAnio: boolean; vigente: boolean }
+export type OrigenFactor = 'ARTICULO' | 'CATEGORIA' | 'SIN_TEMPORADA';
+/** Factor que aplica hoy la política estacional de un artículo. */
+export interface FactorEstacional { stockId: number; fecha: string; factor: number; origen: OrigenFactor; temporadaId: number | null; temporada: string | null }

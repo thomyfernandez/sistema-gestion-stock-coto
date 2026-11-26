@@ -43,7 +43,7 @@ class AplicacionIntegracionTest {
     @Autowired JdbcTemplate jdbc;
 
     @BeforeEach void reiniciar() {
-        for (String tabla : List.of("usuario", "imagen_producto", "configuracion_avisos", "evento_integracion", "promocion", "politica_reposicion", "auditoria_stock", "pedido_reposicion",
+        for (String tabla : List.of("usuario", "imagen_producto", "configuracion_avisos", "evento_integracion", "promocion", "temporada_reposicion", "politica_reposicion", "auditoria_stock", "pedido_reposicion",
                 "movimiento_stock", "linea_combo", "stock", "producto", "destinatario_aviso", "categoria", "proveedor", "bloqueo_operacion")) jdbc.update("DELETE FROM " + tabla);
         new ResourceDatabasePopulator(new ClassPathResource("data.sql")).execute(dataSource);
         mensajes.setDisponible(true); erp.setDisponible(true); digital.setDisponible(true);
@@ -119,7 +119,14 @@ class AplicacionIntegracionTest {
         assertTrue(erp.getOrdenes().isEmpty());
     }
 
+    @Test void elRelojDeLaAplicacionUsaLaZonaDeLaSucursal(@Autowired java.time.Clock reloj) {
+        // Las temporadas cambian a la medianoche de la sucursal, no a la de UTC.
+        assertEquals(java.time.ZoneId.of("America/Argentina/Buenos_Aires"), reloj.getZone());
+    }
+
     @Test void reposicionAutomaticaDescuentaPedidosAbiertosYNoLosDuplica() {
+        // La temporada del pan dulce rige todo el año: la prueba no depende del día en que corre.
+        jdbc.update("UPDATE temporada_reposicion SET desde_mes = 1, desde_dia = 1, hasta_mes = 12, hasta_dia = 31 WHERE id = 1");
         var resultado = gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 61));
         assertEquals(1, resultado.pedidosGenerados().size());
         assertEquals(81, resultado.pedidosGenerados().getFirst().pedido().getCantidad());
@@ -157,7 +164,7 @@ class AplicacionIntegracionTest {
     }
 
     @Test void fallaDeProveedorNoRevierteStockYMensajeConservaCanalParaReintento() {
-        gestor.configurarPolitica(new PoliticaReposicion(1, PoliticaReposicion.Tipo.PUNTO_PEDIDO, 20, 100, 0, 1, 1, 80, "5491100000000"));
+        gestor.configurarPolitica(new PoliticaReposicion(1, PoliticaReposicion.Tipo.PUNTO_PEDIDO, 20, 100, 0, 1, 80, "5491100000000"));
         notificaciones.setCanal(ServicioNotificaciones.Canal.SMS);
         mensajes.setDisponible(false);
         assertDoesNotThrow(() -> gestor.registrarMovimiento(movimiento(1, TipoMovimiento.RESERVA_DIGITAL, 1)));
@@ -239,7 +246,7 @@ class AplicacionIntegracionTest {
         gestor.registrarMovimiento(movimiento(nuevo.getProducto().getId(), TipoMovimiento.RECEPCION, 20));
         assertEquals(20, gestor.consultarStock(nuevo.getProducto().getId()).getDisponible());
         gestor.configurarPolitica(new PoliticaReposicion(nuevo.getProducto().getId(), PoliticaReposicion.Tipo.PUNTO_PEDIDO,
-                5, 30, 0, 1, 1, 5, "compras@coto.example"));
+                5, 30, 0, 1, 5, "compras@coto.example"));
         gestor.registrarMovimiento(movimiento(nuevo.getProducto().getId(), TipoMovimiento.RESERVA_DIGITAL, 16));
         assertEquals(26, pedidosDe(nuevo.getProducto().getId()).getFirst().pedido().getCantidad());
     }
@@ -292,7 +299,7 @@ class AplicacionIntegracionTest {
     @Test void comboNoRecibeMercaderiaFisicaNiPoliticaDeReposicion() {
         assertThrows(IllegalArgumentException.class, () -> gestor.registrarMovimiento(movimiento(6, TipoMovimiento.RECEPCION, 1)));
         assertThrows(IllegalArgumentException.class, () -> gestor.configurarPolitica(new PoliticaReposicion(6,
-                PoliticaReposicion.Tipo.PUNTO_PEDIDO, 5, 20, 0, 1, 1, 5, "demo")));
+                PoliticaReposicion.Tipo.PUNTO_PEDIDO, 5, 20, 0, 1, 5, "demo")));
         assertEquals(35, gestor.consultarStock(6).getDisponible());
     }
 

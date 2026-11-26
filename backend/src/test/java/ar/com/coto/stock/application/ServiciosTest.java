@@ -28,6 +28,33 @@ class ServiciosTest {
         assertEquals(6, stock.getDisponible());
     }
 
+    @Test void contextoArmaLaEstrategiaEstacionalConLasTemporadasDelArticuloYSuCategoria() {
+        var stock = new StockSimple(new Producto(5, "Pan dulce", "COTO 500 g", 5490, null, 1), 30, 0, 0);
+        var navidad = new Temporada(1, "Navidad y Reyes", java.util.List.of(5), null, MonthDay.of(11, 15), MonthDay.of(1, 6), new java.math.BigDecimal("1.5"));
+        var invierno = new Temporada(2, "Invierno almacén", java.util.List.of(), 1, MonthDay.of(6, 1), MonthDay.of(8, 31), new java.math.BigDecimal("1.2"));
+        var consultas = new java.util.ArrayList<String>();
+        RepositorioTemporadas repositorio = new RepositorioTemporadas() {
+            public java.util.List<Temporada> listar() { return java.util.List.of(navidad, invierno); }
+            public java.util.List<Temporada> listarPara(int stockId, Integer categoriaId) { consultas.add(stockId + "/" + categoriaId); return listar(); }
+            public java.util.Optional<Temporada> obtener(long id) { return java.util.Optional.empty(); }
+            public Temporada guardar(Temporada t) { return t; }
+            public void eliminar(long id) { }
+        };
+        var politica = new PoliticaReposicion(5, PoliticaReposicion.Tipo.ESTACIONAL, 0, 40, 0, 1, 10, "compras@coto.example");
+        var zona = ZoneId.of("America/Argentina/Buenos_Aires");
+        var diciembre = new ServicioReposicion(new ReposicionPuntoDePedido(10, 50), Clock.fixed(Instant.parse("2026-12-20T15:00:00Z"), zona), repositorio);
+        assertEquals(30, diciembre.planificar(stock, diciembre.estrategiaPara(politica, stock), 0).orElseThrow().getCantidad());
+        var julio = new ServicioReposicion(new ReposicionPuntoDePedido(10, 50), Clock.fixed(Instant.parse("2026-07-09T15:00:00Z"), zona), repositorio);
+        assertEquals(18, julio.planificar(stock, julio.estrategiaPara(politica, stock), 0).orElseThrow().getCantidad()); // 48 − 30.
+        var marzo = new ServicioReposicion(new ReposicionPuntoDePedido(10, 50), Clock.fixed(Instant.parse("2026-03-10T15:00:00Z"), zona), repositorio);
+        assertEquals(5, marzo.planificar(stock, marzo.estrategiaPara(politica, stock), 5).orElseThrow().getCantidad()); // 40 − 30 − 5 pendientes.
+        assertEquals(java.util.List.of("5/1", "5/1", "5/1"), consultas);
+        // Las demás políticas no consultan temporadas.
+        var puntoPedido = new PoliticaReposicion(5, PoliticaReposicion.Tipo.PUNTO_PEDIDO, 31, 40, 0, 1, 10, "compras@coto.example");
+        assertEquals(10, marzo.estrategiaPara(puntoPedido, stock).calcularCantidad(stock));
+        assertEquals(3, consultas.size());
+    }
+
     @Test void observerServicioStrategyAdapterYAdapteeColaboranExplicitamente() {
         ApiProveedorExterno api = new ApiProveedorExterno();
         ServicioNotificaciones servicio = new ServicioNotificaciones(Map.of(

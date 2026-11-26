@@ -22,7 +22,7 @@ public final class Respuestas {
     public record ResultadoMovimiento(long id, Map<Integer, Integer> disponibilidades, List<Pedido> pedidosGenerados) { }
     public record Auditoria(int stockId, Instant fecha, Integer disponibleAnterior, int disponibleActual, String detalle) { }
     public record Politica(int stockId, String tipo, int puntoPedido, int stockObjetivo, BigDecimal demandaDiaria,
-                           int diasCobertura, BigDecimal factorEstacional, int umbralAlerta, String destinoAlerta, Long contactoId, String canalAlerta) { }
+                           int diasCobertura, int umbralAlerta, String destinoAlerta, Long contactoId, String canalAlerta) { }
     public record Promocion(long id, int productoId, String tipo, BigDecimal porcentaje, int orden, boolean activa, String medioPago) { }
     public record Precio(int productoId, int cantidad, BigDecimal precioLista, BigDecimal precioFinal,
                          BigDecimal ahorro, List<Long> promocionesAplicadas) { }
@@ -36,4 +36,11 @@ public final class Respuestas {
     public record Reintento(int procesados) { }
     public record EstadoProveedor(String sistema, boolean disponible) { }
     public record Estado(String aplicacion, String estado, String version) { }
+    /** vigente: el servidor la evalúa con la fecha de la sucursal; el navegador no la calcula. */
+    public record Temporada(long id, String nombre, List<Integer> stockIds, Integer categoriaId,
+                            int desdeDia, int desdeMes, int hastaDia, int hastaMes, BigDecimal factor,
+                            boolean cruzaElAnio, boolean vigente) { }
+    /** Factor que aplica hoy la política estacional del artículo. origen: ARTICULO, CATEGORIA o SIN_TEMPORADA. */
+    public record FactorEstacional(int stockId, java.time.LocalDate fecha, BigDecimal factor, String origen,
+                                   Long temporadaId, String temporada) { }
 }

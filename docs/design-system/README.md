@@ -190,6 +190,16 @@ Se estilizan los `input[type=checkbox]` y `input[type=radio]` nativos, sin compo
 
 - **Uso**: Informa en modales (como Política de reposición) cómo resolverá el sistema los avisos por stock bajo según la jerarquía (Categoría → Lista general → Sin destinatarios).
 - **Colores**: Fondo `Neutral 50` con borde `Neutral 200` en estado normal; fondo `Warning 100` con borde `Warning 500` cuando no hay destinatarios.
+- **Factor de temporada**: la misma tarjeta informa en la política `ESTACIONAL` qué temporada rige hoy (artículo → categoría → sin temporada) y el objetivo resultante. Estados: cargando (`aria-busy`, `LoaderCircle` girando), resultado (neutra), error de consulta (`.warning`, con `Reintentar`). No bloquea el guardado.
+- **Anatomía**: ícono `lucide` de 24 px como primer hijo (color Neutral 700; Warning 800 en `.warning`, nunca estilos en línea), `.notice-resolution-content` con el texto en `<p>` y las aclaraciones en `<span className="caption">`, desglose opcional `.notice-resolution-breakdown` (etiqueta a la izquierda, valor en Body large a la derecha, separado por un divisor Neutral 200) y acciones en `.notice-resolution-actions`.
+
+### Selector de día y mes (fechas que se repiten cada año)
+
+`.period-range` agrupa dos `fieldset` (**Desde** / **Hasta**) con `.period-fields`: un `select` de día (1 fr) y uno de mes con su nombre (2 fr), en una fila tanto a 1024 como a 390 px. No se usa `input type="date"` porque obliga a elegir un año. El día se limita a los días del mes (29 en febrero) y se ajusta al último si el mes cambia. Debajo, un `.form-info` con `aria-live="polite"` resume el período en palabras y avisa cuando cruza el año ("del 15 de noviembre al 6 de enero del año siguiente").
+
+### Opciones excluyentes en tarjetas
+
+`.channel-options` + `.channel-choice` (radio + ícono 24 + etiqueta, ≥ 48 px de alto) para elegir entre dos o tres alternativas. Con dos opciones, `.channel-options.two`; en móvil (≤ 540 px) se apilan en una columna.
 
 ## Migración de los estilos de las vistas
 

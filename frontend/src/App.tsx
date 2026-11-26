@@ -20,7 +20,7 @@ const allViews = [
   { id: 'configuracion', name: 'Configuración', icon: Settings, roles: ['SUPERVISOR'] },
 ];
 
-const subtitles: Record<string, string> = { inventario: 'Existencias', digital: 'Reservas y despachos', avisos: 'Alertas y avisos', categorias: 'Categorías', reposicion: 'Reposición', catalogo: 'Productos y combos', promociones: 'Promociones', actividad: 'Actividad' };
+const subtitles: Record<string, string> = { inventario: 'Existencias', digital: 'Reservas y despachos', avisos: 'Alertas y avisos', categorias: 'Categorías', reposicion: 'Reposición', temporadas: 'Temporadas', catalogo: 'Productos y combos', promociones: 'Promociones', actividad: 'Actividad' };
 
 function readRoute() {
   let [view, tab] = window.location.hash.replace(/^#\/?/, '').split('/');

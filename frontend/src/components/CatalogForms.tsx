@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import { Mail, Plus, Trash2 } from 'lucide-react';
+import { AlertCircle, CalendarRange, LoaderCircle, Mail, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { api } from '../api';
+import { factor as formatoFactor, fechaDia, number, objetivoConFactor } from '../format';
 import { destinoAviso } from '../notifications';
 import { useStore } from '../store';
+import { useResource } from '../useResource';
 import type { Politica, Producto, Promocion } from '../types';
 import { ImageUpload, type ImageSelection } from './ImageUpload';
 import { Button, ErrorMessage, Field, Modal, OperadorSesion, ProductName } from './ui';
@@ -39,9 +41,10 @@ export function ProductForm({ combo, onClose }: { combo: boolean; onClose: () =>
 export function PolicyForm({ product, onClose }: { product: Producto; onClose: () => void }) {
   const { data, busy, run } = useStore();
   const initial = data?.politicas[product.id];
-  const [values, setValues] = useState<Omit<Politica, 'stockId'>>(initial ? (({ stockId: _, ...rest }) => rest)(initial) : {
-    tipo: 'PUNTO_PEDIDO', puntoPedido: 20, stockObjetivo: 100, demandaDiaria: 0, diasCobertura: 1, factorEstacional: 1, umbralAlerta: 10, destinoAlerta: 'configuracion-global', contactoId: null, canalAlerta: null,
+  const [inicial] = useState<Omit<Politica, 'stockId'>>(() => initial ? (({ stockId: _, ...rest }) => rest)(initial) : {
+    tipo: 'PUNTO_PEDIDO', puntoPedido: 20, stockObjetivo: 100, demandaDiaria: 0, diasCobertura: 1, umbralAlerta: 10, destinoAlerta: 'configuracion-global', contactoId: null, canalAlerta: null,
   });
+  const [values, setValues] = useState(inicial);
   const [error, setError] = useState<Error | null>(null);
   // Los destinatarios se administran en Configuración; la asignación anterior por contacto se conserva sin cambios.
   const aviso = data ? destinoAviso(data, product) : null;
@@ -49,7 +52,7 @@ export function PolicyForm({ product, onClose }: { product: Producto; onClose: (
   const descriptions = {
     PUNTO_PEDIDO: 'Al alcanzar el punto de pedido, se repone hasta el stock objetivo.',
     DEMANDA: 'Se calcula la mercadería necesaria para cubrir la demanda diaria.',
-    ESTACIONAL: 'El objetivo se ajusta por el factor de la temporada.'
+    ESTACIONAL: 'El objetivo base se ajusta con el factor de la temporada que rige cada día.'
   };
 
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -85,24 +88,23 @@ export function PolicyForm({ product, onClose }: { product: Producto; onClose: (
               <Field label="Días de cobertura"><input required type="number" min="1" max="2147483647" step="1" value={values.diasCobertura} onChange={e => setNumber('diasCobertura', e.target.value)} disabled={busy} /></Field>
             </div>
           )}
-          {values.tipo === 'ESTACIONAL' && (
-            <div className="form-grid">
-              <Field label="Objetivo base"><input required type="number" min="1" max="2147483647" step="1" value={values.stockObjetivo} onChange={e => setNumber('stockObjetivo', e.target.value)} disabled={busy} /></Field>
-              <Field label="Factor de temporada"><input required type="number" min="0.0001" max="99999999.9999" step="0.0001" value={values.factorEstacional} onChange={e => setNumber('factorEstacional', e.target.value)} disabled={busy} /></Field>
-            </div>
-          )}
+          {values.tipo === 'ESTACIONAL' && <>
+            {/* Tope: el objetivo base por el factor máximo de una temporada (10) tiene que entrar en un entero. */}
+            <Field label="Objetivo base" hint="Unidades a reponer fuera de temporada."><input required type="number" min="1" max={OBJETIVO_ESTACIONAL_MAXIMO} step="1" value={values.stockObjetivo} onChange={e => setNumber('stockObjetivo', e.target.value)} disabled={busy} /></Field>
+            <SeasonFactorCard product={product} base={Number(values.stockObjetivo)} dirty={JSON.stringify(values) !== JSON.stringify(inicial)} onLeave={onClose} />
+          </>}
           <div className="form-divider" />
           <Field label="Umbral de alerta" hint="Se envía un aviso cuando el disponible cae por debajo de este valor.">
             <input required type="number" min="1" max="2147483647" step="1" value={values.umbralAlerta} onChange={e => setNumber('umbralAlerta', e.target.value)} disabled={busy} />
           </Field>
           {aviso && (
             <div className="notice-resolution-card" role="region" aria-label="Destinatarios del aviso automático">
-              <Mail size={20} aria-hidden="true" style={{ color: 'var(--coto-red)' }} />
+              <Mail size={24} aria-hidden="true" />
               <div className="notice-resolution-content">
-                <p className="form-info" style={{ margin: 0 }}>
+                <p className="form-info">
                   Avisar a {aviso.nombre} · {aviso.canal}: {aviso.destinos.join(', ') || 'sin destino'}
                 </p>
-                <p className="field-hint" style={{ margin: 0 }}>
+                <p className="field-hint">
                   <a className="text-link" href="#/configuracion/avisos" onClick={onClose}>
                     Administrar destinatarios de avisos
                   </a>
@@ -118,6 +120,52 @@ export function PolicyForm({ product, onClose }: { product: Producto; onClose: (
         </footer>
       </form>
     </Modal>
+  );
+}
+
+const OBJETIVO_ESTACIONAL_MAXIMO = 214748364;
+
+/** Factor que hoy aplica la política estacional, según el backend: el navegador no elige la temporada. */
+function SeasonFactorCard({ product, base, dirty, onLeave }: { product: Producto; base: number; dirty: boolean; onLeave: () => void }) {
+  const { data, revision } = useStore();
+  const [intento, setIntento] = useState(0);
+  const consulta = useResource(`factor:${product.id}`, signal => api.factorEstacional(product.id, signal), revision * 1000 + intento);
+  const enlace = <>
+    {dirty && <span className="caption">Guardá la política antes de salir: los cambios sin guardar se pierden.</span>}
+    <a className="text-link" href="#/compras/temporadas" onClick={onLeave}>Administrar temporadas</a>
+  </>;
+  if (consulta.error && !consulta.data) return (
+    <div className="notice-resolution-card warning" role="region" aria-label="Factor de temporada vigente" aria-live="polite">
+      <AlertCircle size={24} aria-hidden="true" />
+      <div className="notice-resolution-content">
+        <p>No pudimos consultar la temporada de hoy.</p>
+        <span className="caption">Podés guardar la política igual: el factor se calcula en cada evaluación de reposición.</span>
+        <div className="notice-resolution-actions"><Button size="sm" icon={RefreshCw} loading={consulta.loading} onClick={() => setIntento(i => i + 1)}>Reintentar</Button>{enlace}</div>
+      </div>
+    </div>
+  );
+  const vigente = consulta.data;
+  if (!vigente) return (
+    <div className="notice-resolution-card" role="region" aria-label="Factor de temporada vigente" aria-live="polite" aria-busy="true">
+      <LoaderCircle size={24} className="spin" aria-hidden="true" />
+      <div className="notice-resolution-content"><p>Consultando la temporada de hoy…</p></div>
+    </div>
+  );
+  const categoria = data?.categorias.find(c => c.id === product.categoriaId)?.nombre;
+  const fecha = fechaDia(vigente.fecha);
+  const conTemporada = vigente.origen !== 'SIN_TEMPORADA';
+  const baseValida = Number.isInteger(base) && base > 0;
+  return (
+    <div className="notice-resolution-card" role="region" aria-label="Factor de temporada vigente" aria-live="polite" aria-busy={consulta.loading}>
+      <CalendarRange size={24} aria-hidden="true" />
+      <div className="notice-resolution-content">
+        <p>{conTemporada ? `Hoy rige «${vigente.temporada}» · ${formatoFactor(vigente.factor)}` : 'Hoy no rige ninguna temporada · ×1'}</p>
+        <span className="caption">{vigente.origen === 'ARTICULO' ? 'Temporada del artículo.' : vigente.origen === 'CATEGORIA' ? (categoria ? `Temporada de la categoría ${categoria}.` : 'Temporada de la categoría.') : 'Se repone el objetivo base.'}</span>
+        <div className="notice-resolution-breakdown"><span>Objetivo de hoy</span>{baseValida ? <strong>{number(objetivoConFactor(base, vigente.factor))} unidades</strong> : <span className="caption">Ingresá el objetivo base para ver el objetivo de hoy.</span>}</div>
+        <span className="caption">{conTemporada && baseValida ? `${number(base)} × ${number(vigente.factor)}, redondeado hacia arriba · ` : ''}al {fecha}</span>
+        <div className="notice-resolution-actions">{enlace}</div>
+      </div>
+    </div>
   );
 }
 

@@ -128,6 +128,23 @@ class AutenticacionYRolesTest {
     }
 
     @Test
+    @DisplayName("Temporadas de reposición: todos consultan, sólo Compras y Supervisor modifican")
+    void temporadasValidanRol() throws Exception {
+        String tokenRepositor = jwtTokenService.generarToken("repositor.demo", "REPOSITOR", "Repositor");
+        String cuerpo = """
+                {"nombre":"Prueba","stockIds":[1],"desdeDia":1,"desdeMes":6,"hastaDia":2,"hastaMes":6,"factor":1.2}
+                """;
+        mvc.perform(get("/api/temporadas").header("Authorization", "Bearer " + tokenRepositor)).andExpect(status().isOk());
+        mvc.perform(get("/api/productos/5/factor-estacional").header("Authorization", "Bearer " + tokenRepositor)).andExpect(status().isOk());
+        mvc.perform(post("/api/temporadas").header("Authorization", "Bearer " + tokenRepositor)
+                .contentType(MediaType.APPLICATION_JSON).content(cuerpo)).andExpect(status().isForbidden());
+        mvc.perform(put("/api/temporadas/1").header("Authorization", "Bearer " + tokenRepositor)
+                .contentType(MediaType.APPLICATION_JSON).content(cuerpo)).andExpect(status().isForbidden());
+        mvc.perform(delete("/api/temporadas/1").header("Authorization", "Bearer " + tokenRepositor)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/temporadas").contentType(MediaType.APPLICATION_JSON).content(cuerpo)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     @DisplayName("Endpoints de configuración, categorías, promociones y movimientos genéricos validan rol")
     void endpointsRestringidosValidanRol() throws Exception {
         String tokenRepositor = jwtTokenService.generarToken("repositor.demo", "REPOSITOR", "Repositor");
