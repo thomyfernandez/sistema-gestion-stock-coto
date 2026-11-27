@@ -10,15 +10,20 @@ afterEach(() => vi.unstubAllGlobals());
 
 const tabla = () => screen.getByRole('region', { name: 'Temporadas de reposición' });
 
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+/** Elige un día en el calendario de la temporada: primero el mes, después el día. */
+async function elegirDia(dialogo: HTMLElement, dia: string, mes: string) {
+  const en = within(dialogo);
+  await userEvent.selectOptions(en.getByLabelText('Mes del calendario'), mes);
+  await userEvent.click(en.getByRole('button', { name: new RegExp(`^${dia} de ${MESES[Number(mes) - 1]}`) }));
+}
+
 async function completar(dialogo: HTMLElement, { nombre, articulos, desde, hasta, factor }: { nombre: string; articulos: string[]; desde: [string, string]; hasta: [string, string]; factor: string }) {
   const en = within(dialogo);
   await userEvent.type(en.getByLabelText('Nombre de la temporada'), nombre);
   for (const articulo of articulos) await userEvent.click(en.getByRole('checkbox', { name: new RegExp(articulo) }));
-  const [desdeGrupo, hastaGrupo] = [en.getByRole('group', { name: 'Desde' }), en.getByRole('group', { name: 'Hasta' })];
-  await userEvent.selectOptions(within(desdeGrupo).getByLabelText('Mes'), desde[1]);
-  await userEvent.selectOptions(within(desdeGrupo).getByLabelText('Día'), desde[0]);
-  await userEvent.selectOptions(within(hastaGrupo).getByLabelText('Mes'), hasta[1]);
-  await userEvent.selectOptions(within(hastaGrupo).getByLabelText('Día'), hasta[0]);
+  await elegirDia(dialogo, ...desde);
+  await elegirDia(dialogo, ...hasta);
   await userEvent.type(en.getByLabelText('Factor de temporada'), factor);
 }
 
@@ -95,18 +100,52 @@ describe('temporadas de reposición', () => {
     expect(backend.rutas('POST')).toEqual([]);
   });
 
-  it('el día se ajusta al último del mes elegido', async () => {
+  it('el calendario marca inicio, fin y el rango, también cuando cruza el año', async () => {
     crearBackend();
     await renderConStore(<PurchasesPage tab="temporadas" />);
     await within(await screen.findByRole('region', { name: 'Temporadas de reposición' })).findByRole('row', { name: /Navidad/ });
     await userEvent.click(screen.getByRole('button', { name: 'Nueva temporada' }));
-    const desde = within(screen.getByRole('dialog', { name: 'Nueva temporada' })).getByRole('group', { name: 'Desde' });
-    await userEvent.selectOptions(within(desde).getByLabelText('Mes'), '1');
-    await userEvent.selectOptions(within(desde).getByLabelText('Día'), '31');
-    await userEvent.selectOptions(within(desde).getByLabelText('Mes'), '4');
-    expect(within(desde).getByLabelText('Día')).toHaveValue('30');
-    await userEvent.selectOptions(within(desde).getByLabelText('Mes'), '2');
-    expect(within(desde).getByLabelText('Día')).toHaveValue('29');
+    const dialogo = screen.getByRole('dialog', { name: 'Nueva temporada' });
+    const en = within(dialogo);
+    expect(en.getByRole('button', { name: /^Desde/ })).toHaveAttribute('aria-pressed', 'true');
+    await elegirDia(dialogo, '20', '12');
+    expect(en.getByRole('button', { name: /^Desde/ })).toHaveTextContent('20/12');
+    // Después del inicio, el calendario pasa solo a elegir el fin.
+    expect(en.getByRole('button', { name: /^Hasta/ })).toHaveAttribute('aria-pressed', 'true');
+    await elegirDia(dialogo, '10', '1');
+    expect(en.getByRole('button', { name: /^Hasta/ })).toHaveTextContent('10/01');
+    expect(en.getByText('Del 20 de diciembre al 10 de enero del año siguiente. Cruza el fin de año.')).toBeInTheDocument();
+    // Enero muestra el tramo del rango que cae en el año siguiente.
+    expect(en.getByRole('button', { name: '5 de enero, dentro del período' })).toBeInTheDocument();
+    expect(en.getByRole('button', { name: '10 de enero, fin' })).toBeInTheDocument();
+    expect(en.getByRole('button', { name: '11 de enero' })).toBeInTheDocument();
+    // Febrero muestra el 29 y el resumen avisa qué pasa en los años no bisiestos.
+    await userEvent.click(en.getByRole('button', { name: /^Hasta/ }));
+    await elegirDia(dialogo, '29', '2');
+    expect(en.getByText(/En los años no bisiestos termina el 28 de febrero./)).toBeInTheDocument();
+    // Con el teclado: desde el 1 de marzo, flecha izquierda vuelve al 29 de febrero.
+    await userEvent.selectOptions(en.getByLabelText('Mes del calendario'), '3');
+    en.getByRole('button', { name: '1 de marzo' }).focus();
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(en.getByLabelText('Mes del calendario')).toHaveValue('2');
+    expect(document.activeElement).toHaveAccessibleName(/^29 de febrero/);
+  });
+
+  it('sin el período completo no envía la temporada', async () => {
+    const backend = crearBackend();
+    await renderConStore(<PurchasesPage tab="temporadas" />);
+    await within(await screen.findByRole('region', { name: 'Temporadas de reposición' })).findByRole('row', { name: /Navidad/ });
+    await userEvent.click(screen.getByRole('button', { name: 'Nueva temporada' }));
+    const dialogo = screen.getByRole('dialog', { name: 'Nueva temporada' });
+    const en = within(dialogo);
+    await userEvent.type(en.getByLabelText('Nombre de la temporada'), 'Incompleta');
+    await userEvent.click(en.getByRole('checkbox', { name: /Bananas/ }));
+    await elegirDia(dialogo, '1', '3');
+    await userEvent.type(en.getByLabelText('Factor de temporada'), '1.1');
+    backend.limpiar();
+    await userEvent.click(en.getByRole('button', { name: 'Crear temporada' }));
+    expect(await en.findByRole('alert')).toHaveTextContent('Elegí en el calendario el día de inicio y el de fin.');
+    expect(backend.rutas('POST')).toEqual([]);
   });
 
   it('una superposición muestra el detalle del backend sin cerrar el modal', async () => {
