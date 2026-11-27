@@ -98,12 +98,13 @@ test('temporadas: Compras carga una temporada por categoría y la política esta
   await dialogo.getByLabel('Nombre de la temporada').fill('Invierno almacén E2E');
   await dialogo.getByText('Una categoría').click();
   await dialogo.getByLabel('Categoría', { exact: true }).selectOption({ label: 'Almacén' });
-  const desde = dialogo.getByRole('group', { name: 'Desde' });
-  await desde.getByLabel('Mes').selectOption('6');
-  await desde.getByLabel('Día').selectOption('1');
-  const hasta = dialogo.getByRole('group', { name: 'Hasta' });
-  await hasta.getByLabel('Mes').selectOption('8');
-  await hasta.getByLabel('Día').selectOption('31');
+  // Calendario sin año: primer clic, inicio; segundo clic, fin.
+  const mes = dialogo.getByLabel('Mes del calendario');
+  await mes.selectOption('6');
+  await dialogo.getByRole('button', { name: /^1 de junio/ }).click();
+  await mes.selectOption('8');
+  await dialogo.getByRole('button', { name: /^31 de agosto/ }).click();
+  await expect(dialogo.getByText('Del 1 de junio al 31 de agosto de cada año.')).toBeVisible();
   await dialogo.getByLabel('Factor de temporada').fill('1.2');
   await dialogo.getByRole('button', { name: 'Crear temporada' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Temporada creada' })).toBeVisible();
@@ -114,10 +115,9 @@ test('temporadas: Compras carga una temporada por categoría y la política esta
   await dialogo.getByLabel('Nombre de la temporada').fill('Vacaciones de invierno');
   await dialogo.getByText('Una categoría').click();
   await dialogo.getByLabel('Categoría', { exact: true }).selectOption({ label: 'Almacén' });
-  await desde.getByLabel('Mes').selectOption('7');
-  await desde.getByLabel('Día').selectOption('10');
-  await hasta.getByLabel('Mes').selectOption('7');
-  await hasta.getByLabel('Día').selectOption('25');
+  await mes.selectOption('7');
+  await dialogo.getByRole('button', { name: /^10 de julio/ }).click();
+  await dialogo.getByRole('button', { name: /^25 de julio/ }).click();
   await dialogo.getByLabel('Factor de temporada').fill('1.4');
   await dialogo.getByRole('button', { name: 'Crear temporada' }).click();
   await expect(dialogo.getByRole('alert')).toContainText('Se superpone con «Invierno almacén E2E» (01/06 al 31/08)');

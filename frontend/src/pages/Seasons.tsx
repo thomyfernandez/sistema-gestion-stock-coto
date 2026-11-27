@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { AlertTriangle, CalendarRange, Edit3, FolderOpen, Package, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { api } from '../api';
-import { ajuste, diaMes, diasDelMes, factor, meses, number, periodoCorto, periodoLargo, sku, todoElAnio } from '../format';
+import { ajuste, diaMes, factor, number, periodoCorto, periodoLargo, sku, todoElAnio } from '../format';
 import { MAX_FACTOR_TEMPORADA } from '../limites';
 import { useStore } from '../store';
 import { useResource } from '../useResource';
 import type { Politica, Producto, Snapshot, SolicitudTemporada, Temporada } from '../types';
+import { CalendarioTemporada } from '../components/CalendarioTemporada';
 import { Badge, Button, Confirmation, Empty, ErrorMessage, Field, Modal } from '../components/ui';
 
 const politicaLabels: Record<Politica['tipo'], string> = { PUNTO_PEDIDO: 'Punto de pedido', DEMANDA: 'Por demanda', ESTACIONAL: 'Estacional' };
@@ -104,15 +105,6 @@ export function SeasonsPanel() {
 
 type Valores = { nombre: string; alcance: 'ARTICULO' | 'CATEGORIA'; stockIds: number[]; categoriaId: string; desdeDia: string; desdeMes: string; hastaDia: string; hastaMes: string; factor: string };
 
-function DiaMes({ legend, dia, mes, onChange, disabled }: { legend: string; dia: string; mes: string; disabled: boolean; onChange: (dia: string, mes: string) => void }) {
-  const dias = diasDelMes(Number(mes) || 1);
-  return <fieldset><legend>{legend}</legend><div className="period-fields">
-    <Field label="Día"><select required value={dia} disabled={disabled} onChange={e => onChange(e.target.value, mes)}><option value="">Día</option>{Array.from({ length: dias }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}</select></Field>
-    {/* Si el mes nuevo tiene menos días, el día se ajusta al último del mes. */}
-    <Field label="Mes"><select required value={mes} disabled={disabled} onChange={e => onChange(dia && Number(dia) > diasDelMes(Number(e.target.value) || 1) ? String(diasDelMes(Number(e.target.value))) : dia, e.target.value)}><option value="">Mes</option>{meses.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}</select></Field>
-  </div></fieldset>;
-}
-
 /** Selección de varios artículos simples con buscador. */
 function ArticlePicker({ articulos, seleccion, disabled, onChange }: { articulos: Producto[]; seleccion: number[]; disabled: boolean; onChange: (ids: number[]) => void }) {
   const [busqueda, setBusqueda] = useState('');
@@ -172,6 +164,7 @@ export function SeasonForm({ existing, onClose }: { existing?: Temporada; onClos
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); setError(null);
     if (values.alcance === 'ARTICULO' && !values.stockIds.length) { setError(new Error('Elegí al menos un artículo para la temporada.')); return; }
+    if (!periodoCompleto) { setError(new Error('Elegí en el calendario el día de inicio y el de fin.')); return; }
     const body: SolicitudTemporada = {
       nombre: values.nombre.trim(),
       stockIds: values.alcance === 'ARTICULO' ? values.stockIds : [],
@@ -197,8 +190,10 @@ export function SeasonForm({ existing, onClose }: { existing?: Temporada; onClos
         : <Field key="categoria" label="Categoría" hint={hintCategoria}><select required value={values.categoriaId} disabled={busy} onChange={e => set({ categoriaId: e.target.value })}><option value="">Seleccioná una categoría</option>{categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}</select></Field>}
       {aviso && <div className="message warning"><AlertTriangle size={24} aria-hidden="true" /><div>{aviso}</div></div>}
       <div className="period-range">
-        <DiaMes legend="Desde" dia={values.desdeDia} mes={values.desdeMes} disabled={busy} onChange={(desdeDia, desdeMes) => set({ desdeDia, desdeMes })} />
-        <DiaMes legend="Hasta" dia={values.hastaDia} mes={values.hastaMes} disabled={busy} onChange={(hastaDia, hastaMes) => set({ hastaDia, hastaMes })} />
+        <CalendarioTemporada disabled={busy}
+          desde={{ dia: Number(values.desdeDia), mes: Number(values.desdeMes) }} hasta={{ dia: Number(values.hastaDia), mes: Number(values.hastaMes) }}
+          onChange={(desde, hasta) => set({ desdeDia: desde.dia ? String(desde.dia) : '', desdeMes: desde.mes ? String(desde.mes) : '',
+            hastaDia: hasta.dia ? String(hasta.dia) : '', hastaMes: hasta.mes ? String(hasta.mes) : '' })} />
         <div aria-live="polite">{periodoCompleto && <p className="form-info">{periodoLargo(periodo)}</p>}</div>
       </div>
       <Field label="Factor de temporada" hint={!factorValido ? 'Mayor que 0 y hasta 10. Por ejemplo, 1,5 repone un 50 % más que el objetivo base.'

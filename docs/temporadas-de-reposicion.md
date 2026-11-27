@@ -10,7 +10,7 @@ pedido           = max(0, objetivo del día − disponible − pedidos pendiente
 ## Uso
 
 1. **Compras → Temporadas**: lista las temporadas con su alcance, período, factor y si rigen hoy (lo informa el backend con la fecha de la sucursal).
-2. **Nueva temporada**: nombre, alcance (**Artículos**: uno o más artículos simples elegidos de una lista con buscador; o **Una categoría**), desde y hasta (día y mes) y factor (mayor que 0 y hasta 10; 1,5 repone un 50 % más). Si el fin es anterior al inicio, la temporada **cruza el año**: del 15/11 al 06/01 va de mediados de noviembre a Reyes.
+2. **Nueva temporada**: nombre, alcance (**Artículos**: uno o más artículos simples elegidos de una lista con buscador; o **Una categoría**), el período en un **calendario sin año** (primer clic: inicio; segundo: fin; el rango se resalta, también si cruza el año) y el factor (mayor que 0 y hasta 10; 1,5 repone un 50 % más). Si el fin es anterior al inicio, la temporada **cruza el año**: del 15/11 al 06/01 va de mediados de noviembre a Reyes.
 3. **Compras → Reposición → Configurar** en un artículo con política *Estacional*: el modal pide sólo el **objetivo base** y muestra qué temporada rige hoy, con qué factor y el objetivo resultante.
 
 El cambio de temporada no dispara un pedido por sí solo: el factor nuevo se aplica en el próximo movimiento del artículo o en la próxima **Evaluar reposición**, como cualquier cambio de política.

@@ -193,9 +193,17 @@ Se estilizan los `input[type=checkbox]` y `input[type=radio]` nativos, sin compo
 - **Factor de temporada**: la misma tarjeta informa en la política `ESTACIONAL` qué temporada rige hoy (artículo → categoría → sin temporada) y el objetivo resultante. Estados: cargando (`aria-busy`, `LoaderCircle` girando), resultado (neutra), error de consulta (`.warning`, con `Reintentar`). No bloquea el guardado.
 - **Anatomía**: ícono `lucide` de 24 px como primer hijo (color Neutral 700; Warning 800 en `.warning`, nunca estilos en línea), `.notice-resolution-content` con el texto en `<p>` y las aclaraciones en `<span className="caption">`, desglose opcional `.notice-resolution-breakdown` (etiqueta a la izquierda, valor en Body large a la derecha, separado por un divisor Neutral 200) y acciones en `.notice-resolution-actions`.
 
-### Selector de día y mes (fechas que se repiten cada año)
+### Calendario sin año (fechas que se repiten cada año)
 
-`.period-range` agrupa dos `fieldset` (**Desde** / **Hasta**) con `.period-fields`: un `select` de día (1 fr) y uno de mes con su nombre (2 fr), en una fila tanto a 1024 como a 390 px. No se usa `input type="date"` porque obliga a elegir un año. El día se limita a los días del mes (29 en febrero) y se ajusta al último si el mes cambia. Debajo, un `.form-info` con `aria-live="polite"` resume el período en palabras y avisa cuando cruza el año ("del 15 de noviembre al 6 de enero del año siguiente").
+`CalendarioTemporada` (`frontend/src/components/CalendarioTemporada.tsx`) elige un período de día y mes sin año. No se usa `input type="date"` porque obliga a elegir un año.
+
+- `.season-calendar-ends`: dos botones `.season-end` (**Desde** / **Hasta**, `aria-pressed`) que muestran la fecha elegida y cuál se está cargando; el activo usa el mismo tratamiento que `.channel-choice.selected`.
+- `.season-calendar-header`: `Button ghost icon-button` con `ChevronLeft`/`ChevronRight` (24 px) y un `select` "Mes del calendario" para saltar de mes.
+- `.season-calendar-grid`: 7 columnas de días `.season-day` de 40 px de alto, sin cabecera de días de la semana (el período no tiene año, así que el día de la semana cambia). Febrero muestra el 29.
+- Estados: `.extremo` (inicio y fin: Primary 500 con texto Neutral 00), `.en-rango` (Primary 100 al 40 % con texto Primary 700), hover Neutral 50, deshabilitado `--color-disabled`. Cada día tiene `aria-label` con fecha y estado ("15 de noviembre, inicio", "3 de enero, dentro del período").
+- Flujo: el primer clic marca el inicio y pasa solo a **Hasta**; el segundo marca el fin. Si el fin es anterior al inicio, el rango cruza el año y se resalta en ambos meses.
+- Teclado: tabindex itinerante; flechas ±1 / ±7 días (cruzan de mes), Inicio/Fin del mes.
+- Debajo, `.period-range` con un `.form-info` en `aria-live="polite"` resume el período en palabras y avisa cuando cruza el año.
 
 ### Opciones excluyentes en tarjetas
 
